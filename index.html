@@ -448,7 +448,8 @@ const VENUES=[
   {n:'Polideportivo Guadalcacín',p:'+34 663 72 63 96',f:'Fut5'},
 ];
 const FORMATS={Fut5:10,Fut6:12,Fut7:14,Fut8:16};
-const MAX_DAYS_AHEAD=7; // no se pueden convocar partidos (ni proponer días) a más de una semana vista
+const MAX_DAYS_AHEAD=7;
+const GOALS_EDIT_HOURS=48; // cada uno puede apuntar o cambiar sus goles hasta 48 h después del partido // no se pueden convocar partidos (ni proponer días) a más de una semana vista
 const POS={POR:'Portero',DEF:'Defensa',MED:'Medio',DEL:'Delantero',TODO:'Todocampista'};
 const EMOJIS=['😎','🤠','🥸','🧔','👨‍🦲','👱','🧑‍🦱','🦁','🐂','🐐','🦍','🐢','🦥','🐷','🥔','🍺','🔥','💩','🤡','👽','🦄','🐙','🧱','🚌'];
 const PTS={play:2,win:3,draw:1,goal:3,assist:2,kit:1,yellow:-3,red:-6};
@@ -496,6 +497,9 @@ function aheadErr(date,time){
   return'';
 }
 const dateMin=()=>ymd(new Date()),dateMax=()=>{const d=new Date();d.setDate(d.getDate()+MAX_DAYS_AHEAD);return ymd(d)};
+const hasPlayed=pid=>Object.values(S.matches).some(m=>m.status==='played'&&attendees(m).includes(pid));
+const levelLocked=pid=>!!pid&&hasPlayed(pid)&&!isAdmin(); // el nivel inicial se congela tras el primer partido (solo admins pueden tocarlo)
+const goalsLocked=m=>(Date.now()-mdt(m).getTime())>GOALS_EDIT_HOURS*36e5;
 const findDup=(date,time,venue,exceptId)=>Object.values(S.matches).find(m=>m.id!==exceptId&&m.date===date&&m.time===time&&normV(m.venue)===normV(venue));
 // Goles y asistencias: cada jugador declara los suyos (colección stats); el organizador puede corregir (m.goals / m.assists mandan).
 const myStat=(mid,pid)=>S.stats[`${mid}__${pid}`];
@@ -667,7 +671,7 @@ function viewMatches(st){
   if(me&&P(me)){
     up.forEach(m=>{const pr=m.promoted;if(pr&&pr.pid===me&&lineup(m).in.includes(me))h+=`<button class="banner wht" style="width:100%;text-align:left" data-act="open" data-id="${esc(m.id)}"><span class="e">⬆️</span><span><b>¡Entras en la lista del ${esc(fmtShort(m))}!</b><br>Alguien se ha bajado y has subido de la reserva.</span></button>`});
     const toVote=played.filter(m=>attendees(m).includes(me)&&!hasVoted(m.id,me)&&(Date.now()-mdt(m))<14*864e5);
-    const noStats=played.filter(m=>attendees(m).includes(me)&&hasVoted(m.id,me)&&!myStat(m.id,me)&&(Date.now()-mdt(m))<14*864e5);
+    const noStats=played.filter(m=>attendees(m).includes(me)&&hasVoted(m.id,me)&&!myStat(m.id,me)&&!goalsLocked(m));
     if(!toVote.length&&noStats.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="myStats" data-id="${esc(noStats[0].id)}"><span class="e">⚽</span><span><b>Apunta tus goles del ${esc(fmtShort(noStats[0]))}</b><br>Para que cuadren con el resultado.</span></button>`;
     if(toVote.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="vote" data-id="${esc(toVote[0].id)}"><span class="e">🗳️</span><span><b>Tienes ${toVote.length} ${toVote.length===1?'partido':'partidos'} por puntuar</b><br>Reparte estrellas y premios. Es anónimo.</span></button>`;
     const owe=[...up,...played.slice(0,6)].filter(m=>m.price&&attendees(m).includes(me)&&!(m.paid||{})[me]);
@@ -750,7 +754,7 @@ function matchDetail(m,st){
     x+=`<h3>Premios del partido · ${aw.nVotes} ${aw.nVotes===1?'voto':'votos'}</h3>`;
     if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>`<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b></div>`).join('')}</div>`;
     else x+=`<p class="muted small">Todavía nadie ha votado.</p>`;
-    if(me&&att.includes(me)&&hasVoted(m.id,me)){const s=myStat(m.id,me);x+=`<button class="btn sm" style="margin-top:10px" data-act="myStats" data-id="${esc(m.id)}">⚽ Mis goles: ${s?`${+s.g||0}${astOn()?` · 🎯 ${+s.a||0}`:''}`:'sin apuntar'} ✏️</button>`}
+    if(me&&att.includes(me)&&hasVoted(m.id,me)){const s=myStat(m.id,me);x+=`<button class="btn sm" style="margin-top:10px" data-act="myStats" data-id="${esc(m.id)}">⚽ Mis goles: ${s?`${+s.g||0}${astOn()?` · 🎯 ${+s.a||0}`:''}`:'sin apuntar'} ${goalsLocked(m)?'🔒':'✏️'}</button>`}
     if(me&&att.includes(me))x+=hasVoted(m.id,me)?`<p class="small muted" style="margin-top:10px">✅ Ya has votado (de forma anónima).</p>`:`<button class="btn pri full" style="margin-top:12px" data-act="vote" data-id="${esc(m.id)}">⭐ Puntuar partido</button>`;
   }else if(h>0){
     x+=`<div style="margin-top:14px">`;
@@ -908,6 +912,7 @@ function viewInfo(){
     <li>Bajarse con <b>menos de 24h</b>: 🟨 automática. Si reincides: 🟥.</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
     <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ⚡ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
+    <li>Tu nivel inicial (las estrellas que te pones) <b>se congela al jugar tu primer partido</b>; tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
     <li>Tu nivel ⚡ sube si ganas y baja si pierdes (y las estrellas de tus compañeros empujan un poco).</li>
     <li>Después del partido, <b>el organizador apunta el resultado</b> y <b>cada uno sus goles</b> al votar (la app avisa si no cuadran y el organizador corrige).</li>
     <li>Y cada uno vota de forma <b>anónima</b> 1–5 ★ a sus compañeros más ⭐ El Crack, 🎩 El Dandy, 🪨 El Duro y 🤦 Vaya día.</li>
@@ -986,8 +991,9 @@ function playerForm(id,asMe){
       <p class="muted small" style="margin-top:6px">Una de la cara, que se te reconozca 😅</p></div></div>
     <label>Nombre o mote</label><input id="nm" maxlength="18" value="${esc(p.name)}" placeholder="El Pirata, Juanma…">
     <label>Posición (es un decir)</label><div class="opts" id="pos">${Object.entries(POS).map(([k,v])=>`<button class="opt ${k===pos?'on':''}" data-v="${k}">${v}</button>`).join('')}</div>
-    <label>${asMe||id===me?'¿Qué nivel crees que tienes?':'¿Qué nivel tiene?'}</label><div class="lvpick" id="lvp">${[1,2,3,4,5].map(i=>`<button data-v="${i}" class="${i<=lv?'on':''}">★</button>`).join('')}</div><div class="lvlabel" id="lvl">${LEVELS[lv]}</div>
-    <p class="muted small" style="margin-top:6px">Es orientativo: luego sube si ganas partidos y baja si pierdes.</p>
+    ${id&&levelLocked(id)?`<label>Nivel inicial</label><div class="box small" style="line-height:1.5">🔒 Empezaste con <b>${'★'.repeat(lv)}</b> (${LEVELS[lv]}). Como ya has jugado, ya no se puede cambiar: <b>ahora tu nivel lo deciden tus partidos</b>.</div>`:''}
+    <div style="${id&&levelLocked(id)?'display:none':''}"><label>${asMe||id===me?'¿Qué nivel crees que tienes?':'¿Qué nivel tiene?'}${id&&hasPlayed(id)&&isAdmin()?' <span style="text-transform:none;letter-spacing:0;color:var(--yel)">· ya ha jugado: solo los admins pueden cambiarlo</span>':''}</label><div class="lvpick" id="lvp">${[1,2,3,4,5].map(i=>`<button data-v="${i}" class="${i<=lv?'on':''}">★</button>`).join('')}</div><div class="lvlabel" id="lvl">${LEVELS[lv]}</div>
+    <p class="muted small" style="margin-top:6px">Es orientativo: luego sube si ganas partidos y baja si pierdes. Una vez que juegues tu primer partido ya no se podrá cambiar.</p></div>
     <label>${photo?'Emoji (si quitas la foto)':'O un emoji'}</label><div class="emojis" id="em">${EMOJIS.map(e=>`<button class="${e===emo?'on':''}" data-v="${e}">${e}</button>`).join('')}</div>
     ${needPin?`<label>${id&&p.pinHash?'Cambiar PIN (déjalo vacío para no tocarlo)':'PIN de 4 cifras'}</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" style="letter-spacing:.4em;font-family:Anton;font-size:22px"><p class="muted small" style="margin-top:6px">Para que nadie vote o se baje en tu nombre.</p>`:''}
     <button class="btn pri full" id="sv" style="margin-top:20px">${id?'Guardar':asMe?(firstEver?'Crear el grupo':'Enviar solicitud'):'Fichar e invitar'}</button>`,
@@ -1006,7 +1012,7 @@ function playerForm(id,asMe){
       if(pinEl&&!pin&&!(id&&p.pinHash)){toast('Ponte un PIN de 4 cifras');return}
       e.target.disabled=true;
       try{
-        const upd={name,pos,emoji:emo,level0:lv,photo:photo||null};if(pin)upd.pinHash=await hashPin(pin);
+        const upd={name,pos,emoji:emo,level0:(id&&levelLocked(id))?(+p.level0||2):lv,photo:photo||null};if(pin)upd.pinHash=await hashPin(pin);
         if(id){await store.doc('players/'+id).update(upd);close();toast('Guardado');return}
         const nidv=nid();const first=!Object.keys(S.players).length&&(store.mode==='demo'||S.conn?.ok);
         let invitePin=null;if(!asMe){invitePin=randPin();upd.pinHash=await hashPin(invitePin)}
@@ -1228,6 +1234,7 @@ function resultForm(mid){
 
 function myStatsForm(mid){
   const m=S.matches[mid];if(!me||!attendees(m).includes(me)){toast('Solo los que jugaron');return}
+  if(goalsLocked(m)){toast(`🔒 Los goles solo se pueden apuntar hasta ${GOALS_EDIT_HOURS} h después del partido. Si hay un error, díselo a ${orgName(m)}.`);return}
   const ms=myStat(mid,me)||{};let g=+ms.g||0,a=+ms.a||0;
   modal(`${mh('Mis goles')}<p class="muted small">${esc(fmtShort(m))} · Blancos ${+m.scoreA||0} – ${+m.scoreB||0} Negros</p>
     <div class="box row" style="justify-content:space-around;margin-top:14px"><div style="text-align:center"><div style="font-size:11px;color:var(--mut);font-weight:800">GOLES</div><div class="stepper" style="margin-top:6px"><button data-g="-1">−</button><span id="g">${g}</span><button data-g="1">+</button></div></div>
@@ -1247,9 +1254,11 @@ function voteForm(mid){
   const r={},aw={};const ms=myStat(mid,me)||{};let myG=+ms.g||0,myA=+ms.a||0;
   const SL={1:'Tronco',2:'Flojito',3:'Cumplió',4:'Muy bien',5:'Crack'};
   modal(`${mh('Puntúa el partido')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}<br>🔒 <b>Voto anónimo:</b> nadie, ni los admins, puede ver qué has votado. Solo se puede votar una vez.</p>
+    ${goalsLocked(m)?`<p class="small muted" style="margin-top:14px">🔒 Ya han pasado ${GOALS_EDIT_HOURS} h: tus goles no se pueden cambiar.</p><div style="display:none">`:'<div>'}
     <h3>⚽ Tus números <span style="text-transform:none;letter-spacing:0;font-weight:500">· sé honesto, se nota 😏</span></h3>
     <div class="box row" style="justify-content:space-around"><div style="text-align:center"><div class="lbl" style="font-size:11px;color:var(--mut);font-weight:800">GOLES</div><div class="stepper" style="margin-top:6px"><button data-mg="-1">−</button><span id="mg">${myG}</span><button data-mg="1">+</button></div></div>
       ${astOn()?`<div style="text-align:center"><div class="lbl" style="font-size:11px;color:var(--mut);font-weight:800">ASISTENCIAS</div><div class="stepper" style="margin-top:6px"><button data-ma="-1">−</button><span id="ma">${myA}</span><button data-ma="1">+</button></div></div>`:''}</div>
+    </div>
     <h3>Nivel de hoy</h3>
     ${others.map(p=>`<div class="prow"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}</span><div class="starpick" data-p="${esc(p)}">${[1,2,3,4,5].map(i=>`<button data-s="${i}">★</button>`).join('')}</div><span class="sl"></span></div>`).join('')}
     ${AWARDS.map(A=>`<h3>${A.e} ${A.n} <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${A.d}</span></h3><div class="opts" data-aw="${A.k}">${(A.self?[me,...others]:others).map(p=>`<button class="opt" data-v="${esc(p)}">${p===me?'Yo mismo 🙋':esc(pname(p))}</button>`).join('')}</div>`).join('')}
@@ -1272,7 +1281,7 @@ function voteForm(mid){
         // El voto se guarda SIN identificar a quien vota; aparte solo se marca que ya ha votado.
         await store.doc('votes/'+nid()+Math.random().toString(36).slice(2,8)).set({mid,ratings:r,awards});
         await store.doc(`voted/${mid}__${me}`).set({mid,pid:me});
-        await store.doc(`stats/${mid}__${me}`).set({mid,pid:me,g:myG,a:myA,at:Date.now()});
+        if(!goalsLocked(m))await store.doc(`stats/${mid}__${me}`).set({mid,pid:me,g:myG,a:myA,at:Date.now()});
         close();toast('Votos enviados 🗳️');
       }catch(x){e.target.disabled=false;err(x)}
     };
