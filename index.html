@@ -448,6 +448,7 @@ const VENUES=[
   {n:'Polideportivo Guadalcacín',p:'+34 663 72 63 96',f:'Fut5'},
 ];
 const FORMATS={Fut5:10,Fut6:12,Fut7:14,Fut8:16};
+const MAX_DAYS_AHEAD=7; // no se pueden convocar partidos (ni proponer días) a más de una semana vista
 const POS={POR:'Portero',DEF:'Defensa',MED:'Medio',DEL:'Delantero',TODO:'Todocampista'};
 const EMOJIS=['😎','🤠','🥸','🧔','👨‍🦲','👱','🧑‍🦱','🦁','🐂','🐐','🦍','🐢','🦥','🐷','🥔','🍺','🔥','💩','🤡','👽','🦄','🐙','🧱','🚌'];
 const PTS={play:2,win:3,draw:1,goal:3,assist:2,kit:1,yellow:-3,red:-6};
@@ -486,6 +487,16 @@ const randPin=()=>String(Math.floor(Math.random()*10000)).padStart(4,'0');
 const appUrl=()=>location.href.split('#')[0];
 const canManage=m=>!!m&&(isAdmin()||(me&&m.createdBy===me)); // admin del partido: quien lo convocó o un admin
 const isManual=m=>m?.teamMode==='manual';
+const normV=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+// Evita partidos duplicados: mismo día, misma hora y mismo campo.
+function aheadErr(date,time){
+  const dt=new Date(`${date}T${time||'21:00'}:00`).getTime(),now=Date.now();
+  if(dt<now-36e5)return'Esa fecha ya ha pasado.';
+  if(dt>now+MAX_DAYS_AHEAD*864e5)return`Solo se puede convocar con ${MAX_DAYS_AHEAD} días de antelación como mucho.`;
+  return'';
+}
+const dateMin=()=>ymd(new Date()),dateMax=()=>{const d=new Date();d.setDate(d.getDate()+MAX_DAYS_AHEAD);return ymd(d)};
+const findDup=(date,time,venue,exceptId)=>Object.values(S.matches).find(m=>m.id!==exceptId&&m.date===date&&m.time===time&&normV(m.venue)===normV(venue));
 // Goles y asistencias: cada jugador declara los suyos (colección stats); el organizador puede corregir (m.goals / m.assists mandan).
 const myStat=(mid,pid)=>S.stats[`${mid}__${pid}`];
 function goalsOf(m){const o={};Object.values(S.stats).forEach(s=>{if(s.mid===m.id&&+s.g)o[s.pid]=+s.g});Object.entries(m.goals||{}).forEach(([p,v])=>o[p]=+v||0);return o}
@@ -494,7 +505,7 @@ function goalCheck(m){const g=goalsOf(m);const sum=t=>(t||[]).reduce((s,p)=>s+(g
 const orgName=m=>m?.createdBy&&P(m.createdBy)?pname(m.createdBy):'el organizador';
 function ym(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 function ymd(d){return `${ym(d)}-${String(d.getDate()).padStart(2,'0')}`}
-function setMe(id){me=id;try{id?localStorage.setItem('fifa07_me',id):localStorage.removeItem('fifa07_me')}catch(e){};renderMe();render()}
+function setMe(id){me=id;try{id?localStorage.setItem('fifa07_me',id):localStorage.removeItem('fifa07_me')}catch(e){};renderMe();render();setTimeout(()=>{try{ensureRecurring()}catch(e){}},300)}
 function toast(t){document.querySelectorAll('.toast').forEach(x=>x.remove());const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2800)}
 function err(e){console.error(e);const c=e?.code||'';
   toast(c==='timeout'?'❌ No se ha guardado: el servidor no responde. Revisa la conexión.':c==='permission-denied'?'❌ No se ha guardado: las reglas de Firebase no lo permiten.':`❌ No se ha guardado (${c||e?.message||'error'}). Prueba otra vez.`)}
@@ -651,7 +662,7 @@ function viewMatches(st){
   const npend=Object.values(S.players).filter(p=>p.status==='pending').length;
   if(isAdmin()&&npend)h+=`<button class="banner" style="width:100%;text-align:left" data-act="goAdmin"><span class="e">🙋</span><span><b>${npend} ${npend===1?'persona quiere':'personas quieren'} entrar</b><br>Toca para aprobar o rechazar.</span></button>`;
   if(!isStandalone()&&!S.instHidden&&store?.mode!=='demo')h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">📲</span><span class="sp"><b>Instálala en tu móvil</b><br><span class="small muted">Para tenerla como una app más.</span></span><button class="btn sm wht" data-act="install">Cómo</button><button class="x" data-act="instHide" style="width:28px;height:28px;font-size:14px">✕</button></div>`;
-  if(isAdmin())h+=`<button class="adminbar" data-act="goAdmin"><span style="font-size:22px">⚙️</span><span class="sp"><b>Eres admin</b><br><span class="small" style="opacity:.7">Panel: Gala, equipación, buzón y gestión</span></span><span>›</span></button>`;
+  if(isAdmin())h+=`<button class="adminbar" data-act="goAdmin"><span style="font-size:22px">⚙️</span><span class="sp"><b>Eres admin</b><br><span class="small" style="opacity:.7">Panel: solicitudes, partidos fijos, ajustes y buzón</span></span><span>›</span></button>`;
   if(store?.mode==='demo')h+=`<div class="demo"><span>🧪 <b>Modo demo:</b> datos de prueba, solo en este móvil.</span><button class="btn sm" data-act="resetDemo">Reiniciar</button></div>`;
   if(me&&P(me)){
     up.forEach(m=>{const pr=m.promoted;if(pr&&pr.pid===me&&lineup(m).in.includes(me))h+=`<button class="banner wht" style="width:100%;text-align:left" data-act="open" data-id="${esc(m.id)}"><span class="e">⬆️</span><span><b>¡Entras en la lista del ${esc(fmtShort(m))}!</b><br>Alguien se ha bajado y has subido de la reserva.</span></button>`});
@@ -665,6 +676,7 @@ function viewMatches(st){
     h+=`<button class="hero" data-act="profile" data-id="${esc(me)}"><div><div class="big">${s.pts}</div><div class="t">PUNTOS</div></div><div class="sp"><b>${esc(pname(me))}</b>${cardsHtml(s.y,s.r)}<div class="t" style="margin-top:2px">Nivel <b style="color:var(--txt)">${s.level.toFixed(1)}</b> ${stars(s.level)} · ${s.pj} PJ · ${s.g} goles</div></div><span class="muted">›</span></button>`;
   }
   if(kitOn()&&me&&P(me)&&!P(me).kit&&!S.kitPromoHidden)h+=`<div class="kitpromo"><div class="ks">${shirtSVG('w',{size:54})}${shirtSVG('b',{size:54})}</div><div class="sp"><b>¿Ya tienes la equipación?</b><div class="small" style="opacity:.75;margin-top:2px">Blanca y negra con tu nombre y dorsal. Pedido conjunto del grupo.</div><button class="btn pri sm" style="margin-top:10px" data-act="kitOrder">👕 Pedir la mía</button></div><button class="x" data-act="kitHide" style="align-self:flex-start">✕</button></div>`;
+  recTeasers().forEach(({r,occ,oa})=>{h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">🔁</span><span class="sp"><b>${WD[r.wd]} ${occ.getDate()}/${occ.getMonth()+1} · ${esc(r.time)} · ${esc(r.venue)}</b><br><span class="small muted">Las inscripciones se abren el ${DIA[oa.getDay()]} a las ${esc(r.openTime)}</span></span></div>`});
   const pls=openPolls();
   if(pls.length){h+=`<h2>¿Qué día? <span class="sub">${pls.length} ${pls.length===1?'encuesta':'encuestas'}</span></h2>`;pls.forEach(p=>h+=pollCard(p))}
   h+=`<h2>Próximos <span class="row"><button class="btn sm" data-act="newPoll">📊 Encuesta</button><button class="btn pri sm" data-act="newMatch">＋ Convocar</button></span></h2>`;
@@ -686,6 +698,7 @@ function matchCard(m,st,isNext){
   let x=`<div class="mc ${isNext?'next':''}" data-act="open" data-id="${esc(m.id)}"><div class="top">${dateBlock(m)}
     <div class="sp"><div class="t1">${esc(m.venue||'Campo por decidir')}</div>
     <div class="t2">${esc(m.time||'')}h · ${esc(m.format||'')}${m.price?` · ${esc(m.price)}€`:''}${!played&&h>0?` · ${whenTxt(m)}`:''}</div></div>`;
+  if(m.recurring&&!played)x+=`<span class="pill out">🔁 Fijo</span>`;
   if(played)x+=`<span class="pill">Final</span>`;
   else if(h<=0)x+=`<span class="pill red">Resultado</span>`;
   else if(cnt>=n)x+=`<span class="pill wht">Completo</span>`;
@@ -1011,7 +1024,7 @@ function matchForm(id,pre){
   let fmt=src.format||'Fut7';
   const known=!src.venue||VENUES.some(v=>v.n===src.venue);
   modal(`${mh(m?'Editar partido':'Convocar pachanga')}
-    <div class="grid2"><div><label>Día</label><input type="date" id="d" value="${src.date||ymd(t)}"></div><div><label>Hora</label><input type="time" id="t" value="${src.time||'21:00'}"></div></div>
+    <div class="grid2"><div><label>Día</label><input type="date" id="d" value="${src.date||ymd(t)}" min="${dateMin()}" max="${dateMax()}"></div><div><label>Hora</label><input type="time" id="t" value="${src.time||'21:00'}"></div></div>
     <label>Campo</label><select id="v">${VENUES.map(v=>`<option ${src.venue===v.n?'selected':''}>${esc(v.n)}</option>`).join('')}<option value="__" ${!known?'selected':''}>Otro…</option></select>
     <input id="vo" placeholder="Nombre del campo" value="${!known?esc(src.venue):''}" style="display:${!known?'':'none'};margin-top:6px">
     <label>Formato</label><div class="opts" id="f">${Object.keys(FORMATS).map(k=>`<button class="opt ${k===fmt?'on':''}" data-v="${k}">${k}</button>`).join('')}</div>
@@ -1028,6 +1041,9 @@ function matchForm(id,pre){
       const date=md.querySelector('#d').value,time=md.querySelector('#t').value;
       if(!date||!time){toast('Falta día u hora');return}
       const venue=v.value==='__'?vo.value.trim():v.value;
+      if(!m||m.date!==date||m.time!==time){const ae=aheadErr(date,time);if(ae){toast('📅 '+ae);return}}
+      const dup=findDup(date,time,venue,id);
+      if(dup){modal(`${mh('Ya existe ese partido')}<p class="muted">Ya hay una pachanga el <b style="color:var(--txt)">${esc(fmtShort(dup))} a las ${esc(dup.time)}</b> en <b style="color:var(--txt)">${esc(dup.venue||'')}</b>. No se pueden crear dos iguales.</p><button class="btn pri full" style="margin-top:16px" data-act="open" data-id="${esc(dup.id)}">Ver ese partido</button>`);return}
       const data={date,time,venue,format:fmt,slots:Math.max(2,+md.querySelector('#sl').value||FORMATS[fmt]),price:md.querySelector('#pr').value.trim().replace(',','.'),bizum:md.querySelector('#bz').value.trim(),notes:md.querySelector('#no').value.trim()};
       e.target.disabled=true;
       try{
@@ -1784,8 +1800,8 @@ function pollForm(){
   if(!me){pickMe();return}
   const base=new Date();const opts=[2,3,4].map(k=>{const d=new Date(base);d.setDate(d.getDate()+((k-d.getDay()+7)%7||7));return{date:ymd(d),time:'21:00'}});
   let fmt='Fut7';
-  const row=(o,i)=>`<div class="grid2 popr" data-i="${i}" style="margin-top:8px;grid-template-columns:1fr 1fr auto"><input type="date" value="${o.date}" class="pd"><input type="time" value="${o.time}" class="pt"><button class="iconbtn prm" style="width:44px">✕</button></div>`;
-  modal(`${mh('¿Qué día os viene?')}<p class="muted small">Propón varios días y que cada uno marque los que puede. Luego convocas el más votado con un toque.</p>
+  const row=(o,i)=>`<div class="grid2 popr" data-i="${i}" style="margin-top:8px;grid-template-columns:1fr 1fr auto"><input type="date" value="${o.date}" class="pd" min="${dateMin()}" max="${dateMax()}"><input type="time" value="${o.time}" class="pt"><button class="iconbtn prm" style="width:44px">✕</button></div>`;
+  modal(`${mh('¿Qué día os viene?')}<p class="muted small">Propón varios días (como mucho a una semana vista) y que cada uno marque los que puede. Luego convocas el más votado con un toque.</p>
     <label>Pregunta</label><input id="pq" value="¿Qué día os viene?" maxlength="60">
     <label>Días propuestos</label><div id="rows">${opts.map(row).join('')}</div>
     <button class="btn sm ghost" id="add" style="margin-top:8px">＋ Añadir día</button>
@@ -1799,6 +1815,7 @@ function pollForm(){
     md.querySelector('#sv').onclick=async e=>{
       const options=[...md.querySelectorAll('.popr')].map(r=>({date:r.querySelector('.pd').value,time:r.querySelector('.pt').value||'21:00'})).filter(o=>o.date);
       if(options.length<2){toast('Pon al menos 2 días');return}
+      const bad=options.find(o=>aheadErr(o.date,o.time));if(bad){toast('📅 '+aheadErr(bad.date,bad.time));return}
       e.target.disabled=true;
       try{const id=nid();await store.doc('polls/'+id).set({title:md.querySelector('#pq').value.trim()||'¿Qué día os viene?',options,venue:md.querySelector('#pv').value,format:fmt,createdBy:me,createdAt:Date.now(),closed:false});
         close();toast('Encuesta lanzada. Pásala por el grupo 📲');copyPoll(id)}catch(x){e.target.disabled=false;err(x)}
@@ -1954,6 +1971,67 @@ function installModal(tab){
     const bi=md.querySelector('#bip');if(bi)bi.onclick=async()=>{S.bip.prompt();try{await S.bip.userChoice}catch(e){}S.bip=null;close()}});
 }
 
+/* ============ PARTIDOS FIJOS ============ */
+// Reglas guardadas en config/recurring.rules. Cuando llega la hora de apertura, la primera persona que abra la app
+// crea el partido (con id fijo por regla y fecha, para que nunca se duplique).
+const WD=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const recRules=()=>(S.config.recurring?.rules||[]);
+function nextOcc(r,from=new Date()){
+  const d=new Date(from);d.setHours(0,0,0,0);const occ=new Date(d);occ.setDate(d.getDate()+((r.wd-d.getDay()+7)%7));
+  const[hh,mm]=(r.time||'19:00').split(':').map(Number);occ.setHours(hh,mm,0,0);if(occ<=from)occ.setDate(occ.getDate()+7);return occ;
+}
+function openAt(r,occ){
+  const o=new Date(occ);const back=((occ.getDay()-r.openWd+7)%7)||7;o.setDate(occ.getDate()-back);
+  const[hh,mm]=(r.openTime||'21:00').split(':').map(Number);o.setHours(hh,mm,0,0);return o;
+}
+const recId=(r,occ)=>`rec_${r.id}_${ymd(occ)}`;
+let recBusy=false;const recDone=new Set();
+async function ensureRecurring(){
+  if(recBusy||!store||(store.mode==='live'&&!S.conn?.ok))return;
+  if(!S.ready.matches||!S.ready.config||!S.ready.players||!me||!P(me)||isPending(me))return;
+  recBusy=true;
+  try{
+    for(const r of recRules()){
+      if(!r.active)continue;const occ=nextOcc(r),oa=openAt(r,occ);
+      if(Date.now()<oa.getTime())continue;
+      const id=recId(r,occ);if(recDone.has(id)||S.matches[id])continue;
+      const date=ymd(occ);
+      if(findDup(date,r.time,r.venue)){recDone.add(id);continue}
+      recDone.add(id);
+      await store.doc('matches/'+id).set({date,time:r.time,venue:r.venue,format:r.format||'Fut5',slots:+r.slots||FORMATS[r.format]||10,price:r.price||'',bizum:r.bizum||'',notes:r.notes||'',status:'open',teamA:[],teamB:[],scoreA:0,scoreB:0,goals:{},assists:{},paid:{},createdBy:r.org||null,createdAt:Date.now(),recurring:r.id});
+    }
+  }catch(e){console.error(e)}finally{recBusy=false}
+}
+function recTeasers(){
+  return recRules().filter(r=>r.active).map(r=>{const occ=nextOcc(r),oa=openAt(r,occ);return Date.now()<oa.getTime()&&!S.matches[recId(r,occ)]?{r,occ,oa}:null}).filter(Boolean);
+}
+function recForm(idx){
+  const rules=recRules();const r=idx!=null?rules[idx]:{id:nid(),wd:4,time:'19:00',venue:'Polideportivo Guadalcacín',format:'Fut5',slots:10,price:'',bizum:'',openWd:5,openTime:'21:00',org:me,active:true};
+  let fmt=r.format||'Fut5';
+  const ids=approvedIds().sort((a,b)=>pname(a).localeCompare(pname(b)));
+  modal(`${mh(idx!=null?'Editar partido fijo':'Nuevo partido fijo')}<p class="muted small">Se crea solo cada semana y se abre para apuntarse el día y la hora que elijas.</p>
+    <div class="grid2"><div><label>Se juega el</label><select id="rwd">${WD.map((d,i)=>`<option value="${i}" ${i===r.wd?'selected':''}>${d}</option>`).join('')}</select></div><div><label>Hora</label><input type="time" id="rt" value="${esc(r.time)}"></div></div>
+    <label>Campo</label><select id="rv">${VENUES.map(v=>`<option ${v.n===r.venue?'selected':''}>${esc(v.n)}</option>`).join('')}</select>
+    <label>Formato</label><div class="opts" id="rf">${Object.keys(FORMATS).map(k=>`<button class="opt ${k===fmt?'on':''}" data-v="${k}">${k}</button>`).join('')}</div>
+    <div class="grid2"><div><label>Plazas</label><input type="number" id="rs" value="${+r.slots||10}" min="2" max="30"></div><div><label>€ por cabeza</label><input id="rp" inputmode="decimal" value="${esc(r.price||'')}"></div></div>
+    <label>Bizum a (teléfono)</label><input id="rb" inputmode="tel" value="${esc(r.bizum||'')}">
+    <label>Organizador</label><select id="ro">${ids.map(i=>`<option value="${esc(i)}" ${i===r.org?'selected':''}>${esc(pname(i))}</option>`).join('')}</select>
+    <div class="grid2"><div><label>Se abre el</label><select id="owd">${WD.map((d,i)=>`<option value="${i}" ${i===r.openWd?'selected':''}>${d} antes</option>`).join('')}</select></div><div><label>A las</label><input type="time" id="ot" value="${esc(r.openTime)}"></div></div>
+    <p class="muted small" id="rprev" style="margin-top:10px"></p>
+    <label class="row" style="text-transform:none;letter-spacing:0;font-size:15px;color:var(--txt);gap:10px;margin-top:14px;font-weight:600"><input type="checkbox" id="ra" ${r.active?'checked':''}> Activo</label>
+    <button class="btn pri full" id="sv" style="margin-top:18px">Guardar</button>
+    ${idx!=null?'<button class="btn dan full" id="rdel" style="margin-top:8px">Borrar partido fijo</button>':''}`,
+  md=>{
+    const read=()=>({...r,wd:+md.querySelector('#rwd').value,time:md.querySelector('#rt').value||'19:00',venue:md.querySelector('#rv').value,format:fmt,slots:+md.querySelector('#rs').value||10,price:md.querySelector('#rp').value.trim(),bizum:md.querySelector('#rb').value.trim(),org:md.querySelector('#ro').value,openWd:+md.querySelector('#owd').value,openTime:md.querySelector('#ot').value||'21:00',active:md.querySelector('#ra').checked});
+    const prev=()=>{const x=read(),occ=nextOcc(x),oa=openAt(x,occ);md.querySelector('#rprev').innerHTML=`Próximo: <b style="color:var(--txt)">${DIA[occ.getDay()]} ${occ.getDate()}/${occ.getMonth()+1} a las ${x.time}</b> · se abre el <b style="color:var(--txt)">${DIA[oa.getDay()]} ${oa.getDate()}/${oa.getMonth()+1} a las ${x.openTime}</b>`};
+    md.querySelectorAll('select,input').forEach(i=>i.addEventListener('change',prev));prev();
+    md.querySelectorAll('#rf .opt').forEach(b=>b.onclick=()=>{fmt=b.dataset.v;md.querySelector('#rs').value=FORMATS[fmt];md.querySelectorAll('#rf .opt').forEach(x=>x.classList.toggle('on',x===b));prev()});
+    md.querySelector('#sv').onclick=async e=>{e.target.disabled=true;const nr=read();const list=rules.slice();if(idx!=null)list[idx]=nr;else list.push(nr);
+      try{await store.doc('config/recurring').set({rules:list});close();toast('Partido fijo guardado 🔁');setTimeout(ensureRecurring,300)}catch(x){e.target.disabled=false;err(x)}};
+    const del=md.querySelector('#rdel');if(del)del.onclick=async()=>{const list=rules.filter((_,i)=>i!==idx);try{await store.doc('config/recurring').set({rules:list});close();toast('Borrado')}catch(x){err(x)}};
+  });
+}
+
 /* ============ ADMIN ============ */
 function adminSection(){
   const row=(e,t,d,on,act)=>`<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="sp"><b>${e} ${t}</b><br><span class="small muted">${d}</span></span><button class="tog ${on?'on':''}" data-act="${act}">${on?'Activada':'Oculta'}</button></div>`;
@@ -1962,6 +2040,9 @@ function adminSection(){
   return `<h2 id="admin" style="scroll-margin-top:90px">Panel de admin</h2>
     <div class="box" style="margin-bottom:10px"><b>🙋 Solicitudes para entrar · ${pend.length}</b>
     ${pend.map(p=>`<div class="pay"><span class="av">${face(p.id)}</span><span class="nm">${esc(p.name)}<br><span class="small muted" style="font-weight:500">${esc(POS[p.pos]||'')} · ${'★'.repeat(+p.level0||2)}</span></span><button class="tog on" data-act="approve" data-id="${esc(p.id)}">Aprobar</button><button class="tog" data-act="reject" data-id="${esc(p.id)}">✕</button></div>`).join('')||'<p class="small muted" style="margin-top:6px">Ninguna pendiente. Para meter a alguien directamente: Jugadores → "Fichar e invitar".</p>'}</div>
+    <div class="box" style="margin-bottom:10px"><b>🔁 Partidos fijos</b>
+    ${recRules().map((r,i)=>{const occ=nextOcc(r),oa=openAt(r,occ);return `<button class="pay" style="width:100%;text-align:left" data-act="recEdit" data-i="${i}"><span class="sp"><b>${WD[r.wd]}s ${esc(r.time)}</b> · ${esc(r.venue)}<br><span class="small muted" style="font-weight:500">${r.active?`Se abre el ${DIA[r.openWd]} a las ${esc(r.openTime)} · próximo ${occ.getDate()}/${occ.getMonth()+1}`:'Pausado'}</span></span><span class="muted">›</span></button>`}).join('')||'<p class="small muted" style="margin-top:6px">Ninguno todavía.</p>'}
+    <button class="btn sm wht" style="margin-top:10px" data-act="recNew">＋ Añadir partido fijo</button></div>
     <div class="box" style="padding:6px 16px 14px">
     ${row('🏆','Gala de la temporada','Premios de la temporada y votación del Balón de Oro y el de Plomo.',galaOn(),'galaToggle')}
     ${row('🎯','Asistencias','Que cada uno apunte también sus asistencias (suman +2 y tienen ranking).',astOn(),'astToggle')}
@@ -2063,6 +2144,8 @@ document.addEventListener('click',e=>{
     case'unteams':store.doc('matches/'+id).update({teamA:[],teamB:[]}).catch(err);break;
     case'swap':if(canManage(S.matches[id]))swap(id,a.dataset.p);break;
     case'teamEdit':teamEditor(id);break;
+    case'recNew':recForm();break;
+    case'recEdit':recForm(+a.dataset.i);break;
     case'myStats':myStatsForm(id);break;
     case'orgChange':orgChange(id);break;
     case'teamAuto':confirmBox('Volver a automático','La app volverá a repartir los equipos según el nivel y se perderán los cambios hechos a mano.','🤖 Automático',async()=>{await store.doc('matches/'+id).update({teamMode:'auto',teamA:[],teamB:[],teamsBy:null});await autoTeams(id)});break;
@@ -2188,6 +2271,7 @@ function sub(col){
     S[col]=o;S.ready[col]=1;
     if(col==='players'&&me&&!o[me]&&snap.docs.length)me=null;
     renderMe();render();
+    if(col==='matches'||col==='config'||col==='players')setTimeout(ensureRecurring,500);
   },e=>{clearTimeout(t);console.error(e);S.ready[col]=1;if(col==='players')storeErr=true;render()});
 }
 (async()=>{
@@ -2195,7 +2279,7 @@ function sub(col){
   try{store=FIREBASE_CONFIG?await firebaseStore(FIREBASE_CONFIG):demoStore()}
   catch(e){console.error(e);storeErr=true;render();return}
   ['players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats'].forEach(sub);
-  setInterval(()=>{if(!S.sheet&&!document.querySelector('.md'))render()},60000);
+  setInterval(()=>{ensureRecurring();if(!S.sheet&&!document.querySelector('.md'))render()},60000);
 })();
 </script>
 </body>
