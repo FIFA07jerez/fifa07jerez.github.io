@@ -91,6 +91,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .banner{display:flex;gap:12px;align-items:center;margin:14px 0 0;padding:14px;border-radius:var(--r);background:var(--redbg);border:1px solid rgba(227,6,19,.4);font-size:14px}
 .banner.wht{background:#fff;color:#0a0a0a;border-color:#fff}
 .banner .e{font-size:24px}
+.banner.upd{background:#fff6bf;color:#2a2200;border-color:#f3dc5c}.banner.upd .small{color:#5a4d00}.banner.upd .x{background:rgba(0,0,0,.08);color:#2a2200}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--s2);color:var(--mut)}
 .pill.red{background:var(--red);color:#fff}
 .pill.wht{background:#fff;color:#0a0a0a}
@@ -256,6 +257,11 @@ td.pts{font-family:'Anton';font-size:18px}
 .org{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;border-radius:14px;background:var(--s1);border:1px solid var(--line);font-size:14px}
 .fix{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--s1)}
 .fix summary{font-weight:800;font-size:14px;cursor:pointer}
+.duel{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:10px}
+.dv-top{display:flex;align-items:center;gap:8px;font-size:15px}
+.dv-top .vs{font-size:18px;margin:0 2px}
+.dv-top b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .chk{font-weight:800;color:var(--red2);width:18px}
 .credit{text-align:center;margin:36px 0 10px;padding:22px 16px;border-top:1px solid var(--line);font-size:14px}
 .previa{margin-top:14px;border-radius:18px;padding:14px;background:linear-gradient(160deg,#1a0002,#0f0f0f 70%);border:1px solid rgba(227,6,19,.4)}
 .pv-h{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--red2)}
@@ -375,6 +381,7 @@ td.pts{font-family:'Anton';font-size:18px}
 .opt{padding:9px 13px;border-radius:999px;background:var(--s1);border:1px solid var(--line2);font-weight:700;font-size:14px}
 .opt.on{background:var(--red);color:#fff;border-color:var(--red)}
 .opt.onw{background:#fff;color:#0a0a0a;border-color:#fff}
+.opt.onr{background:#3a0a0d;color:#ff8a92;border-color:#7a1a20}
 .emojis{display:flex;flex-wrap:wrap;gap:4px}
 .emojis button{font-size:24px;width:44px;height:44px;border-radius:12px;border:1.5px solid transparent}
 .emojis button.on{border-color:var(--red);background:var(--s1)}
@@ -435,6 +442,11 @@ const FIREBASE_DB = null;               // nombre de la base de datos si no es l
 const APP_NAME = ['FIFA','07'];          // nombre del grupo: [parte blanca, parte roja]
 const SLOGAN = 'Para los amantes del mal fútbol';
 const CREATOR = 'Daniel Lucena';
+// Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
+const UPDATES = [
+  {at:'2026-11-17T00:40:00+01:00', e:'⚔️', t:'Nuevo: duelos', d:'Reta a alguien de tu partido y jugaos una caña o la pista. Lo tienes en la ficha del partido.'},
+];
+const UPDATE_HOURS = 24;
 const BETA = true;                       // quita la etiqueta BETA poniendo false
 
 const VENUES=[
@@ -450,6 +462,7 @@ const VENUES=[
 ];
 const FORMATS={Fut5:10,Fut6:12,Fut7:14,Fut8:16};
 const MAX_DAYS_AHEAD=7;
+const FIELD_TAGS=['👍 Buen césped','👎 Césped roto','🚿 Vestuarios bien','🤢 Vestuarios sucios','💡 Buena luz','💸 Caro','💰 Buen precio'];
 const GOALS_EDIT_HOURS=48; // cada uno puede apuntar o cambiar sus goles hasta 48 h después del partido // no se pueden convocar partidos (ni proponer días) a más de una semana vista
 const POS={POR:'Portero',DEF:'Defensa',MED:'Medio',DEL:'Delantero',TODO:'Todocampista'};
 const EMOJIS=['😎','🤠','🥸','🧔','👨‍🦲','👱','🧑‍🦱','🦁','🐂','🐐','🦍','🐢','🦥','🐷','🥔','🍺','🔥','💩','🤡','👽','🦄','🐙','🧱','🚌'];
@@ -470,7 +483,7 @@ const galaOn=()=>!!S.config?.app?.gala;
 const astOn=()=>!!S.config?.app?.assists; // asistencias ocultas hasta que un admin las active // la Gala está oculta hasta que un admin la active // la equipación está oculta hasta que un admin la active
 
 /* ============ ESTADO ============ */
-const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},ready:{},sheet:null};
+const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},duels:{},ready:{},sheet:null};
 let store=null,me=null,storeErr=false;
 try{S.kitPromoHidden=!!localStorage.getItem('fifa07_kithide');S.instHidden=!!localStorage.getItem('fifa07_insthide')}catch(e){}
 try{me=localStorage.getItem('fifa07_me')}catch(e){}
@@ -507,6 +520,10 @@ const waLink=(pid,text)=>{const d=phoneDigits(P(pid)?.phone);return d?`https://w
 const promoText=(m,pid)=>`⬆️ ¡${pname(pid)}, entras en la pachanga del ${fmtShort(m)} a las ${m.time} en ${m.venue||'el campo'}! Alguien se ha bajado y has subido de la reserva. Cuentan contigo 💪\n${appUrl()}`;
 // Para apuntarse hay que haber votado el último partido jugado (si ya tiene resultado).
 const pendingVote=pid=>{if(!pid)return null;const last=Object.values(S.matches).filter(m=>m.status==='played'&&attendees(m).includes(pid)).sort((a,b)=>mdt(b)-mdt(a))[0];return last&&!hasVoted(last.id,pid)?last:null};
+// Valoraciones de campos (vienen de los votos, anónimas): {nombreNormalizado:{name,n,avg,tags:{tag:n}}}
+function fieldStats(){const o={};Object.values(S.votes).forEach(v=>{if(!v.field?.s)return;const m=S.matches[v.mid];const name=v.field.venue||m?.venue;if(!name)return;const k=normV(name);
+  const x=o[k]=o[k]||{name,n:0,sum:0,tags:{}};x.n++;x.sum+=+v.field.s;(v.field.tags||[]).forEach(t=>x.tags[t]=(x.tags[t]||0)+1)});
+  Object.values(o).forEach(x=>{x.avg=x.sum/x.n;x.top=Object.entries(x.tags).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>e[0])});return o}
 const findDup=(date,time,venue,exceptId)=>Object.values(S.matches).find(m=>m.id!==exceptId&&m.date===date&&m.time===time&&normV(m.venue)===normV(venue));
 // Goles y asistencias: cada jugador declara los suyos (colección stats); el organizador puede corregir (m.goals / m.assists mandan).
 const myStat=(mid,pid)=>S.stats[`${mid}__${pid}`];
@@ -545,8 +562,16 @@ function matchAwards(m){
   vs.forEach(v=>{const aw=v.awards||{};AWARDS.forEach(a=>{const p=aw[a.k];if(p)cnt[a.k][p]=(cnt[a.k][p]||0)+1});
     for(const[p,x]of Object.entries(v.ratings||{})){const n=+x;if(n>=1&&n<=5)(rat[p]=rat[p]||[]).push(n)}});
   const avg={};for(const[p,a]of Object.entries(rat))avg[p]=a.reduce((x,y)=>x+y,0)/a.length;
-  const win={};AWARDS.forEach(a=>win[a.k]=tally(cnt[a.k]));
-  return{win,avg,nVotes:vs.length,rat};
+  // Un solo ganador por premio. Desempates: 1) más votos; 2) nota media del partido (más alta; en "Vaya día", más baja);
+  // 3) goles (más; en "Vaya día", menos); 4) orden alfabético.
+  const g=goalsOf(m),win={},cnt2={};
+  AWARDS.forEach(A=>{const c=cnt[A.k];const max=Math.max(0,...Object.values(c));if(!max){win[A.k]=[];return}
+    const neg=A.pts<0;const tied=Object.keys(c).filter(p=>c[p]===max);
+    tied.sort((x,y)=>{const ax=avg[x]??(neg?9:0),ay=avg[y]??(neg?9:0);if(ax!==ay)return neg?ax-ay:ay-ax;
+      const gx=g[x]||0,gy=g[y]||0;if(gx!==gy)return neg?gx-gy:gy-gx;
+      return pname(x).localeCompare(pname(y))});
+    win[A.k]=[tied[0]];cnt2[A.k]={who:tied[0],votes:max,tie:tied.length>1}});
+  return{win,avg,nVotes:vs.length,rat,info:cnt2};
 }
 function resultFor(m,pid){
   if(m.status!=='played')return null;
@@ -637,6 +662,8 @@ function renderMe(){
   const b=$('#meBtn');
   b.innerHTML=me&&P(me)?`<div class="av">${face(me)}</div><span>${esc(pname(me))}</span>${P(me).admin?'<span class="pill red" style="padding:2px 6px;font-size:9px">ADMIN</span>':''}`:`<div class="av">👤</div><span>¿Quién eres?</span>`;
 }
+function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
+  return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
 function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
   const main=$('#main');
@@ -671,6 +698,7 @@ function viewMatches(st){
   const played=all.filter(m=>m.status==='played').sort((a,b)=>mdt(b)-mdt(a));
   let h='';
   if(S.conn&&!S.conn.ok)h+=`<div class="banner" style="border-color:#ffd400;background:rgba(255,212,0,.1)"><span class="e">⚠️</span><span><b>Sin conexión con la base de datos</b><br><span class="small">${S.conn.code==='reglas'?'Las reglas de Firebase no dejan leer ni escribir. Revisa la pestaña Seguridad.':`Lo que hagas no se guardará (${esc(S.conn.code)}). Recarga en un rato.`}</span></span></div>`;
+  liveUpdates().forEach(u=>{h+=`<div class="banner upd"><span class="e">${u.e}</span><span class="sp"><b>${esc(u.t)}</b><br><span class="small">${esc(u.d)}</span></span><button class="x" data-act="updHide" data-id="${esc(u.at)}" style="width:28px;height:28px;font-size:14px" aria-label="Cerrar">✕</button></div>`});
   const npend=Object.values(S.players).filter(p=>p.status==='pending').length;
   if(isAdmin()&&npend)h+=`<button class="banner" style="width:100%;text-align:left" data-act="goAdmin"><span class="e">🙋</span><span><b>${npend} ${npend===1?'persona quiere':'personas quieren'} entrar</b><br>Toca para aprobar o rechazar.</span></button>`;
   if(!isStandalone()&&!S.instHidden&&store?.mode!=='demo')h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">📲</span><span class="sp"><b>Instálala en tu móvil</b><br><span class="small muted">Para tenerla como una app más.</span></span><button class="btn sm wht" data-act="install">Cómo</button><button class="x" data-act="instHide" style="width:28px;height:28px;font-size:14px">✕</button></div>`;
@@ -688,6 +716,12 @@ function viewMatches(st){
     h+=`<button class="hero" data-act="profile" data-id="${esc(me)}"><div><div class="big">${s.pts}</div><div class="t">PUNTOS</div></div><div class="sp"><b>${esc(pname(me))}</b>${cardsHtml(s.y,s.r)}<div class="t" style="margin-top:2px">Nivel <b style="color:var(--txt)">${s.level.toFixed(1)}</b> ${stars(s.level)} · ${s.pj} PJ · ${s.g} goles</div></div><span class="muted">›</span></button>`;
   }
   if(kitOn()&&me&&P(me)&&!P(me).kit&&!S.kitPromoHidden)h+=`<div class="kitpromo"><div class="ks">${shirtSVG('w',{size:54})}${shirtSVG('b',{size:54})}</div><div class="sp"><b>¿Ya tienes la equipación?</b><div class="small" style="opacity:.75;margin-top:2px">Blanca y negra con tu nombre y dorsal. Pedido conjunto del grupo.</div><button class="btn pri sm" style="margin-top:10px" data-act="kitOrder">👕 Pedir la mía</button></div><button class="x" data-act="kitHide" style="align-self:flex-start">✕</button></div>`;
+  if(me){
+    const mine=Object.values(S.duels).filter(d=>(d.from===me||d.to===me)&&d.status!=='rejected'&&d.status!=='cancelled').filter(d=>{const r=duelResult(d);return r.state==='pending'||r.state==='upcoming'||r.state==='live'||(r.state==='final'&&!d.settled)}).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const toMe=mine.filter(d=>d.status==='pending'&&d.to===me);
+    if(toMe.length)h+=`<div class="banner" style="margin-top:14px"><span class="e">⚔️</span><span><b>${esc(pname(toMe[0].from))} te ha retado</b><br>${DUEL_KINDS[toMe[0].kind].n} · ${stakeTxt(toMe[0])}. ¿Aceptas o te escondes? 🐔</span></div>`;
+    if(mine.length){h+=`<h2>Tus duelos <span class="sub">${mine.length}</span></h2>`;mine.forEach(d=>h+=duelLine(d))}
+  }
   recTeasers().forEach(({r,occ,oa})=>{h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">🔁</span><span class="sp"><b>${WD[r.wd]} ${occ.getDate()}/${occ.getMonth()+1} · ${esc(r.time)} · ${esc(r.venue)}</b><br><span class="small muted">Las inscripciones se abren el ${DIA[oa.getDay()]} a las ${esc(r.openTime)}</span></span></div>`});
   const pls=openPolls();
   if(pls.length){h+=`<h2>¿Qué día? <span class="sub">${pls.length} ${pls.length===1?'encuesta':'encuestas'}</span></h2>`;pls.forEach(p=>h+=pollCard(p))}
@@ -751,6 +785,7 @@ function matchDetail(m,st){
   if(played){
     x+=`<div class="box" style="margin-top:14px"><div class="scoreline" style="margin:0"><div class="tw"><i class="sq w"></i>Blancos</div><div class="n">${+m.scoreA||0}</div><div class="dash">–</div><div class="n">${+m.scoreB||0}</div><div class="tb">Negros<i class="sq b"></i></div></div>`;
     const sc=Object.entries(goalsOf(m)).filter(([p,g])=>g>0&&P(p)).sort((a,b)=>b[1]-a[1]);
+    if((m.noShow||[]).length)x+=`<p class="small" style="margin-top:10px;color:#ff8a92">🚫 No vino: ${(m.noShow||[]).filter(P).map(pname).map(esc).join(', ')} · 🟥</p>`;
     {const c=goalCheck(m);const line=(n,dec,sc)=>dec===sc?`<span style="color:#4ade80">✓ ${n}: ${dec}/${sc}</span>`:dec<sc?`<span style="color:var(--yel)">${n}: faltan ${sc-dec}</span>`:`<span style="color:var(--red2)">${n}: sobran ${dec-sc} ⚠️</span>`;
       x+=`<p class="small" style="margin-top:10px">Goles apuntados · ${line('Blancos',c.A,c.sa)} · ${line('Negros',c.B,c.sb)}</p>`;
       if((c.A!==c.sa||c.B!==c.sb)&&canManage(m))x+=`<p class="small muted" style="margin-top:4px">Cuando hayan votado todos, si sigue sin cuadrar, corrígelo en "Editar resultado".</p>`}
@@ -761,7 +796,8 @@ function matchDetail(m,st){
     x+=`<button class="btn wht full" style="margin-top:12px" data-act="share" data-kind="result" data-id="${esc(m.id)}">📸 Compartir resultado</button>`;
     const aw=matchAwards(m);
     x+=`<h3>Premios del partido · ${aw.nVotes} ${aw.nVotes===1?'voto':'votos'}</h3>`;
-    if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>`<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b></div>`).join('')}</div>`;
+    if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>{const i=aw.info[A.k];return `<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b>${i?`<div class="small muted" style="font-size:11px">${i.votes} ${i.votes===1?'voto':'votos'}${i.tie?' · desempate':''}</div>`:''}</div>`}).join('')}</div>
+      <p class="small muted" style="margin-top:6px">Un ganador por premio. Si hay empate a votos, gana quien tenga mejor nota del partido (en Vaya día, peor), y luego más goles (en Vaya día, menos).</p>`;
     else x+=`<p class="muted small">Todavía nadie ha votado.</p>`;
     if(me&&att.includes(me)&&hasVoted(m.id,me)){const s=myStat(m.id,me);x+=`<button class="btn sm" style="margin-top:10px" data-act="myStats" data-id="${esc(m.id)}">⚽ Mis goles: ${s?`${+s.g||0}${astOn()?` · 🎯 ${+s.a||0}`:''}`:'sin apuntar'} ${goalsLocked(m)?'🔒':'✏️'}</button>`}
     if(me&&att.includes(me))x+=hasVoted(m.id,me)?`<p class="small muted" style="margin-top:10px">✅ Ya has votado (de forma anónima).</p>`:`<button class="btn pri full" style="margin-top:12px" data-act="vote" data-id="${esc(m.id)}">⭐ Puntuar partido</button>`;
@@ -813,6 +849,9 @@ function matchDetail(m,st){
     if(L.res.length){x+=`<h3>🪑 Reserva</h3>`;L.res.forEach((p,i)=>x+=`<button class="pl res ${p===me?'me':''}" data-act="profile" data-id="${esc(p)}"><span class="num">R${i+1}</span><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}</span></button>`)}
   }
 
+  {const ds=duelsOf(m.id);const iIn=me&&signupsOf(m.id).some(s=>s.pid===me);
+    if(ds.length||(!played&&h>0&&iIn)){x+=`<h3>⚔️ Duelos de este partido</h3>`;ds.forEach(d=>x+=duelLine(d));
+      if(!played&&h>0&&iIn)x+=`<button class="btn full" style="margin-top:8px" data-act="duelNew" data-id="${esc(m.id)}">⚔️ Retar a alguien</button>`}}
   // Pagos
   if(m.price){
     const paid=att.filter(p=>(m.paid||{})[p]).length;
@@ -922,7 +961,9 @@ function viewInfo(){
     <li><b>Grupo privado:</b> se entra con aprobación del admin o con invitación. No pases el enlace sin hablarlo.</li>
     <li>Cada uno se apunta <b>a sí mismo</b>. Si te apuntas, <b>vienes</b>.</li>
     <li>🗳️ <b>Para apuntarte tienes que haber puntuado tu último partido.</b></li>
+    <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y nota se cierran a las 48 h.</li>
     <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides, 🟥).</li>
+    <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
     <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ⚡ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
     <li>Tu nivel inicial (las estrellas que te pones) <b>se congela al jugar tu primer partido</b>; tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
@@ -933,9 +974,12 @@ function viewInfo(){
   h+=`<h2>Puntos fantasy</h2><div class="box small" style="line-height:1.8">Jugar <b>+${PTS.play}</b> · Ganar <b>+${PTS.win}</b> · Empatar <b>+${PTS.draw}</b> · Gol <b>+${PTS.goal}</b> ${astOn()?`· Asistencia <b>+${PTS.assist}</b> `:''}· ${AWARDS.map(A=>`${A.e} <b>${A.pts>0?'+':''}${A.pts}</b>`).join(' · ')} · Estrellas: <b>(media − 3) × 2</b> · 🟨 <b>${PTS.yellow}</b> · 🟥 <b>${PTS.red}</b></div>`;
   h+=`<h2>Nivel ⚡</h2><div class="box small" style="line-height:1.6">Como en Playtomic. Al registrarte te pones de 1 a 5 ★ según el nivel que crees que tienes. Después:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo de más nivel sube más, y perder contra uno peor baja más.</li><li>Las goleadas cuentan un poco más.</li><li>Las estrellas que te ponen tus compañeros también empujan un poco.</li><li>En tus primeros ${LV.NEW_MATCHES} partidos el nivel se mueve más rápido, hasta que encuentra el tuyo.</li></ul>La fiabilidad llega al 100% a los ${LV.FULL} partidos.</div>`;
   if(isAdmin())h+=adminSection();
-  h+=`<h2>Campos <span class="sub">📍 Jerez</span></h2><div class="box" style="padding:2px 16px">`;
-  VENUES.forEach(v=>{h+=`<div class="venue"><div><b>${esc(v.n)}</b><div class="muted small">${esc(v.f)}</div></div><a href="tel:${v.p.replace(/\s/g,'')}">${esc(v.p)}</a></div>`});
-  h+=`</div>`;
+  {const fsx=fieldStats();const list=VENUES.map(v=>({...v,r:fsx[normV(v.n)]}));
+   const extra=Object.entries(fsx).filter(([k])=>!VENUES.some(v=>normV(v.n)===k)).map(([,r])=>({n:r.name,f:'',p:'',r}));
+   const all=[...list,...extra].sort((a,b)=>(b.r?.avg||0)-(a.r?.avg||0)||(b.r?.n||0)-(a.r?.n||0));
+   h+=`<h2>Campos <span class="sub">📍 Jerez · ranking por votos</span></h2><div class="box" style="padding:2px 16px">`;
+   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b><div class="muted small">${esc(v.f||'')}${v.r?`${v.f?' · ':''}<span style="color:var(--yel)">★ ${v.r.avg.toFixed(1)}</span> (${v.r.n})${v.r.top.length?' · '+v.r.top.map(esc).join(' '):''}`:`${v.f?' · ':''}sin valorar`}</div></div>${v.p?`<a href="tel:${v.p.replace(/\s/g,'')}">${esc(v.p)}</a>`:''}</div>`});
+   h+=`</div><p class="small muted" style="margin-top:6px">Las notas salen de lo que vota cada uno al puntuar el partido (es anónimo).</p>`}
   h+=`<h2>Buzón beta</h2><div class="box"><p class="small muted">¿Algo falla, no se entiende o se te ocurre una idea? Escríbelo aquí.</p><textarea id="fbt" rows="3" maxlength="500" placeholder="Ej: al apuntarme no me sale…" style="margin-top:10px"></textarea><button class="btn pri full" style="margin-top:10px" data-act="fbSend">Enviar sugerencia</button></div>`;
   if(isAdmin()){const fl=Object.values(S.feedback).sort((a,b)=>(b.at||0)-(a.at||0));
     h+=`<h3>Sugerencias recibidas · ${fl.length}</h3>${fl.map(f=>`<div class="box" style="margin-bottom:8px;padding:12px"><div class="small muted">${esc(f.pid?pname(f.pid):'Anónimo')} · ${new Date(f.at).toLocaleDateString('es-ES')}</div><div style="margin-top:4px;white-space:pre-wrap">${esc(f.text)}</div><button class="btn sm ghost" style="margin-top:6px" data-act="fbDel" data-id="${esc(f.id)}">Hecho ✓</button></div>`).join('')||'<p class="muted small">Ninguna todavía.</p>'}`}
@@ -1045,7 +1089,7 @@ function matchForm(id,pre){
   const known=!src.venue||VENUES.some(v=>v.n===src.venue);
   modal(`${mh(m?'Editar partido':'Convocar pachanga')}
     <div class="grid2"><div><label>Día</label><input type="date" id="d" value="${src.date||ymd(t)}" min="${dateMin()}" max="${dateMax()}"></div><div><label>Hora</label><input type="time" id="t" value="${src.time||'21:00'}"></div></div>
-    <label>Campo</label><select id="v">${VENUES.map(v=>`<option ${src.venue===v.n?'selected':''}>${esc(v.n)}</option>`).join('')}<option value="__" ${!known?'selected':''}>Otro…</option></select>
+    <label>Campo</label><select id="v">${(()=>{const fsx=fieldStats();return VENUES.map(v=>{const r=fsx[normV(v.n)];return `<option value="${esc(v.n)}" ${src.venue===v.n?'selected':''}>${esc(v.n)}${r?` · ★${r.avg.toFixed(1)}`:''}</option>`}).join('')})()}<option value="__" ${!known?'selected':''}>Otro…</option></select>
     <input id="vo" placeholder="Nombre del campo" value="${!known?esc(src.venue):''}" style="display:${!known?'':'none'};margin-top:6px">
     <label>Formato</label><div class="opts" id="f">${Object.keys(FORMATS).map(k=>`<button class="opt ${k===fmt?'on':''}" data-v="${k}">${k}</button>`).join('')}</div>
     <div class="grid2"><div><label>Plazas</label><input type="number" id="sl" value="${src.slots||FORMATS[fmt]}" min="2" max="30"></div><div><label>€ por cabeza</label><input id="pr" inputmode="decimal" value="${esc(src.price||'')}" placeholder="4"></div></div>
@@ -1200,9 +1244,13 @@ function resultForm(mid){
   let A=[...(m.teamA||[])],B=[...(m.teamB||[])];
   if(!A.length&&!B.length){const T=balance(lineup(m).in,computeStats());A=T.A;B=T.B}
   const goals={...goalsOf(m)},ast={...assistsOf(m)},kit={...(m.kit||{})};
-  const team={};A.forEach(p=>team[p]='A');B.forEach(p=>team[p]='B');
+  const prevNS=new Set(m.noShow||[]),ns=new Set(prevNS);
+  const nsPool=[...new Set([...lineup(m).in,...(m.teamA||[]),...(m.teamB||[]),...prevNS])].filter(P);
+  const team={};A.forEach(p=>team[p]='A');B.forEach(p=>team[p]='B');(m.noShow||[]).forEach(p=>delete team[p]);A=A.filter(p=>!(m.noShow||[]).includes(p));B=B.filter(p=>!(m.noShow||[]).includes(p));
   const sync=()=>{A=Object.keys(team).filter(x=>team[x]==='A');B=Object.keys(team).filter(x=>team[x]==='B')};
   const draw=md=>{
+    md.querySelector('#ns').innerHTML=nsPool.map(p=>`<button class="opt ${ns.has(p)?'onr':''}" data-ns="${esc(p)}">${ns.has(p)?'🟥 ':''}${esc(pname(p))}</button>`).join('');
+    md.querySelectorAll('[data-ns]').forEach(b=>b.onclick=()=>{const p=b.dataset.ns;if(ns.has(p)){ns.delete(p);team[p]=A.length<=B.length?'A':'B'}else{ns.add(p);delete team[p]}sync();draw(md)});
     const ga=A.reduce((t,p)=>t+(goals[p]||0),0),gb=B.reduce((t,p)=>t+(goals[p]||0),0);
     md.querySelector('#rows').innerHTML=[...A,...B].map(p=>`<div class="prow">
       <button class="tog ${team[p]==='A'?'on':''}" data-tg="${esc(p)}" style="min-width:64px">${team[p]==='A'?'Blanco':'Negro'}</button>
@@ -1220,6 +1268,7 @@ function resultForm(mid){
   modal(`${mh('Resultado')}
     <div class="box"><div class="scoreline" style="margin:0"><div class="tw"><i class="sq w"></i>Blancos</div><input id="sa" ${sIn(+m.scoreA||0)}><div class="dash">–</div><input id="sb" ${sIn(+m.scoreB||0)}><div class="tb">Negros<i class="sq b"></i></div></div></div>
     <p class="small" style="margin:12px 0 0;line-height:1.45">✍️ Tú solo tienes que poner el <b>resultado</b>. Los goles${astOn()?' y asistencias':''} los apunta <b>cada jugador</b> al votar; aquí abajo puedes <b>corregirlos</b> si algo no cuadra.</p>
+    <h3>🚫 ¿Faltó alguien sin avisar?</h3><p class="small muted" style="margin-top:-4px">Se le quita del partido y se lleva 🟥 directa.</p><div class="opts" id="ns"></div>
     <details class="fix"><summary>✏️ Corregir equipos o goles${astOn()?' / asistencias':''}</summary>
     <p class="muted small" id="hint" style="margin:8px 0 2px"></p>${kitOn()?`<p class="muted small">👕 = vino con la camiseta oficial (+${PTS.kit} pt)</p>`:''}
     <div id="rows"></div>
@@ -1239,7 +1288,10 @@ function resultForm(mid){
       // Solo se guardan como corrección los números distintos de lo que declaró cada jugador.
       const g={},a={},k={};[...A,...B].forEach(p=>{const s=myStat(mid,p)||{};if((goals[p]||0)!==(+s.g||0))g[p]=goals[p]||0;if((ast[p]||0)!==(+s.a||0))a[p]=ast[p]||0;if(kit[p])k[p]=true});
       try{
-        await store.doc('matches/'+mid).update({teamA:A,teamB:B,scoreA:Math.max(0,+md.querySelector('#sa').value||0),scoreB:Math.max(0,+md.querySelector('#sb').value||0),goals:g,assists:a,kit:k,status:'played',playedAt:m.playedAt||Date.now()});
+        await store.doc('matches/'+mid).update({teamA:A,teamB:B,scoreA:Math.max(0,+md.querySelector('#sa').value||0),scoreB:Math.max(0,+md.querySelector('#sb').value||0),goals:g,assists:a,kit:k,noShow:[...ns],status:'played',playedAt:m.playedAt||Date.now()});
+        // Tarjeta roja por no presentarse (y se quita si se desmarca).
+        for(const p of ns)if(!prevNS.has(p)&&P(p)){const pl=P(p);await store.doc('players/'+p).update({red:(pl.red||0)+1,cardLog:[...(pl.cardLog||[]),{type:'red',mid,reason:'noshow',at:Date.now()}]})}
+        for(const p of prevNS)if(!ns.has(p)&&P(p)){const pl=P(p);const log=(pl.cardLog||[]).filter(c=>!(c.mid===mid&&c.reason==='noshow'));if(log.length!==(pl.cardLog||[]).length)await store.doc('players/'+p).update({red:Math.max(0,(pl.red||0)-1),cardLog:log})}
         close();toast('Resultado guardado. Cada uno apunta sus goles al votar ⭐');
         if(me&&[...A,...B].includes(me)&&!hasVoted(mid,me))setTimeout(()=>voteForm(mid),450);
       }catch(x){e.target.disabled=false;err(x)}
@@ -1266,7 +1318,7 @@ function voteForm(mid){
   if(hasVoted(mid,me)){toast('Ya has votado este partido ✅');return}
   if(!attendees(m).includes(me)){toast('Solo votan los que jugaron');return}
   const others=attendees(m).filter(p=>p!==me&&P(p));
-  const r={},aw={};const ms=myStat(mid,me)||{};let myG=+ms.g||0,myA=+ms.a||0;
+  const r={},aw={};const ms=myStat(mid,me)||{};let myG=+ms.g||0,myA=+ms.a||0;let fs=0;const ftags=new Set();
   const SL={1:'Tronco',2:'Flojito',3:'Cumplió',4:'Muy bien',5:'Crack'};
   modal(`${mh('Puntúa el partido')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}<br>🔒 <b>Voto anónimo:</b> nadie, ni los admins, puede ver qué has votado. Solo se puede votar una vez.</p>
     ${goalsLocked(m)?`<p class="small muted" style="margin-top:14px">🔒 Ya han pasado ${GOALS_EDIT_HOURS} h: tus goles no se pueden cambiar.</p><div style="display:none">`:'<div>'}
@@ -1274,14 +1326,19 @@ function voteForm(mid){
     <div class="box row" style="justify-content:space-around"><div style="text-align:center"><div class="lbl" style="font-size:11px;color:var(--mut);font-weight:800">GOLES</div><div class="stepper" style="margin-top:6px"><button data-mg="-1">−</button><span id="mg">${myG}</span><button data-mg="1">+</button></div></div>
       ${astOn()?`<div style="text-align:center"><div class="lbl" style="font-size:11px;color:var(--mut);font-weight:800">ASISTENCIAS</div><div class="stepper" style="margin-top:6px"><button data-ma="-1">−</button><span id="ma">${myA}</span><button data-ma="1">+</button></div></div>`:''}</div>
     </div>
+    <h3>🏟️ ¿Qué tal el campo? <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${esc(m.venue||'')} (opcional)</span></h3>
+    <div class="row"><div class="starpick" id="fst">${[1,2,3,4,5].map(i=>`<button data-fs="${i}">★</button>`).join('')}</div></div>
+    <div class="opts" id="ftg" style="margin-top:8px">${FIELD_TAGS.map(t=>`<button class="opt" data-ft="${esc(t)}">${esc(t)}</button>`).join('')}</div>
     <h3>Nivel de hoy</h3>
     ${others.map(p=>`<div class="prow"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}</span><div class="starpick" data-p="${esc(p)}">${[1,2,3,4,5].map(i=>`<button data-s="${i}">★</button>`).join('')}</div><span class="sl"></span></div>`).join('')}
     ${AWARDS.map(A=>`<h3>${A.e} ${A.n} <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${A.d}</span></h3><div class="opts" data-aw="${A.k}">${(A.self?[me,...others]:others).map(p=>`<button class="opt" data-v="${esc(p)}">${p===me?'Yo mismo 🙋':esc(pname(p))}</button>`).join('')}</div>`).join('')}
     <button class="btn pri full" id="sv" style="margin-top:22px">Enviar votos</button>`,
   md=>{
+    md.querySelectorAll('[data-fs]').forEach(b=>b.onclick=()=>{fs=+b.dataset.fs;md.querySelectorAll('[data-fs]').forEach(x=>x.classList.toggle('on',+x.dataset.fs<=fs))});
+    md.querySelectorAll('[data-ft]').forEach(b=>b.onclick=()=>{const t=b.dataset.ft;ftags.has(t)?ftags.delete(t):ftags.add(t);b.classList.toggle('on',ftags.has(t))});
     md.querySelectorAll('[data-mg]').forEach(b=>b.onclick=()=>{myG=Math.max(0,myG+ +b.dataset.mg);md.querySelector('#mg').textContent=myG});
     md.querySelectorAll('[data-ma]').forEach(b=>b.onclick=()=>{myA=Math.max(0,myA+ +b.dataset.ma);md.querySelector('#ma').textContent=myA});
-    md.querySelectorAll('.starpick').forEach(sp=>sp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    md.querySelectorAll('.starpick[data-p]').forEach(sp=>sp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
       const p=sp.dataset.p,v=+b.dataset.s;r[p]=v;sp.querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.s<=v));sp.nextElementSibling.textContent=SL[v]}));
     md.querySelectorAll('[data-aw]').forEach(g=>{const k=g.dataset.aw,neg=AWARDS.find(a=>a.k===k).pts<0;
       g.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{aw[k]=aw[k]===b.dataset.v?null:b.dataset.v;g.querySelectorAll('.opt').forEach(x=>{x.classList.remove('on','onw');if(x.dataset.v===aw[k])x.classList.add(neg?'onw':'on')})})});
@@ -1294,7 +1351,8 @@ function voteForm(mid){
       const awards={};AWARDS.forEach(A=>{if(aw[A.k])awards[A.k]=aw[A.k]});
       try{
         // El voto se guarda SIN identificar a quien vota; aparte solo se marca que ya ha votado.
-        await store.doc('votes/'+nid()+Math.random().toString(36).slice(2,8)).set({mid,ratings:r,awards});
+        const vd={mid,ratings:r,awards};if(fs)vd.field={s:fs,tags:[...ftags],venue:m.venue||''};
+        await store.doc('votes/'+nid()+Math.random().toString(36).slice(2,8)).set(vd);
         await store.doc(`voted/${mid}__${me}`).set({mid,pid:me});
         if(!goalsLocked(m))await store.doc(`stats/${mid}__${me}`).set({mid,pid:me,g:myG,a:myA,at:Date.now()});
         close();toast('Votos enviados 🗳️');
@@ -1326,6 +1384,8 @@ function profile(id){
     </div>
     <p class="small muted" style="margin-top:12px">${stars(s.level)} Fiabilidad <b style="color:var(--txt)">${s.rel}%</b> · empezó en ${s.lv0}★ · ahora ${s.level.toFixed(2)} ${s.level-s.lv0>=0?`<span class="up">▲${(s.level-s.lv0).toFixed(2)}</span>`:`<span class="down">▼${(s.lv0-s.level).toFixed(2)}</span>`}</p>
     <p class="small muted" style="margin-top:4px">${esc(POS[p.pos]||'Todocampista')} · Tarjetas: ${s.y?`🟨×${s.y} `:''}${s.r?`🟥×${s.r}`:''}${!s.y&&!s.r?'limpio 😇':''}${p.admin?' · <span class="pill red">Admin</span>':''}</p>
+    ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
+    ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&signupsOf(mm.id).some(x=>x.pid===me)&&signupsOf(mm.id).some(x=>x.pid===id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
     ${(()=>{const sk=streak(s);return sk?`<div class="banner" style="margin-top:12px"><span class="e">${sk.e}</span><span><b>${sk.t[0].toUpperCase()+sk.t.slice(1)}</b></span></div>`:''})()}
     <div class="row" style="margin-top:14px"><button class="btn wht full" style="flex:1" data-act="share" data-kind="card" data-id="${esc(id)}">📸 Compartir carta</button>${(()=>{const y=seasonOfDate(new Date());return s.hist.some(x=>seasonOf(x.m)===y)?`<button class="btn pri" style="flex:1" data-act="wrapped" data-id="${esc(id)}">🎬 ${id===me?'Mi':'Su'} temporada</button>`:''})()}</div>
     ${kitOn()&&id===me&&!p.kit?`<button class="btn full" style="margin-top:8px" data-act="kitOrder">👕 Pedir mi equipación</button>`:''}
@@ -1412,7 +1472,7 @@ function enrich(st){
       paidN:H.filter(x=>(x.m.paid||{})[id]).length,
       fromRes:H.filter(x=>x.m.promoted?.pid===id).length,
       orgN:H.filter(x=>x.m.createdBy===id).length,
-      votedN:voted[id]||0,
+      votedN:voted[id]||0,noShows:(S.players[id]?.cardLog||[]).filter(c=>c.reason==='noshow').length,
       potm:hon.potm[id]||0,pich:hon.pich[id]||0});
   }
   return st;
@@ -1473,6 +1533,7 @@ const ACH=[
   {e:'🎭',n:'Doble cara',d:'Haber sido Crack y Vaya día',t:s=>s.aw.crack>=1&&s.aw.vaya>=1},
   {e:'🐐',n:'Jugador del mes',d:'Ganar un jugador del mes',t:s=>s.potm>=1},
   {e:'🥇',n:'Pichichi del mes',d:'Máximo goleador de un mes',t:s=>s.pich>=1},
+  {e:'🤠',n:'Pistolero',d:'Ganar 3 duelos',t:s=>duelRecord(s.id).w>=3},
   // Rachas
   {e:'🔥',n:'En racha',d:'3 victorias seguidas',t:s=>s.maxW>=3},
   {e:'🚀',n:'Imparable',d:'5 victorias seguidas',t:s=>s.maxW>=5},
@@ -1484,6 +1545,9 @@ const ACH=[
   {e:'🪵',n:'Pie de madera',d:'10 partidos jugados y 0 goles',t:s=>s.pj>=10&&s.g===0,neg:true},
   {e:'🤦',n:'Rey del Vaya día',d:'Ser Vaya día 3 veces',t:s=>s.aw.vaya>=3,neg:true},
   {e:'🤝',n:'Ni fu ni fa',d:'Empatar 3 partidos',t:s=>s.e>=3,neg:true},
+  {e:'🍺',n:'Invita la casa',d:'Perder 3 duelos',t:s=>duelRecord(s.id).l>=3,neg:true},
+  {e:'🐔',n:'Gallina',d:'Rechazar un duelo',t:s=>Object.values(S.duels).some(d=>d.to===s.id&&d.status==='rejected'),neg:true},
+  {e:'👻',n:'Fantasma',d:'Apuntarte y no presentarte',t:s=>s.noShows>=1,neg:true},
   {e:'🟨',n:'Tarjetero',d:'Llevarte una amarilla por bajarte tarde',t:s=>s.y+s.r>=1,neg:true},
   {e:'📉',n:'Caída libre',d:'Bajar medio nivel desde el inicial',t:s=>s.lv0-s.level>=0.5,neg:true},
 ];
@@ -2109,6 +2173,104 @@ function recForm(idx){
   });
 }
 
+/* ============ DUELOS ============ */
+// Un jugador reta a otro para un partido concreto; el rival acepta o rechaza. Se juegan una caña o la cuota de la pista.
+const DUEL_KINDS={goals:{e:'⚽',n:'Más goles',d:'Quién mete más goles en el partido'},win:{e:'🏆',n:'Gana su equipo',d:'Solo vale si os toca en equipos distintos'},stars:{e:'⭐',n:'Mejor nota',d:'Quién saca más estrellas del vestuario'}};
+const DUEL_STAKES={beer:{e:'🍺',n:'Una caña'},court:{e:'💶',n:'La cuota de la pista'}};
+const duelsOf=mid=>Object.values(S.duels).filter(d=>d.mid===mid&&d.status!=='rejected'&&d.status!=='cancelled');
+const stakeTxt=d=>{const m=S.matches[d.mid];return d.stake==='court'?`💶 la pista${m?.price?` (${m.price}€)`:''}`:'🍺 una caña'};
+function duelResult(d){
+  const m=S.matches[d.mid];if(!m)return{state:'void',why:'el partido se borró'};
+  if(d.status!=='accepted')return{state:d.status};
+  if(m.status!=='played')return{state:'upcoming'};
+  const att=attendees(m);if(!att.includes(d.from)||!att.includes(d.to))return{state:'void',why:'no jugaron los dos'};
+  let a,b,final=true;
+  if(d.kind==='win'){
+    const ra=resultFor(m,d.from),rb=resultFor(m,d.to);const sameTeam=(m.teamA||[]).includes(d.from)===(m.teamA||[]).includes(d.to);
+    if(sameTeam)return{state:'void',why:'os tocó en el mismo equipo'};
+    if(ra==='E')return{state:'draw'};a=ra==='V'?1:0;b=rb==='V'?1:0;
+  }else if(d.kind==='goals'){const g=goalsOf(m);a=g[d.from]||0;b=g[d.to]||0;final=goalsLocked(m)}
+  else{const av=matchAwards(m).avg;a=av[d.from]||0;b=av[d.to]||0;final=goalsLocked(m)}
+  if(a===b)return{state:final?'draw':'live',a,b};
+  const w=a>b?d.from:d.to,l=a>b?d.to:d.from;
+  return{state:final?'final':'live',winner:w,loser:l,a,b};
+}
+function duelLine(d){
+  const K=DUEL_KINDS[d.kind],r=duelResult(d),m=S.matches[d.mid];
+  let st='';
+  if(r.state==='pending')st=`<span class="pill">Esperando respuesta</span>`;
+  else if(r.state==='upcoming')st=`<span class="pill wht">Aceptado</span>`;
+  else if(r.state==='live')st=`<span class="pill">${r.winner?`Va ganando ${esc(pname(r.winner))}`:'Van empatados'} (${d.kind==='stars'?`${(r.a||0).toFixed(1)}–${(r.b||0).toFixed(1)}`:`${r.a}–${r.b}`})</span>`;
+  else if(r.state==='final')st=d.settled?`<span class="pill out">✅ Saldado</span>`:`<span class="pill red">${esc(pname(r.loser))} paga</span>`;
+  else if(r.state==='draw')st=`<span class="pill">🤝 Empate, nadie paga</span>`;
+  else if(r.state==='void')st=`<span class="pill">Nulo · ${esc(r.why||'')}</span>`;
+  let acts='';
+  if(d.status==='pending'&&d.to===me)acts=`<button class="btn sm pri" data-act="duelAccept" data-id="${esc(d.id)}">Aceptar</button><button class="btn sm ghost" data-act="duelReject" data-id="${esc(d.id)}">Rechazar</button>`;
+  else if((d.status==='pending'||(d.status==='accepted'&&m&&m.status!=='played'&&hoursTo(m)>0))&&d.from===me)acts=`<button class="btn sm ghost" data-act="duelCancel" data-id="${esc(d.id)}">Retirar</button>`;
+  if(r.state==='final'&&!d.settled&&(r.winner===me||isAdmin()))acts+=`<button class="btn sm wht" data-act="duelSettle" data-id="${esc(d.id)}">✅ Me ha pagado</button>`;
+  return `<div class="duel"><div class="dv-top"><span class="av">${face(d.from)}</span><b>${esc(pname(d.from))}</b><span class="vs">⚔️</span><b>${esc(pname(d.to))}</b><span class="av">${face(d.to)}</span></div>
+    <div class="small muted" style="margin-top:6px">${K.e} ${K.n} · ${stakeTxt(d)}${m?` · ${esc(fmtShort(m))}`:''}</div>
+    ${r.state==='final'&&!d.settled?`<div class="small" style="margin-top:6px"><b>${esc(pname(r.loser))}</b> le debe ${stakeTxt(d)} a <b>${esc(pname(r.winner))}</b></div>`:''}
+    <div class="row wrapr" style="margin-top:8px">${st}<span class="sp"></span>${acts}</div></div>`;
+}
+function duelForm(mid,rivalPre){
+  const m=S.matches[mid];if(!me||!m)return;
+  if(!signupsOf(mid).some(s=>s.pid===me)){toast('Apúntate primero al partido');return}
+  if(hoursTo(m)<=0){toast('El partido ya ha empezado');return}
+  const taken=new Set(duelsOf(mid).filter(d=>d.from===me||d.to===me).map(d=>d.from===me?d.to:d.from));
+  const rivals=signupsOf(mid).map(s=>s.pid).filter(p=>p!==me&&P(p)&&!taken.has(p));
+  if(!rivals.length){toast('No hay nadie más a quien retar en este partido');return}
+  let rival=rivals.includes(rivalPre)?rivalPre:null,kind='goals',stake='beer';
+  modal(`${mh('⚔️ Nuevo duelo')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}. Tu rival tiene que aceptarlo.</p>
+    <h3>¿A quién retas?</h3><div class="opts" id="dr">${rivals.map(p=>`<button class="opt ${p===rival?'on':''}" data-v="${esc(p)}">${esc(pname(p))}</button>`).join('')}</div>
+    <h3>¿A qué?</h3><div id="dk">${Object.entries(DUEL_KINDS).map(([k,K])=>`<button class="pl" data-v="${k}" style="width:100%"><span style="font-size:22px">${K.e}</span><span class="nm">${K.n}<br><span class="small muted" style="font-weight:500">${K.d}</span></span><span class="chk">${k===kind?'✓':''}</span></button>`).join('')}</div>
+    <h3>¿Qué os jugáis?</h3><div class="opts" id="ds">${Object.entries(DUEL_STAKES).map(([k,s])=>`<button class="opt ${k===stake?'on':''}" data-v="${k}">${s.e} ${s.n}${k==='court'&&m.price?` (${esc(m.price)}€)`:''}</button>`).join('')}</div>
+    <button class="btn pri full" id="sv" style="margin-top:20px">⚔️ Lanzar el reto</button>`,
+  md=>{
+    md.querySelectorAll('#dr .opt').forEach(b=>b.onclick=()=>{rival=b.dataset.v;md.querySelectorAll('#dr .opt').forEach(x=>x.classList.toggle('on',x===b))});
+    md.querySelectorAll('#dk [data-v]').forEach(b=>b.onclick=()=>{kind=b.dataset.v;md.querySelectorAll('#dk .chk').forEach(c=>c.textContent='');b.querySelector('.chk').textContent='✓'});
+    md.querySelectorAll('#ds .opt').forEach(b=>b.onclick=()=>{stake=b.dataset.v;md.querySelectorAll('#ds .opt').forEach(x=>x.classList.toggle('on',x===b))});
+    md.querySelector('#sv').onclick=async e=>{
+      if(!rival){toast('Elige a tu rival');return}
+      e.target.disabled=true;const id=nid();
+      try{await store.doc('duels/'+id).set({mid,from:me,to:rival,kind,stake,status:'pending',settled:false,createdAt:Date.now()});
+        const K=DUEL_KINDS[kind];const txt=`⚔️ *DUELO* en ${APP_NAME.join('')}\n${pname(me)} reta a ${pname(rival)}: ${K.e} ${K.n.toLowerCase()} el ${fmtShort(m)}.\nSe juegan ${stake==='court'?'💶 la pista':'🍺 una caña'}. ${pname(rival)}, ¿aceptas o te escondes? 🐔\n${appUrl()}`;
+        const wl=waLink(rival,txt);
+        modal(`${mh('Reto lanzado ⚔️')}<p class="muted">${esc(pname(rival))} lo verá en la app al entrar. Si quieres que se entere ya (y que se entere el grupo 😏):</p>
+          ${wl?`<a class="btn full" style="margin-top:14px;text-decoration:none;background:#25d366;border-color:#25d366;color:#fff" href="${wl}" target="_blank" rel="noopener">💬 Mandárselo a ${esc(pname(rival))}</a>`:''}
+          <button class="btn pri full" id="cp" style="margin-top:10px">📣 Copiar para el grupo</button>`,
+        md2=>md2.querySelector('#cp').onclick=()=>copyText(txt,'Copiado. Al grupo con él 📣'));
+      }catch(x){e.target.disabled=false;err(x)}
+    };
+  });
+}
+function duelRecord(pid){
+  let w=0,l=0,owe=0,owed=0;
+  Object.values(S.duels).forEach(d=>{if(d.from!==pid&&d.to!==pid)return;const r=duelResult(d);if(r.state!=='final')return;
+    if(r.winner===pid){w++;if(!d.settled)owed++}else{l++;if(!d.settled)owe++}});
+  return{w,l,owe,owed};
+}
+
+/* ============ COPIA DE SEGURIDAD ============ */
+async function backup(){
+  const cols=['players','matches','signups','stats','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','duels'];
+  const data={};cols.forEach(c=>{data[c]={};Object.values(S[c]||{}).forEach(d=>{const{id,...rest}=d;data[c][id]=rest})});
+  const json=JSON.stringify({app:APP_NAME.join(''),exportedAt:new Date().toISOString(),by:me?pname(me):'',data});
+  const name=`${APP_NAME.join('').toLowerCase()}-copia-${ymd(new Date())}.json`;
+  const blob=new Blob([json],{type:'application/json'});const file=new File([blob],name,{type:'application/json'});
+  const kb=Math.round(blob.size/1024);
+  const counts=`${Object.keys(data.players).length} jugadores · ${Object.keys(data.matches).length} partidos · ${kb} KB`;
+  const url=URL.createObjectURL(blob);
+  const can=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+  modal(`${mh('Copia de seguridad')}<p class="muted small">${counts}</p>
+    ${can?'<button class="btn pri full" id="bsh" style="margin-top:14px">📲 Guardar en Archivos / enviar</button>':''}
+    <a class="btn ${can?'':'pri'} full" style="margin-top:10px;text-decoration:none" href="${url}" download="${esc(name)}" id="bdl">⬇️ Descargar archivo</a>
+    <p class="small muted" style="margin-top:12px;line-height:1.5">Guárdala en tu iPhone (Archivos) o mándatela a ti mismo. Si algún día se borra algo, con este archivo se puede recuperar todo.</p>`,
+  md=>{const mark=async()=>{try{await store.doc('config/app').set({...(S.config.app||{}),lastBackup:Date.now()})}catch(e){}};
+    const b=md.querySelector('#bsh');if(b)b.onclick=async()=>{try{await navigator.share({files:[file],title:name});mark();toast('Copia guardada 💾')}catch(e){}};
+    md.querySelector('#bdl').addEventListener('click',()=>{mark();setTimeout(()=>toast('Copia descargada 💾'),300)});});
+}
+
 /* ============ ADMIN ============ */
 function adminSection(){
   const row=(e,t,d,on,act)=>`<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="sp"><b>${e} ${t}</b><br><span class="small muted">${d}</span></span><button class="tog ${on?'on':''}" data-act="${act}">${on?'Activada':'Oculta'}</button></div>`;
@@ -2117,6 +2279,7 @@ function adminSection(){
   return `<h2 id="admin" style="scroll-margin-top:90px">Panel de admin</h2>
     <div class="box" style="margin-bottom:10px"><b>🙋 Solicitudes para entrar · ${pend.length}</b>
     ${pend.map(p=>`<div class="pay"><span class="av">${face(p.id)}</span><span class="nm">${esc(p.name)}<br><span class="small muted" style="font-weight:500">${esc(POS[p.pos]||'')} · ${'★'.repeat(+p.level0||2)}</span></span><button class="tog on" data-act="approve" data-id="${esc(p.id)}">Aprobar</button><button class="tog" data-act="reject" data-id="${esc(p.id)}">✕</button></div>`).join('')||'<p class="small muted" style="margin-top:6px">Ninguna pendiente. Para meter a alguien directamente: Jugadores → "Fichar e invitar".</p>'}</div>
+    <div class="box" style="margin-bottom:10px"><div class="row"><span class="sp"><b>💾 Copia de seguridad</b><br><span class="small muted">${S.config.app?.lastBackup?`Última: ${new Date(S.config.app.lastBackup).toLocaleDateString('es-ES')}${(Date.now()-S.config.app.lastBackup)>30*864e5?' · ⚠️ hace más de un mes':''}`:'Nunca se ha hecho'}</span></span><button class="btn sm wht" data-act="backup">Descargar</button></div></div>
     <div class="box" style="margin-bottom:10px"><b>🔁 Partidos fijos</b>
     ${recRules().map((r,i)=>{const occ=nextOcc(r),oa=openAt(r,occ);return `<button class="pay" style="width:100%;text-align:left" data-act="recEdit" data-i="${i}"><span class="sp"><b>${WD[r.wd]}s ${esc(r.time)}</b> · ${esc(r.venue)}<br><span class="small muted" style="font-weight:500">${r.active?`Se abre el ${DIA[r.openWd]} a las ${esc(r.openTime)} · próximo ${occ.getDate()}/${occ.getMonth()+1}`:'Pausado'}</span></span><span class="muted">›</span></button>`}).join('')||'<p class="small muted" style="margin-top:6px">Ninguno todavía.</p>'}
     <button class="btn sm wht" style="margin-top:10px" data-act="recNew">＋ Añadir partido fijo</button></div>
@@ -2221,6 +2384,12 @@ document.addEventListener('click',e=>{
     case'unteams':store.doc('matches/'+id).update({teamA:[],teamB:[]}).catch(err);break;
     case'swap':if(canManage(S.matches[id]))swap(id,a.dataset.p);break;
     case'teamEdit':teamEditor(id);break;
+    case'duelNew':duelForm(id,a.dataset.rival);break;
+    case'duelAccept':store.doc('duels/'+id).update({status:'accepted',acceptedAt:Date.now()}).then(()=>toast('Reto aceptado ⚔️ ¡Que gane el peor!')).catch(err);break;
+    case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
+    case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
+    case'duelSettle':store.doc('duels/'+id).update({settled:true,settledAt:Date.now()}).then(()=>toast('Saldado ✅ Así da gusto')).catch(err);break;
+    case'backup':if(isAdmin())backup();break;
     case'promoCopy':{const m=S.matches[id];copyText(promoText(m,m.promoted.pid),'Aviso copiado 📲');break}
     case'recNew':recForm();break;
     case'recEdit':recForm(+a.dataset.i);break;
@@ -2255,6 +2424,7 @@ document.addEventListener('click',e=>{
     case'approve':store.doc('players/'+id).update({status:'approved'}).then(()=>toast(`${pname(id)} ya está dentro ✅`)).catch(err);break;
     case'reject':confirmBox('Rechazar solicitud',`Se borra la solicitud de <b>${esc(pname(id))}</b>.`,'Rechazar',async()=>{await store.doc('players/'+id).delete()},true);break;
     case'install':installModal();break;
+    case'updHide':{let s={};try{s=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){};s[id]=1;try{localStorage.setItem('fifa07_upd',JSON.stringify(s))}catch(e){};render();break}
     case'instHide':S.instHidden=true;try{localStorage.setItem('fifa07_insthide','1')}catch(e){};render();break;
     case'goAdmin':S.tab='info';render();setTimeout(()=>document.getElementById('admin')?.scrollIntoView({behavior:'smooth'}),50);break;
     case'galaToggle':confirmBox(galaOn()?'Ocultar la Gala':'Activar la Gala',galaOn()?'La pestaña Gala dejará de verse para el grupo. Los votos se guardan.':'Todo el grupo verá la pestaña Gala en Ranking y podrá votar el Balón de Oro y el de Plomo.',galaOn()?'Ocultar':'🏆 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),gala:!galaOn()})});break;
@@ -2356,7 +2526,7 @@ function sub(col){
   $('#logo').innerHTML=`${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b>${BETA?'<span class="beta">BETA</span>':''}<small>${esc(SLOGAN)}</small>`;document.title=APP_NAME.join('')+' · Pachangas';
   try{store=FIREBASE_CONFIG?await firebaseStore(FIREBASE_CONFIG):demoStore()}
   catch(e){console.error(e);storeErr=true;render();return}
-  ['players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats'].forEach(sub);
+  ['players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'].forEach(sub);
   setInterval(()=>{ensureRecurring();if(!S.sheet&&!document.querySelector('.md'))render()},60000);
 })();
 </script>
