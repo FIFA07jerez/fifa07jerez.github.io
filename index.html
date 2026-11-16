@@ -329,6 +329,7 @@ td.pts{font-family:'Anton';font-size:18px}
 .ach{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ach .a{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;opacity:.35;filter:grayscale(1)}
 .ach .a.on{opacity:1;filter:none;border-color:rgba(227,6,19,.5)}
+.ach .a.neg.on{border-color:#5a5a5a;background:repeating-linear-gradient(135deg,var(--s1) 0 8px,#181818 8px 16px)}
 .ach .ae{font-size:26px}.ach .an{font-size:12px;font-weight:800;margin-top:2px}.ach .ad{font-size:10px;color:var(--mut);margin-top:2px;line-height:1.2}
 .chem{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .chem .ce{font-size:24px}.chem .ck2{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
@@ -500,6 +501,12 @@ const dateMin=()=>ymd(new Date()),dateMax=()=>{const d=new Date();d.setDate(d.ge
 const hasPlayed=pid=>Object.values(S.matches).some(m=>m.status==='played'&&attendees(m).includes(pid));
 const levelLocked=pid=>!!pid&&hasPlayed(pid)&&!isAdmin(); // el nivel inicial se congela tras el primer partido (solo admins pueden tocarlo)
 const goalsLocked=m=>(Date.now()-mdt(m).getTime())>GOALS_EDIT_HOURS*36e5;
+// WhatsApp directo: si el jugador ha puesto su teléfono, se abre su chat con el mensaje ya escrito.
+const phoneDigits=ph=>{let d=String(ph||'').replace(/\D/g,'');if(d.length===9)d='34'+d;return d.length>=11?d:''};
+const waLink=(pid,text)=>{const d=phoneDigits(P(pid)?.phone);return d?`https://wa.me/${d}?text=${encodeURIComponent(text)}`:''};
+const promoText=(m,pid)=>`⬆️ ¡${pname(pid)}, entras en la pachanga del ${fmtShort(m)} a las ${m.time} en ${m.venue||'el campo'}! Alguien se ha bajado y has subido de la reserva. Cuentan contigo 💪\n${appUrl()}`;
+// Para apuntarse hay que haber votado el último partido jugado (si ya tiene resultado).
+const pendingVote=pid=>{if(!pid)return null;const last=Object.values(S.matches).filter(m=>m.status==='played'&&attendees(m).includes(pid)).sort((a,b)=>mdt(b)-mdt(a))[0];return last&&!hasVoted(last.id,pid)?last:null};
 const findDup=(date,time,venue,exceptId)=>Object.values(S.matches).find(m=>m.id!==exceptId&&m.date===date&&m.time===time&&normV(m.venue)===normV(venue));
 // Goles y asistencias: cada jugador declara los suyos (colección stats); el organizador puede corregir (m.goals / m.assists mandan).
 const myStat=(mid,pid)=>S.stats[`${mid}__${pid}`];
@@ -566,10 +573,11 @@ function computeLevels(){
   }
   return L;
 }
-function computeStats(flt){
+function computeStats(flt){return enrich(computeStatsRaw(flt))}
+function computeStatsRaw(flt){
   const LVL=computeLevels();
   const st={};
-  for(const id in S.players){const p=S.players[id];if(p.status==='pending')continue;st[id]={pj:0,v:0,e:0,d:0,g:0,a:0,aw:{crack:0,dandy:0,duro:0,vaya:0},rs:[],pts:0,y:p.yellow||0,r:p.red||0,hist:[],lv0:+p.level0||2,kitN:0,hasKit:!!p.kit}}
+  for(const id in S.players){const p=S.players[id];if(p.status==='pending')continue;st[id]={pj:0,v:0,e:0,d:0,g:0,a:0,aw:{crack:0,dandy:0,duro:0,vaya:0},rs:[],pts:0,y:p.yellow||0,r:p.red||0,hist:[],lv0:+p.level0||2,kitN:0,hasKit:!!p.kit,id}}
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&(!flt||flt(m))).sort((a,b)=>mdt(a)-mdt(b));
   for(const m of played){
     const aw=matchAwards(m);
@@ -595,7 +603,7 @@ function computeStats(flt){
     const gpm=s.pj?s.g/s.pj:0,cr=s.pj?s.aw.crack/s.pj:0,wr=s.pj?s.v/s.pj:0,vr=s.pj?s.aw.vaya/s.pj:0;
     s.ovr=Math.max(40,Math.min(99,Math.round(40+s.level*11+Math.min(gpm,2)*1.5+cr*4+wr*2-vr*3)));
   }
-  return enrich(st);
+  return st;
 }
 function attrs(s){
   const c=v=>Math.max(1,Math.min(99,Math.round(v)));
@@ -721,6 +729,7 @@ function matchCard(m,st,isNext){
     if(h>0){
       x+=`<div class="cta">`;
       if(mine)x+=`<button class="btn" data-act="leave" data-id="${esc(m.id)}">${inList?'✓ Estás dentro':`🪑 Reserva ${L.res.indexOf(me)+1}`}</button>`;
+      else if(me&&pendingVote(me))x+=`<button class="btn wht" data-act="vote" data-id="${esc(pendingVote(me).id)}">🗳️ Puntúa el último para apuntarte</button>`;
       else x+=`<button class="btn ${cnt>=n?'wht':'pri'}" data-act="join" data-id="${esc(m.id)}">${cnt>=n?'Apuntarme a reserva':'¡Me apunto!'}</button>`;
       x+=`<button class="iconbtn" data-act="copy" data-id="${esc(m.id)}" aria-label="Copiar lista">📋</button></div>`;
       if(inList&&(m.teamA||[]).length){const k=m.teamA.includes(me)?'A':'B';x+=`<div class="small" style="margin-top:10px;display:flex;align-items:center;gap:8px">${shirtSVG(TEAM[k].c,{size:22})}<span>Te toca la <b>${k==='A'?'blanca':'negra'}</b></span></div>`}
@@ -759,6 +768,7 @@ function matchDetail(m,st){
   }else if(h>0){
     x+=`<div style="margin-top:14px">`;
     if(mine)x+=`<button class="btn full" data-act="leave" data-id="${esc(m.id)}">Desapuntarme</button>`;
+    else if(me&&pendingVote(me))x+=`<button class="btn wht full" data-act="vote" data-id="${esc(pendingVote(me).id)}">🗳️ Puntúa tu último partido para apuntarte</button>`;
     else x+=`<button class="btn ${cnt>=n?'wht':'pri'} full" data-act="join" data-id="${esc(m.id)}">${cnt>=n?'Apuntarme a reserva':'¡Me apunto!'}</button>`;
     if(h<24)x+=`<p class="small muted" style="margin-top:8px;text-align:center">⚠️ Quedan menos de 24h: bajarse ahora es 🟨</p>`;
     x+=`</div>`;
@@ -766,6 +776,8 @@ function matchDetail(m,st){
 
   if(!played&&h>0&&(hasTeams||(suggest&&cnt>=4)))x+=previewHtml(m,suggest?balance(L.in,st):{A:m.teamA,B:m.teamB},st);
   else if(!played&&h>0)x+=wxHtml(m)?`<div class="previa" style="padding:12px 14px">${wxHtml(m)}</div>`:'';
+  if(!played&&h>0&&m.promoted?.pid&&P(m.promoted.pid)&&L.in.includes(m.promoted.pid)&&(canManage(m)||m.promoted.by===me)){const up=m.promoted.pid,wl=waLink(up,promoText(m,up));
+    x+=`<div class="banner" style="margin-top:14px"><span class="e">⬆️</span><span class="sp"><b>${esc(pname(up))} ha subido de la reserva</b><br><span class="small">Asegúrate de que lo sabe.</span></span>${wl?`<a class="btn sm" style="background:#25d366;border-color:#25d366;color:#fff;text-decoration:none" href="${wl}" target="_blank" rel="noopener">💬 Avisar</a>`:`<button class="btn sm" data-act="promoCopy" data-id="${esc(m.id)}">📋 Copiar</button>`}</div>`}
   // Reparto
   if(me&&(hasTeams||suggest)&&!played){const T0=suggest?balance(L.in,st):{A:m.teamA,B:m.teamB};const k=T0.A.includes(me)?'A':T0.B.includes(me)?'B':null;
     if(k)x+=`<div class="banner ${k==='A'?'wht':''}" style="margin-top:14px"><span class="e">${k==='A'?shirtSVG('w',{size:34}):shirtSVG('b',{size:34})}</span><span><b>Te toca la ${k==='A'?'BLANCA':'NEGRA'}</b>${suggest?' (de momento)':''}${kitOn()?`<br><span class="small" style="opacity:.75">Ven equipado: +${PTS.kit} punto y cuenta para el logro Uniformado.</span>`:''}</span></div>`}
@@ -909,7 +921,8 @@ function viewInfo(){
   h+=`<h2>Normas</h2><div class="box"><ul class="rules">
     <li><b>Grupo privado:</b> se entra con aprobación del admin o con invitación. No pases el enlace sin hablarlo.</li>
     <li>Cada uno se apunta <b>a sí mismo</b>. Si te apuntas, <b>vienes</b>.</li>
-    <li>Bajarse con <b>menos de 24h</b>: 🟨 automática. Si reincides: 🟥.</li>
+    <li>🗳️ <b>Para apuntarte tienes que haber puntuado tu último partido.</b></li>
+    <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides, 🟥).</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
     <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ⚡ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
     <li>Tu nivel inicial (las estrellas que te pones) <b>se congela al jugar tu primer partido</b>; tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
@@ -989,6 +1002,7 @@ function playerForm(id,asMe){
       <div><label class="btn sm" style="margin:0;display:inline-flex;text-transform:none;letter-spacing:0;font-size:13px;color:var(--txt)">📷 ${photo?'Cambiar':'Subir foto'}<input type="file" accept="image/*" id="phf" style="display:none"></label>
       <button class="btn sm ghost" id="phx" style="margin-top:6px;${photo?'':'display:none'}">Quitar foto</button>
       <p class="muted small" style="margin-top:6px">Una de la cara, que se te reconozca 😅</p></div></div>
+    ${(asMe||id===me||isAdmin())?`<label>Teléfono <span style="text-transform:none;letter-spacing:0;font-weight:500">(opcional)</span></label><input id="ph" inputmode="tel" value="${esc(p.phone||'')}" placeholder="600 123 456"><p class="muted small" style="margin-top:6px">Para que te avisen por WhatsApp con un toque si entras desde la reserva. Solo lo usa la app para eso.</p>`:''}
     <label>Nombre o mote</label><input id="nm" maxlength="18" value="${esc(p.name)}" placeholder="El Pirata, Juanma…">
     <label>Posición (es un decir)</label><div class="opts" id="pos">${Object.entries(POS).map(([k,v])=>`<button class="opt ${k===pos?'on':''}" data-v="${k}">${v}</button>`).join('')}</div>
     ${id&&levelLocked(id)?`<label>Nivel inicial</label><div class="box small" style="line-height:1.5">🔒 Empezaste con <b>${'★'.repeat(lv)}</b> (${LEVELS[lv]}). Como ya has jugado, ya no se puede cambiar: <b>ahora tu nivel lo deciden tus partidos</b>.</div>`:''}
@@ -1012,7 +1026,7 @@ function playerForm(id,asMe){
       if(pinEl&&!pin&&!(id&&p.pinHash)){toast('Ponte un PIN de 4 cifras');return}
       e.target.disabled=true;
       try{
-        const upd={name,pos,emoji:emo,level0:(id&&levelLocked(id))?(+p.level0||2):lv,photo:photo||null};if(pin)upd.pinHash=await hashPin(pin);
+        const upd={name,pos,emoji:emo,level0:(id&&levelLocked(id))?(+p.level0||2):lv,photo:photo||null};const phEl=md.querySelector('#ph');if(phEl){const pv=phEl.value.trim();if(pv&&!phoneDigits(pv)){toast('Ese teléfono no parece válido');e.target.disabled=false;return}upd.phone=pv}if(pin)upd.pinHash=await hashPin(pin);
         if(id){await store.doc('players/'+id).update(upd);close();toast('Guardado');return}
         const nidv=nid();const first=!Object.keys(S.players).length&&(store.mode==='demo'||S.conn?.ok);
         let invitePin=null;if(!asMe){invitePin=randPin();upd.pinHash=await hashPin(invitePin)}
@@ -1070,6 +1084,7 @@ function matchForm(id,pre){
 async function join(mid,pid){
   if(!pid){toast('Primero dinos quién eres');pickMe();return}
   if(S.signups[`${mid}__${pid}`])return;
+  if(pid===me){const pv=pendingVote(me);if(pv){modal(`${mh('Primero, a votar 🗳️')}<p class="muted">Para apuntarte tienes que puntuar tu último partido: <b style="color:var(--txt)">${esc(fmtShort(pv))} en ${esc(pv.venue||'')}</b>. Es un minuto y es anónimo.</p><button class="btn pri full" style="margin-top:16px" data-act="vote" data-id="${esc(pv.id)}">⭐ Puntuar ahora</button>`);return}}
   const m=S.matches[mid];const full=lineup(m).in.length>=(m.slots||10);
   try{await store.doc(`signups/${mid}__${pid}`).set({mid,pid,at:Date.now()});autoTeams(mid);
     toast(pid===me?(full?'Estás en reserva 🪑':'¡Dentro! Ahora no falles 😤'):`${pname(pid)} apuntado`)}catch(e){err(e)}
@@ -1089,7 +1104,7 @@ function leave(mid){
     }
     if(up){S.keepModal=true;
       const txt=`⬆️ ${pname(me)} se baja del partido del ${fmtShort(m)} (${m.venue}). Entra ${pname(up)} desde la reserva. ¡${pname(up)}, cuentan contigo!`;
-      modal(`${mh('Sube '+esc(pname(up)))}<p class="muted">${late?(isRed?'🟥 Roja apuntada. ':'🟨 Amarilla apuntada. '):''}Avisa a ${esc(pname(up))} para que sepa que entra.</p><textarea rows="4" readonly style="margin-top:12px">${esc(txt)}</textarea><button class="btn pri full" id="cp" style="margin-top:12px">📋 Copiar aviso para WhatsApp</button>`,
+      modal(`${mh('Sube '+esc(pname(up)))}<p class="muted">${late?(isRed?'🟥 Roja apuntada. ':'🟨 Amarilla apuntada. '):''}Avisa a ${esc(pname(up))} para que sepa que entra.</p><textarea rows="4" readonly style="margin-top:12px">${esc(txt)}</textarea>${waLink(up,promoText(m,up))?`<a class="btn pri full" style="margin-top:12px;text-decoration:none;background:#25d366;border-color:#25d366" href="${waLink(up,promoText(m,up))}" target="_blank" rel="noopener">💬 Avisar a ${esc(pname(up))} por WhatsApp</a>`:''}<button class="btn ${waLink(up,'x')?'':'pri'} full" id="cp" style="margin-top:10px">📋 Copiar aviso para el grupo</button>${waLink(up,'x')?'':`<p class="small muted" style="margin-top:8px">${esc(pname(up))} no ha puesto su teléfono en el perfil, por eso no sale el botón de WhatsApp directo.</p>`}`,
       md=>md.querySelector('#cp').onclick=()=>copyText(txt,'Aviso copiado. Pégalo en el grupo 📲',md.querySelector('textarea')));
     }else toast(late?(isRed?'🟥 ¡Roja! Vaya tela…':'🟨 Amarilla. Que no se repita.'):'Desapuntado');
   },true);
@@ -1318,8 +1333,9 @@ function profile(id){
     ${(()=>{const c=chemistry(id);const row=(e,t,e2)=>e?`<div class="chem"><span class="ce">${t[0]}</span><span class="sp"><span class="ck2">${t[1]}</span><b>${face(e[0])} ${esc(pname(e[0]))}</b></span><span class="cv">${e2(e[1])}</span></div>`:'';
       const body=row(c.best,['🤝','Mejor dupla'],v=>`${Math.round(v.w/v.pj*100)}% en ${v.pj}`)+row(c.worst,['💔','Dupla gafe'],v=>`${Math.round(v.w/v.pj*100)}% en ${v.pj}`)+row(c.nemesis,['😈','Bestia negra'],v=>`${v.l} derrotas de ${v.pj}`)+row(c.victim,['🍖','Víctima favorita'],v=>`${v.w} victorias de ${v.pj}`);
       return `<h3>Química</h3>${body||'<p class="muted small">Hace falta jugar al menos 2 partidos con (o contra) alguien.</p>'}`})()}
-    <h3>Logros · ${achList().filter(a=>a.t(s)).length}/${achList().length}</h3>
-    <div class="ach">${achList().map(a=>`<div class="a ${a.t(s)?'on':''}" title="${esc(a.d)}"><div class="ae">${a.e}</div><div class="an">${a.n}</div><div class="ad">${a.d}</div></div>`).join('')}</div>
+    ${(()=>{const L=achList().filter(a=>!a.neg),N=achList().filter(a=>a.neg);const card=a=>`<div class="a ${a.t(s)?'on':''} ${a.neg?'neg':''}" title="${esc(a.d)}"><div class="ae">${a.e}</div><div class="an">${a.n}</div><div class="ad">${a.d}</div></div>`;
+      return `<h3>Logros · ${L.filter(a=>a.t(s)).length}/${L.length}</h3><div class="ach">${L.map(card).join('')}</div><h3>Antilogros 😅 · ${N.filter(a=>a.t(s)).length}/${N.length}</h3><div class="ach">${N.map(card).join('')}</div>`})()}
+
     <h3>Historial</h3>
     ${s.hist.slice().reverse().map(h=>`<div class="hist"><span>${esc(fmtShort(h.m))} · ${esc(h.m.venue||'')}</span><span>${h.res==='V'?'✅':h.res==='E'?'🤝':h.res==='D'?'❌':''} ${h.g?'⚽'.repeat(Math.min(h.g,5)):''} ${h.aws.join('')} ${h.dl!=null?(h.dl>=0?`<span class="up">▲${h.dl.toFixed(2)}</span>`:`<span class="down">▼${(-h.dl).toFixed(2)}</span>`):''} <span class="muted">${h.pts>0?'+':''}${h.pts}pts</span></span></div>`).join('')||'<p class="muted small">Aún no ha jugado.</p>'}
     <div class="row wrapr" style="margin-top:18px">
@@ -1379,45 +1395,97 @@ const seasonRange=y=>[new Date(y,SEASON_START-1,1).getTime(),new Date(y+1,SEASON
 
 /* ============ RACHAS, LOGROS, QUÍMICA ============ */
 function enrich(st){
-  for(const id in st){const s=st[id];
-    let w=0,l=0,gs=0,dry=0,maxW=0,cw=0,maxG=0;
-    s.hist.forEach(h=>{if(h.res==='V'){cw++;maxW=Math.max(maxW,cw)}else cw=0;maxG=Math.max(maxG,h.g)});
-    for(let i=s.hist.length-1;i>=0;i--){if(s.hist[i].res==='V')w++;else break}
-    for(let i=s.hist.length-1;i>=0;i--){if(s.hist[i].res==='D')l++;else break}
-    for(let i=s.hist.length-1;i>=0;i--){if(s.hist[i].g>0)gs++;else break}
-    for(let i=s.hist.length-1;i>=0;i--){if(!s.hist[i].g)dry++;else break}
-    Object.assign(s,{wS:w,lS:l,gS:gs,dry,maxW,maxG});
+  const voted={};Object.values(S.voted).forEach(v=>voted[v.pid]=(voted[v.pid]||0)+1);
+  const hon=monthHonors();
+  for(const id in st){const s=st[id];const H=s.hist;
+    let cw=0,cl=0,cg=0,cd=0,maxW=0,maxL=0,maxGS=0,maxDry=0,maxG=0;
+    H.forEach(x=>{
+      if(x.res==='V'){cw++;maxW=Math.max(maxW,cw)}else cw=0;
+      if(x.res==='D'){cl++;maxL=Math.max(maxL,cl)}else cl=0;
+      if(x.g>0){cg++;maxGS=Math.max(maxGS,cg);cd=0}else{cd++;maxDry=Math.max(maxDry,cd);cg=0}
+      maxG=Math.max(maxG,x.g)});
+    const tail=f=>{let n=0;for(let i=H.length-1;i>=0;i--){if(f(H[i]))n++;else break}return n};
+    Object.assign(s,{wS:tail(x=>x.res==='V'),lS:tail(x=>x.res==='D'),gS:tail(x=>x.g>0),dry:tail(x=>!x.g),maxW,maxL,maxGS,maxDry,maxG,
+      venues:new Set(H.map(x=>normV(x.m.venue))).size,
+      nights:H.filter(x=>+(x.m.time||'0').split(':')[0]>=22).length,
+      fixed:H.filter(x=>x.m.recurring).length,
+      paidN:H.filter(x=>(x.m.paid||{})[id]).length,
+      fromRes:H.filter(x=>x.m.promoted?.pid===id).length,
+      orgN:H.filter(x=>x.m.createdBy===id).length,
+      votedN:voted[id]||0,
+      potm:hon.potm[id]||0,pich:hon.pich[id]||0});
   }
   return st;
 }
+// Jugador del mes y pichichi de cada mes ya terminado (se calcula una vez por cambio de datos).
+let _honKey='',_hon={potm:{},pich:{}};
+function monthHonors(){
+  const key=Object.keys(S.matches).length+'|'+Object.keys(S.votes).length+'|'+Object.keys(S.stats||{}).length+'|'+Object.values(S.matches).filter(m=>m.status==='played').length;
+  if(key===_honKey)return _hon;_honKey=key;const out={potm:{},pich:{}};
+  const cur=ym(new Date());const months=[...new Set(Object.values(S.matches).filter(m=>m.status==='played').map(m=>(m.date||'').slice(0,7)))].filter(x=>x&&x<cur);
+  _hon=out; // evita recursión
+  for(const mo of months){
+    const st=computeStatsRaw(m=>(m.date||'').startsWith(mo));const ids=Object.keys(st).filter(i=>st[i].pj>0);
+    if(!ids.length)continue;
+    const tp=ids.sort((a,b)=>st[b].pts-st[a].pts)[0];out.potm[tp]=(out.potm[tp]||0)+1;
+    const tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];if(st[tg].g>0)out.pich[tg]=(out.pich[tg]||0)+1;
+  }
+  return _hon=out;
+}
 function streak(s){
-  if(s.wS>=2)return{e:'🔥',n:s.wS,t:`${s.wS} victorias seguidas`};
-  if(s.gS>=3)return{e:'⚽',n:s.gS,t:`marcando ${s.gS} partidos seguidos`};
-  if(s.lS>=3)return{e:'🥶',n:s.lS,t:`${s.lS} derrotas seguidas`};
-  if(s.dry>=4)return{e:'🧊',n:s.dry,t:`${s.dry} partidos sin marcar`};
+  if(s.wS>=2)return{e:'🔥',n:s.wS,t:`en racha: ${s.wS} victorias seguidas`};
+  if(s.lS>=5)return{e:'💀',n:s.lS,t:`gafe: ${s.lS} derrotas seguidas`};
+  if(s.lS>=3)return{e:'🥶',n:s.lS,t:`pecho frío: ${s.lS} derrotas seguidas`};
+  if(s.gS>=3)return{e:'⚽',n:s.gS,t:`olfato de gol: marcando ${s.gS} partidos seguidos`};
+  if(s.dry>=4)return{e:'🧊',n:s.dry,t:`pólvora mojada: ${s.dry} partidos sin marcar`};
   return null;
 }
 const ACH=[
-  {e:'👕',n:'Oficial',d:'Pedir la equipación FIFA07',t:s=>s.hasKit,kit:true},
+  {e:'👕',n:'Oficial',d:'Pedir la equipación',t:s=>s.hasKit,kit:true},
   {e:'🎽',n:'Uniformado',d:'10 partidos con la camiseta',t:s=>s.kitN>=10,kit:true},
+  // Partidos
   {e:'👟',n:'Debut',d:'Jugar tu primer partido',t:s=>s.pj>=1},
   {e:'📅',n:'Fijo',d:'10 partidos jugados',t:s=>s.pj>=10},
   {e:'🎖️',n:'Veterano',d:'25 partidos jugados',t:s=>s.pj>=25},
   {e:'🏛️',n:'Clásico',d:'50 partidos jugados',t:s=>s.pj>=50},
+  {e:'💯',n:'Centenario',d:'100 partidos jugados',t:s=>s.pj>=100},
+  {e:'🔁',n:'Del jueves de toda la vida',d:'10 partidos fijos',t:s=>s.fixed>=10},
+  {e:'🧳',n:'Trotamundos',d:'Jugar en 4 campos distintos',t:s=>s.venues>=4},
+  {e:'🌙',n:'Noctámbulo',d:'5 partidos a partir de las 22:00',t:s=>s.nights>=5},
+  {e:'🪑',n:'Calientabanquillos',d:'Entrar 3 veces desde la reserva',t:s=>s.fromRes>=3},
+  {e:'👑',n:'Capitán',d:'Organizar 5 partidos',t:s=>s.orgN>=5},
+  {e:'🗳️',n:'Juez del vestuario',d:'Votar en 10 partidos',t:s=>s.votedN>=10},
+  {e:'⏰',n:'Palabra de honor',d:'10 partidos sin bajarte tarde (sin 🟨)',t:s=>s.pj>=10&&!s.y&&!s.r},
+  {e:'💸',n:'Al día',d:'Pagar tu parte en 10 partidos',t:s=>s.paidN>=10},
+  // Goles
   {e:'⚽',n:'Se estrenó',d:'Marcar tu primer gol',t:s=>s.g>=1},
   {e:'✌️',n:'Doblete',d:'2 goles en un partido',t:s=>s.maxG>=2},
   {e:'3️⃣',n:'Hat-trick',d:'3 goles en un partido',t:s=>s.maxG>=3},
   {e:'🖐️',n:'Manita',d:'5 goles en un partido',t:s=>s.maxG>=5},
+  {e:'👃',n:'Olfato de gol',d:'Marcar 3 partidos seguidos',t:s=>s.maxGS>=3},
+  {e:'💣',n:'Cañonero',d:'25 goles en total',t:s=>s.g>=25},
   {e:'🎯',n:'Asistente',d:'10 asistencias',t:s=>s.a>=10,ast:true},
+  // Vestuario y premios
   {e:'⭐',n:'Crack',d:'Ser El Crack una vez',t:s=>s.aw.crack>=1},
   {e:'👑',n:'Leyenda',d:'Ser El Crack 5 veces',t:s=>s.aw.crack>=5},
   {e:'🎩',n:'Elegancia',d:'Ser El Dandy 3 veces',t:s=>s.aw.dandy>=3},
   {e:'🪨',n:'Muro',d:'Ser El Duro 3 veces',t:s=>s.aw.duro>=3},
-  {e:'🤦',n:'Rey del Vaya día',d:'Ser Vaya día 3 veces',t:s=>s.aw.vaya>=3},
+  {e:'🎭',n:'Doble cara',d:'Haber sido Crack y Vaya día',t:s=>s.aw.crack>=1&&s.aw.vaya>=1},
+  {e:'🐐',n:'Jugador del mes',d:'Ganar un jugador del mes',t:s=>s.potm>=1},
+  {e:'🥇',n:'Pichichi del mes',d:'Máximo goleador de un mes',t:s=>s.pich>=1},
+  // Rachas
   {e:'🔥',n:'En racha',d:'3 victorias seguidas',t:s=>s.maxW>=3},
   {e:'🚀',n:'Imparable',d:'5 victorias seguidas',t:s=>s.maxW>=5},
-  {e:'😇',n:'Fair play',d:'10 partidos sin tarjetas',t:s=>s.pj>=10&&!s.y&&!s.r},
   {e:'📈',n:'Subidón',d:'Subir medio nivel desde el inicial',t:s=>s.level-s.lv0>=0.5},
+  // Antilogros (con cariño)
+  {e:'🥶',n:'Pecho frío',d:'Perder 3 partidos seguidos',t:s=>s.maxL>=3,neg:true},
+  {e:'💀',n:'Gafe',d:'Perder 5 partidos seguidos',t:s=>s.maxL>=5,neg:true},
+  {e:'🧊',n:'Pólvora mojada',d:'5 partidos seguidos sin marcar',t:s=>s.maxDry>=5,neg:true},
+  {e:'🪵',n:'Pie de madera',d:'10 partidos jugados y 0 goles',t:s=>s.pj>=10&&s.g===0,neg:true},
+  {e:'🤦',n:'Rey del Vaya día',d:'Ser Vaya día 3 veces',t:s=>s.aw.vaya>=3,neg:true},
+  {e:'🤝',n:'Ni fu ni fa',d:'Empatar 3 partidos',t:s=>s.e>=3,neg:true},
+  {e:'🟨',n:'Tarjetero',d:'Llevarte una amarilla por bajarte tarde',t:s=>s.y+s.r>=1,neg:true},
+  {e:'📉',n:'Caída libre',d:'Bajar medio nivel desde el inicial',t:s=>s.lv0-s.level>=0.5,neg:true},
 ];
 function achList(){return ACH.filter(a=>(!a.kit||kitOn())&&(!a.ast||astOn()))}
 function chemistry(pid){
@@ -1568,7 +1636,7 @@ async function imgCard(id){
   g.fillText(`${s.pj} PJ · ${s.g} GOLES · ${s.v} VICTORIAS · ${s.aw.crack} ⭐`,540,1030);
   g.font='700 30px Archivo';g.fillStyle='#8f8f8f';const sk=streak(s);
   g.fillText(`Nivel ${s.level.toFixed(2)}${sk?`  ·  ${sk.e} ${sk.t}`:''}`,540,1085);
-  const got=achList().filter(a=>a.t(s));g.font='44px serif';g.fillText(got.slice(-10).map(a=>a.e).join(' '),540,1180);
+  const got=achList().filter(a=>!a.neg&&a.t(s));g.font='44px serif';g.fillText(got.slice(-10).map(a=>a.e).join(' '),540,1180);
   g.textAlign='left';return c;
 }
 async function imgMonth(){
@@ -2153,6 +2221,7 @@ document.addEventListener('click',e=>{
     case'unteams':store.doc('matches/'+id).update({teamA:[],teamB:[]}).catch(err);break;
     case'swap':if(canManage(S.matches[id]))swap(id,a.dataset.p);break;
     case'teamEdit':teamEditor(id);break;
+    case'promoCopy':{const m=S.matches[id];copyText(promoText(m,m.promoted.pid),'Aviso copiado 📲');break}
     case'recNew':recForm();break;
     case'recEdit':recForm(+a.dataset.i);break;
     case'myStats':myStatsForm(id);break;
