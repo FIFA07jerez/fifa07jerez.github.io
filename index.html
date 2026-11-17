@@ -44,7 +44,15 @@ header{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.85);-webkit-ba
 .av{width:30px;height:30px;border-radius:50%;background:var(--s2);display:grid;place-items:center;font-size:17px;flex:none}
 .ph{width:1.5em;height:1.5em;border-radius:50%;object-fit:cover;vertical-align:middle;display:inline-block}
 .av .ph,.faces .f .ph{width:100%;height:100%;font-size:inherit}
-.av,.faces .f{overflow:hidden}
+.faces .f{overflow:hidden}.av{position:relative}
+.inj{display:none}
+.av .inj{display:grid;place-items:center;position:absolute;right:-4px;bottom:-4px;width:15px;height:15px;border-radius:50%;background:#fff;color:#e10600;font-style:normal;font-weight:900;font-size:13px;line-height:1;box-shadow:0 0 0 1.5px #e10600}
+.fut .face .inj{display:grid;place-items:center;position:absolute;right:2%;bottom:4%;width:16cqw;height:16cqw;border-radius:50%;background:#fff;color:#e10600;font-style:normal;font-weight:900;font-size:13cqw;line-height:1;box-shadow:0 0 0 1cqw #e10600,0 2cqw 5cqw rgba(0,0,0,.4)}
+.fut.injd .face img,.fut.injd .face{filter:grayscale(.55)}
+.fut .injb{position:absolute;left:50%;top:44.5%;transform:translateX(-50%) rotate(-6deg);background:#e10600;color:#fff;font-family:'Archivo';font-weight:900;font-size:4.6cqw;letter-spacing:.06em;text-transform:uppercase;padding:1.2cqw 3cqw;border-radius:1.5cqw;white-space:nowrap;z-index:4;box-shadow:0 2cqw 6cqw rgba(0,0,0,.45)}
+.injpick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.injpick button{display:flex;align-items:center;gap:8px;text-align:left;padding:10px;border-radius:12px;background:var(--s2);border:1px solid var(--line2);color:var(--txt);font-size:13px;font-weight:700}
+.injpick button.on{border-color:#e10600;background:rgba(225,6,0,.15)}
 .photo-edit{display:flex;gap:16px;align-items:center;margin-top:8px}
 .photo-edit .big{width:96px;height:96px;border-radius:50%;background:var(--s1);border:2px dashed var(--line2);display:grid;place-items:center;font-size:44px;overflow:hidden;flex:none}
 .photo-edit .big img{width:100%;height:100%;object-fit:cover}
@@ -457,6 +465,7 @@ const SLOGAN = 'Para los amantes del mal fútbol';
 const CREATOR = 'Daniel Lucena';
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
+  {at:'2026-11-17T18:40:00+01:00', e:'✚', t:'Parte médico', d:'¿Lesionado? Márcalo en tu perfil (Jugadores → tu carta) y te sale una cruz roja. Hay opciones como "En la UVI" o "En la cuneta".'},
   {at:'2026-11-17T18:30:00+01:00', e:'🥜', t:'Nuevo duelo: el caño', d:'Reta a alguien a que le haces un caño. Si se lo haces y lo confirma, paga él. Ojo: a los de reserva ya no se les puede retar.'},
   {at:'2026-11-17T00:40:00+01:00', e:'⚔️', t:'Nuevo: duelos', d:'Reta a alguien de tu partido y jugaos una caña o la pista. Lo tienes en la ficha del partido.'},
 ];
@@ -513,7 +522,9 @@ const P=id=>S.players[id];
 const pname=id=>P(id)?.name||'¿?';
 const pemo=id=>P(id)?.emoji||'⚽';
 const okPhoto=ph=>typeof ph==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ph);
-const face=id=>{const ph=P(id)?.photo;return okPhoto(ph)?`<img class="ph" src="${ph}" alt="">`:esc(pemo(id))};
+const INJURIES=[['🚑','Lesionado'],['🏥','En la UVI'],['🛣️','En la cuneta'],['🦴','Menisco de cristal'],['🛋️','En el dique seco'],['🧊','Con hielo y paciencia'],['🧈','Isquios de mantequilla'],['🍺','Lesionado del tercer tiempo'],['⚰️','Dado por muerto'],['🧓','Baja por la edad'],['🩼','Con muletas y dignidad'],['🙏','Rezando al fisio']];
+const injOf=id=>{const j=P(id)?.injury;return j&&j.label?j:null};
+const face=id=>{const ph=P(id)?.photo;return (okPhoto(ph)?`<img class="ph" src="${ph}" alt="">`:esc(pemo(id)))+(injOf(id)?'<i class="inj" title="Lesionado">✚</i>':'')};
 const isAdmin=()=>!!(me&&P(me)?.admin&&P(me)?.status!=='pending');
 const isPending=id=>P(id)?.status==='pending';
 const approvedIds=()=>Object.keys(S.players).filter(id=>!isPending(id));
@@ -973,7 +984,9 @@ function futCard(id,st,big=false,opt={}){
   const at=attrs(s),L=at.slice(0,3),R=at.slice(3);
   const row=([k,v])=>`<div class="r"><b>${v}</b><span>${k}</span></div>`;
   const badge=opt.badge||(inf?'⭐ Crack de la jornada':vayaKing?'🤦 Rey del Vaya día':s.aw.crack>=3?'⭐ Leyenda':'');
-  return `<button class="fut ${t} ${big?'big':''}" ${big?'':`data-act="profile" data-id="${esc(id)}"`}><div class="fi">
+  const ij=injOf(id);
+  return `<button class="fut ${t} ${big?'big':''} ${ij?'injd':''}" ${big?'':`data-act="profile" data-id="${esc(id)}"`}><div class="fi">
+    ${ij?`<div class="injb">✚ ${esc(ij.label)}</div>`:''}
     ${badge?`<div class="badge">${badge}</div>`:''}
     <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(p.pos||'TODO')}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i><div class="lvl">⚡${s.level.toFixed(1)}</div>${sk&&!opt.extra?`<div class="strk">${sk.e}${sk.n}</div>`:''}</div>
     <div class="face ${okPhoto(p.photo)?'hasph':''}">${face(id)}</div>
@@ -1034,6 +1047,15 @@ function modal(html,onMount,sheet=null){
 }
 function close(){S.sheet=null;$('#modalRoot').innerHTML=''}
 const mh=t=>`<div class="mh"><h2>${t}</h2><button class="x">✕</button></div>`;
+function injForm(id){const mine=id===me;let sel=Math.floor(Math.random()*INJURIES.length);
+  modal(`${mh('✚ Parte médico')}<p class="muted small">${mine?'Elige cómo quieres que te vean los demás':'¿Cómo lo ponemos?'}. Te sale una cruz roja en la foto y en la carta hasta que ${mine?'digas':'diga'} que ya está bien.</p>
+    <div class="injpick" id="ip">${INJURIES.map(([e,n],i)=>`<button class="${i===sel?'on':''}" data-v="${i}"><span style="font-size:20px">${e}</span><span>${esc(n)}</span></button>`).join('')}</div>
+    <label>¿Para cuándo vuelve? <span style="text-transform:none;letter-spacing:0;font-weight:500">(opcional)</span></label><input id="inote" maxlength="40" placeholder="2 semanas, cuando me deje el fisio…">
+    <button class="btn pri full" id="sv" style="margin-top:20px">✚ Al dique seco</button>`,
+  md=>{md.querySelectorAll('#ip button').forEach(b=>b.onclick=()=>{sel=+b.dataset.v;md.querySelectorAll('#ip button').forEach(x=>x.classList.toggle('on',x===b))});
+    md.querySelector('#sv').onclick=async e=>{e.target.disabled=true;const [em,label]=INJURIES[sel];
+      try{await withTimeout(store.doc('players/'+id).update({injury:{e:em,label,note:md.querySelector('#inote').value.trim(),at:Date.now()}}));close();toast(`${em} ${label}. Recupérate pronto`)}catch(x){e.target.disabled=false;err(x)}}});
+}
 function confirmBox(title,text,okLabel,onOk,danger){
   modal(`${mh(title)}<p class="muted" style="margin:8px 0 20px">${text}</p><div class="row"><button class="btn full x" style="width:auto;flex:1;height:auto;font-size:14px;color:var(--txt);background:var(--s2)">Cancelar</button><button class="btn full ${danger?'dan':'pri'}" id="ok" style="flex:1">${okLabel}</button></div>`,
   md=>md.querySelector('#ok').onclick=async()=>{md.querySelector('#ok').disabled=true;try{await onOk()}catch(e){err(e)}if(!S.keepModal)close();S.keepModal=false});
@@ -1167,6 +1189,7 @@ async function join(mid,pid){
   if(!pid){toast('Primero dinos quién eres');pickMe();return}
   if(S.signups[`${mid}__${pid}`])return;
   if(pid===me){const pv=pendingVote(me);if(pv){modal(`${mh('Primero, a votar 🗳️')}<p class="muted">Para apuntarte tienes que puntuar tu último partido: <b style="color:var(--txt)">${esc(fmtShort(pv))} en ${esc(pv.venue||'')}</b>. Es un minuto y es anónimo.</p><button class="btn pri full" style="margin-top:16px" data-act="vote" data-id="${esc(pv.id)}">⭐ Puntuar ahora</button>`);return}}
+  if(pid===me&&injOf(me)&&!S._injOk){const ij=injOf(me);confirmBox('¿Ya estás recuperado?',`Estás marcado como <b>${esc(ij.e)} ${esc(ij.label)}</b>. Si te apuntas, te quitamos la cruz roja.`,'💪 Sí, estoy bien',async()=>{await store.doc('players/'+me).update({injury:null});S._injOk=true;try{await join(mid,pid)}finally{S._injOk=false}});return}
   const m=S.matches[mid];const full=lineup(m).in.length>=(m.slots||10);
   try{await store.doc(`signups/${mid}__${pid}`).set({mid,pid,at:Date.now()});autoTeams(mid);
     toast(pid===me?(full?'Estás en reserva 🪑':'¡Dentro! Ahora no falles 😤'):`${pname(pid)} apuntado`)}catch(e){err(e)}
@@ -1422,6 +1445,10 @@ function profile(id){
     </div>
     <p class="small muted" style="margin-top:12px">${stars(s.level)} Fiabilidad <b style="color:var(--txt)">${s.rel}%</b> · empezó en ${s.lv0}★ · ahora ${s.level.toFixed(2)} ${s.level-s.lv0>=0?`<span class="up">▲${(s.level-s.lv0).toFixed(2)}</span>`:`<span class="down">▼${(s.lv0-s.level).toFixed(2)}</span>`}</p>
     <p class="small muted" style="margin-top:4px">${esc(POS[p.pos]||'Todocampista')} · Tarjetas: ${s.y?`🟨×${s.y} `:''}${s.r?`🟥×${s.r}`:''}${!s.y&&!s.r?'limpio 😇':''}${p.admin?' · <span class="pill red">Admin</span>':''}</p>
+    ${(()=>{const ij=injOf(id);const mine=id===me;let x='';
+      if(ij){const d=Math.floor((Date.now()-(ij.at||Date.now()))/864e5);x+=`<div class="banner" style="margin-top:12px;border-color:#e10600;background:rgba(225,6,0,.12)"><span class="e" style="color:#e10600;font-weight:900">✚</span><span class="sp"><b>${esc(ij.e||'🚑')} ${esc(ij.label)}</b><br><span class="small">${d<1?'Desde hoy':d===1?'Desde ayer':`Desde hace ${d} días`}${ij.note?` · Vuelve: ${esc(ij.note)}`:''}</span></span></div>`}
+      if(mine||isAdmin())x+=ij?`<button class="btn full" style="margin-top:10px" data-act="injOff" data-id="${esc(id)}">💪 ${mine?'Ya estoy bien':'Quitar la lesión'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="injOn" data-id="${esc(id)}">✚ ${mine?'Me he lesionado':'Marcar como lesionado'}</button>`;
+      return x})()}
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
     ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
     ${(()=>{const sk=streak(s);return sk?`<div class="banner" style="margin-top:12px"><span class="e">${sk.e}</span><span><b>${sk.t[0].toUpperCase()+sk.t.slice(1)}</b></span></div>`:''})()}
@@ -2475,6 +2502,8 @@ document.addEventListener('click',e=>{
     case'duelAccept':{const d=S.duels[id],mm=d&&S.matches[d.mid];if(mm&&!lineup(mm).in.includes(me)){toast('Estás en reserva: no puedes aceptar hasta entrar en la lista 🪑');break}}store.doc('duels/'+id).update({status:'accepted',acceptedAt:Date.now()}).then(()=>toast('Reto aceptado ⚔️ ¡Que gane el peor!')).catch(err);break;
     case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
     case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
+    case'injOn':injForm(id);break;
+    case'injOff':store.doc('players/'+id).update({injury:null}).then(()=>{close();toast(id===me?'¡Vuelve el crack! 💪':'Lesión quitada')}).catch(err);break;
     case'duelNut':{const v=a.dataset.v,d=S.duels[id];if(!d)break;
       const go=()=>store.doc('duels/'+id).update({nut:v,nutAt:Date.now(),nutBy:me}).then(()=>toast(v==='claimed'?`Hecho. Ahora ${pname(d.to)} lo tiene que confirmar 🥜`:v==='yes'?'Caño confirmado 🥜 Duele, eh':'Apuntado: no hubo caño')).catch(err);
       if(v==='no'&&d.from===me)confirmBox('No hubo caño','Entonces gana '+esc(pname(d.to))+' el duelo.','Vale, pago yo',go,true);else go();break}
@@ -2556,6 +2585,7 @@ async function firebaseStore(cfg){
 function demoStore(){
   let data=null;try{data=JSON.parse(localStorage.getItem('fifa07_demo'))}catch(e){}
   if(!data){data=seed();me='d0';try{localStorage.setItem('fifa07_me','d0')}catch(e){}}
+  if(data&&data.players&&data.players.d5&&!data._inj){data._inj=1;data.players.d5.injury={e:'🏥',label:'En la UVI',note:'cuando me deje el fisio',at:Date.now()-3*864e5}}
   if(data&&!(data.config&&data.config.app&&data.config.app.promo&&data.config.app.promo.logo!==undefined)){data.config=data.config||{};const d=new Date();d.setDate(d.getDate()+19);
     data.config.app={...((data.config.app)||{}),promo:{on:true,logo:true,title:'Torneo Memorial Alberto Lucena Cortés',kicker:'II Edición',emoji:'🕊️',date:ymd(d),time:'10:00',place:'Lugar por confirmar',text:'Texto de ejemplo: aquí va lo que quieras contar del memorial (torneo, inscripciones, causa solidaria…). Lo cambias todo desde el Panel de admin.',url:'',cta:'Apuntarme',days:30,img:''}}}
   const subs={};const save=()=>{try{localStorage.setItem('fifa07_demo',JSON.stringify(data))}catch(e){}};
@@ -2575,6 +2605,7 @@ function demoStore(){
 function seed(){
   const names=[['Dani','MED','😎',3],['El Pirata','DEL','🥸',3],['Juanma','DEF','🧔',2],['Rafita','POR','🦍',2],['Curro','MED','🐂',3],['Lolo','DEF','🐢',1],['Chino','DEL','🔥',4],['Fran','TODO','🍺',2],['Kike','DEF','🧱',2],['Tito','MED','🐐',3],['Manu','POR','🦥',1],['Javi','DEL','🤠',3],['Nono','TODO','🐷',2],['Moi','MED','🦁',4]];
   const players={};names.forEach(([n,pos,e,l],i)=>players['d'+i]={name:n,pos,emoji:e,level0:l,yellow:i===5?1:0,red:0,cardLog:[],admin:i===0,createdAt:i});
+  players.d5.injury={e:'🏥',label:'En la UVI',note:'cuando me deje el fisio',at:Date.now()-3*864e5};
   [[1,9,'M'],[2,4,'XL'],[3,1,'L'],[4,8,'L'],[6,10,'S'],[9,6,'M'],[13,23,'L']].forEach(([i,d,sz])=>{players['d'+i].dorsal=d;players['d'+i].kit={size:sz,name:players['d'+i].name,both:true,at:i}});
   const matches={},signups={},votes={},voted={};
   let rnd=7;const R=()=>{rnd=(rnd*9301+49297)%233280;return rnd/233280};
