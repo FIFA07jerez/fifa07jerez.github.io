@@ -465,7 +465,7 @@ const SLOGAN = 'Para los amantes del mal fútbol';
 const CREATOR = 'Daniel Lucena';
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
-  {at:'2026-11-17T18:40:00+01:00', e:'✚', t:'Parte médico', d:'¿Lesionado? Márcalo en tu perfil (Jugadores → tu carta) y te sale una cruz roja. Hay opciones como "En la UVI" o "En la cuneta".'},
+  {at:'2026-11-17T18:40:00+01:00', e:'✚', t:'Parte médico', d:'¿Lesionado? Toca tu nombre arriba a la derecha → "✚ Me he lesionado" y te sale una cruz roja. Hay opciones como "En la UVI" o "En la cuneta".'},
   {at:'2026-11-17T18:30:00+01:00', e:'🥜', t:'Nuevo duelo: el caño', d:'Reta a alguien a que le haces un caño. Si se lo haces y lo confirma, paga él. Ojo: a los de reserva ya no se les puede retar.'},
   {at:'2026-11-17T00:40:00+01:00', e:'⚔️', t:'Nuevo: duelos', d:'Reta a alguien de tu partido y jugaos una caña o la pista. Lo tienes en la ficha del partido.'},
 ];
@@ -1077,7 +1077,8 @@ function pinPrompt(title,sub,cb){
 function pickMe(){
   if(needsGate()){loginForm();return}
   const ids=approvedIds().sort((a,b)=>pname(a).localeCompare(pname(b)));
-  modal(`${mh('¿Quién eres?')}<p class="muted small" style="margin-bottom:12px">Para cambiar de jugador en este móvil hace falta su PIN.</p>
+  const mine=me&&P(me)?`<div class="row" style="gap:8px;margin:4px 0 14px"><button class="btn" style="flex:1" data-act="profile" data-id="${esc(me)}">🃏 Mi carta</button>${injOf(me)?`<button class="btn" style="flex:1" data-act="injOff" data-id="${esc(me)}">💪 Ya estoy bien</button>`:`<button class="btn" style="flex:1;border-color:#e10600" data-act="injOn" data-id="${esc(me)}"><b style="color:#e10600">✚</b> Me he lesionado</button>`}</div>`:'';
+  modal(`${mh(me&&P(me)?esc(pname(me)):'¿Quién eres?')}${mine}${mine?'<h3 style="margin-top:6px">Cambiar de jugador</h3>':''}<p class="muted small" style="margin-bottom:12px">Para cambiar de jugador en este móvil hace falta su PIN.</p>
     <input id="q" placeholder="Buscar…" style="margin-bottom:6px">
     <div>${ids.map(id=>`<button class="pl" data-pick="${esc(id)}"><span class="av">${face(id)}</span><span class="nm">${esc(pname(id))}</span>${id===me?'<span class="pill red">Tú</span>':'<span class="muted">🔒</span>'}</button>`).join('')}</div>
     <button class="btn ghost full" id="out" style="margin-top:14px">Cerrar sesión en este móvil</button>`,
