@@ -1414,7 +1414,7 @@ function voteForm(mid){
       try{
         // El voto se guarda SIN identificar a quien vota; aparte solo se marca que ya ha votado.
         const vd={mid,ratings:r,awards};if(fs)vd.field={s:fs,tags:[...ftags],venue:m.venue||''};
-        await store.doc('votes/'+nid()+Math.random().toString(36).slice(2,8)).set(vd);
+        await store.doc('votes/'+Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>b.toString(36).padStart(2,'0')).join('')).set(vd);
         await store.doc(`voted/${mid}__${me}`).set({mid,pid:me});
         if(!goalsLocked(m))await store.doc(`stats/${mid}__${me}`).set({mid,pid:me,g:myG,a:myA,at:Date.now()});
         close();toast('Votos enviados 🗳️');
@@ -1938,7 +1938,7 @@ function galaVoteForm(){
     md.querySelector('#sv').onclick=async e=>{
       if(!oro||!plomo){toast('Elige los dos premios');return}
       e.target.disabled=true;
-      try{await store.doc('galaVotes/'+nid()+Math.random().toString(36).slice(2,8)).set({season:y,oro,plomo});
+      try{await store.doc('galaVotes/'+Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>b.toString(36).padStart(2,'0')).join('')).set({season:y,oro,plomo});
         await store.doc(`galaVoted/${y}__${me}`).set({season:y,pid:me});close();toast('Voto enviado 🗳️')}catch(x){e.target.disabled=false;err(x)}
     };
   });
@@ -2233,11 +2233,11 @@ async function ensureRecurring(){
     for(const r of recRules()){
       if(!r.active)continue;const occ=nextOcc(r),oa=openAt(r,occ);
       if(Date.now()<oa.getTime())continue;
-      const id=recId(r,occ);if(recDone.has(id)||S.matches[id])continue;
+      const id=recId(r,occ);if(recDone.has(id)||S.matches[id]||(S.config.recurring?.skip||[]).includes(id))continue;
       const date=ymd(occ);
       if(findDup(date,r.time,r.venue)){recDone.add(id);continue}
       recDone.add(id);
-      await store.doc('matches/'+id).set({date,time:r.time,venue:r.venue,format:r.format||'Fut5',slots:+r.slots||FORMATS[r.format]||10,price:r.price||'',bizum:r.bizum||'',notes:r.notes||'',status:'open',teamA:[],teamB:[],scoreA:0,scoreB:0,goals:{},assists:{},paid:{},createdBy:r.org||null,createdAt:Date.now(),recurring:r.id});
+      await store.doc('matches/'+id).set({date,time:r.time,venue:r.venue,format:r.format||'Fut5',slots:+r.slots||FORMATS[r.format]||10,price:r.price||'',bizum:r.bizum||'',notes:r.notes||'',status:'open',createdBy:r.org||null,createdAt:Date.now(),recurring:r.id},{merge:true});
     }
   }catch(e){console.error(e)}finally{recBusy=false}
 }
@@ -2266,8 +2266,8 @@ function recForm(idx){
     md.querySelectorAll('select,input').forEach(i=>i.addEventListener('change',prev));prev();
     md.querySelectorAll('#rf .opt').forEach(b=>b.onclick=()=>{fmt=b.dataset.v;md.querySelector('#rs').value=FORMATS[fmt];md.querySelectorAll('#rf .opt').forEach(x=>x.classList.toggle('on',x===b));prev()});
     md.querySelector('#sv').onclick=async e=>{e.target.disabled=true;const nr=read();const list=rules.slice();if(idx!=null)list[idx]=nr;else list.push(nr);
-      try{await store.doc('config/recurring').set({rules:list});close();toast('Partido fijo guardado 🔁');setTimeout(ensureRecurring,300)}catch(x){e.target.disabled=false;err(x)}};
-    const del=md.querySelector('#rdel');if(del)del.onclick=async()=>{const list=rules.filter((_,i)=>i!==idx);try{await store.doc('config/recurring').set({rules:list});close();toast('Borrado')}catch(x){err(x)}};
+      try{await store.doc('config/recurring').set({...(S.config.recurring||{}),rules:list});close();toast('Partido fijo guardado 🔁');setTimeout(ensureRecurring,300)}catch(x){e.target.disabled=false;err(x)}};
+    const del=md.querySelector('#rdel');if(del)del.onclick=async()=>{const list=rules.filter((_,i)=>i!==idx);try{await store.doc('config/recurring').set({...(S.config.recurring||{}),rules:list});close();toast('Borrado')}catch(x){err(x)}};
   });
 }
 
@@ -2408,6 +2408,9 @@ function adminSection(){
       <p style="margin-top:6px">🃏 Toca a cualquier jugador para <b style="color:var(--txt)">nombrarlo admin, quitar tarjetas, resetear su PIN o borrarlo</b>.</p>
       <p style="margin-top:6px">🗑 En la ficha de cualquier partido puedes <b style="color:var(--txt)">borrarlo o editarlo</b>.</p>
       <p style="margin-top:6px">💬 Buzón beta: <b style="color:var(--txt)">${nfb} ${nfb===1?'sugerencia':'sugerencias'}</b> (más abajo).</p>
+      ${(()=>{const live=['players','galaVotes','galaVoted','config','polls','pollVotes','feedback'].reduce((n,c)=>n+Object.keys(S[c]||{}).length,0)+ARC_COLS.reduce((n,c)=>n+Object.keys(S.live[c]||{}).length,0);const na=Object.keys(S.arc).length;
+        return `<p style="margin-top:6px">📦 Cada móvil carga <b>${live+na}</b> documentos al abrir${na?` · ${na} ${na===1?'mes archivado':'meses archivados'}`:''}. <span class="muted">Gratis hasta unas 50.000 lecturas al día entre todos.</span></p>
+        <button class="btn sm" style="margin-top:6px" data-act="arcNow">📦 Archivar meses cerrados</button>`})()}
       <p style="margin-top:6px">🔌 Conexión: ${store?.mode==='demo'?'modo demo':S.conn?.ok?`<b style="color:#4ade80">OK</b> · base de datos ${esc(S.conn.db)}`:`<b style="color:#ffd400">fallo (${esc(S.conn?.code||'?')})</b>`}</p>
     </div></div>`;
 }
@@ -2503,6 +2506,7 @@ document.addEventListener('click',e=>{
     case'duelAccept':{const d=S.duels[id],mm=d&&S.matches[d.mid];if(mm&&!lineup(mm).in.includes(me)){toast('Estás en reserva: no puedes aceptar hasta entrar en la lista 🪑');break}}store.doc('duels/'+id).update({status:'accepted',acceptedAt:Date.now()}).then(()=>toast('Reto aceptado ⚔️ ¡Que gane el peor!')).catch(err);break;
     case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
     case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
+    case'arcNow':a.disabled=true;archiveOld(true).then(n=>{toast(n?`Archivados ${n} documentos 📦`:'No hay nada que archivar todavía (se archivan los meses cerrados hace más de '+ARC_DAYS+' días)');render()});break;
     case'injOn':injForm(id);break;
     case'injOff':store.doc('players/'+id).update({injury:null}).then(()=>{close();toast(id===me?'¡Vuelve el crack! 💪':'Lesión quitada')}).catch(err);break;
     case'duelNut':{const v=a.dataset.v,d=S.duels[id];if(!d)break;
@@ -2520,7 +2524,7 @@ document.addEventListener('click',e=>{
     case'vote':voteForm(id);break;
     case'pay':payForm(id);break;
     case'copy':copyList(id);break;
-    case'delMatch':confirmBox('Borrar partido','Se borra la convocatoria y su resultado.','Borrar',async()=>{await store.doc('matches/'+id).delete();for(const s of signupsOf(id))await store.doc(`signups/${s.mid}__${s.pid}`).delete()},true);break;
+    case'delMatch':confirmBox('Borrar partido',id.startsWith('rec_')?'Se borra la convocatoria y su resultado. Es un partido fijo: esa semana no se volverá a crear sola.':'Se borra la convocatoria y su resultado.','Borrar',async()=>{if(id.startsWith('rec_')){const rc=S.config.recurring||{};await store.doc('config/recurring').set({...rc,rules:rc.rules||[],skip:[...(rc.skip||[]).slice(-30),id]})}await store.doc('matches/'+id).delete();for(const d of duelsOf(id))await store.doc('duels/'+d.id).update({status:'cancelled'}).catch(()=>{});for(const s of signupsOf(id))await store.doc(`signups/${s.mid}__${s.pid}`).delete()},true);break;
     case'profile':profile(id);break;
     case'newPlayer':if(isAdmin())playerForm(null,false);break;
     case'share':shareImage(a.dataset.kind,id);break;
@@ -2580,7 +2584,7 @@ async function firebaseStore(cfg){
   else{const r=results.find(x=>x.id==='(default)')||results[0];fdb=r.d;diag={ok:false,code:results.map(x=>x.code).join('/'),db:''}}
   S.conn=diag;
   return{mode:'live',
-    doc:p=>{const r=fs.doc(fdb,p);return{set:d=>withTimeout(fs.setDoc(r,d)),update:d=>withTimeout(fs.updateDoc(r,d)),delete:()=>withTimeout(fs.deleteDoc(r))}},
+    doc:p=>{const r=fs.doc(fdb,p);return{set:(d,o)=>withTimeout(o?fs.setDoc(r,d,o):fs.setDoc(r,d)),update:d=>withTimeout(fs.updateDoc(r,d)),delete:()=>withTimeout(fs.deleteDoc(r))}},
     collection:c=>({onSnapshot:(cb,er)=>fs.onSnapshot(fs.collection(fdb,c),s=>cb({docs:s.docs.map(d=>({id:d.id,data:()=>d.data()})),fromCache:s.metadata.fromCache}),er)})};
 }
 function demoStore(){
@@ -2597,7 +2601,7 @@ function demoStore(){
   save();
   return{mode:'demo',
     doc:p=>{const[c,id]=split(p);return{
-      set:async d=>{(data[c]=data[c]||{})[id]=clean(d);save();emit(c)},
+      set:async(d,o)=>{data[c]=data[c]||{};data[c][id]=o&&o.merge&&data[c][id]?Object.assign(data[c][id],clean(d)):clean(d);save();emit(c)},
       update:async d=>{if(!data[c]?.[id])throw new Error('no existe');Object.assign(data[c][id],clean(d));save();emit(c)},
       delete:async()=>{if(data[c])delete data[c][id];save();emit(c)}}},
     collection:c=>({onSnapshot:cb=>{(subs[c]=subs[c]||[]).push(cb);setTimeout(()=>cb(snap(c)),0);return()=>{}}}),
@@ -2637,11 +2641,58 @@ function seed(){
   const pollVotes={};['d1','d2','d3','d4','d6','d7','d9','d13'].forEach((p,i)=>pollVotes['dp1__'+p]={poll:'dp1',pid:p,picks:i%3===0?[0,1]:i%3===1?[1]:[1,2]});
   return{players,matches,signups,votes,voted,polls,pollVotes};
 }
+/* ============ ARCHIVO MENSUAL ============
+   Para no pasarnos del plan gratis de Firebase: los meses ya cerrados (hace más de ARC_DAYS días) se guardan
+   en UN solo documento archive/AAAA-MM y se borran los cientos de documentos sueltos. La app junta archivo + datos
+   vivos y todo funciona igual. Si alguien toca algo archivado, se "resucita" como documento vivo y se vuelve a
+   archivar en la siguiente pasada. Lo lanza el móvil de un admin como mucho cada 12 h (o a mano en el panel). */
+const ARC_COLS=['matches','signups','stats','votes','voted','duels'];
+const ARC_DAYS=15;
+S.live={};S.arc={};S.arcIdx={};
+function arcRebuild(col){const o={};
+  for(const a of Object.values(S.arc)){const c=(a.cols||{})[col]||{};for(const id in c)o[id]={id,...c[id]}}
+  Object.assign(o,S.live[col]||{});S[col]=o}
+function arcIndex(){S.arcIdx={};for(const [mon,a] of Object.entries(S.arc))for(const c of ARC_COLS)for(const id in ((a.cols||{})[c]||{}))S.arcIdx[c+'/'+id]=mon}
+function wrapStore(st){const raw=st.doc.bind(st);st.rawDoc=raw;
+  st.doc=p=>{const d=raw(p);const i=p.indexOf('/'),c=p.slice(0,i),id=p.slice(i+1);if(!ARC_COLS.includes(c))return d;
+    const live=()=>!!(S.live[c]&&S.live[c][id]);
+    return{set:d.set,
+      update:async u=>{const mon=S.arcIdx[p];if(!live()&&mon){const base=((S.arc[mon].cols||{})[c]||{})[id]||{};return d.set({...base,...u})}return d.update(u)},
+      delete:async()=>{const mon=S.arcIdx[p];if(mon){const a=S.arc[mon];const cols=JSON.parse(JSON.stringify(a.cols||{}));if(cols[c])delete cols[c][id];await raw('archive/'+mon).set({...a,id:undefined,cols})}
+        if(live()||!mon)return d.delete()}}};
+  return st}
+async function archiveOld(force){
+  if(!isAdmin()||S.archiving)return 0;if(![...ARC_COLS,'archive'].every(c=>S.ready[c]))return 0;
+  if(!force){let last=0;try{last=+localStorage.getItem('fifa07_arc')||0}catch(e){}if(Date.now()-last<12*3600e3)return 0}
+  S.archiving=true;let moved=0;
+  try{
+    const cutoff=Date.now()-ARC_DAYS*864e5;
+    const closed=mon=>{const[y,mm]=mon.split('-').map(Number);return new Date(y,mm,1).getTime()<cutoff};
+    const plan={};
+    for(const c of ARC_COLS)for(const [id,dd] of Object.entries(S.live[c]||{})){
+      const mid=c==='matches'?id:dd.mid;const mon=(S.matches[mid]?.date||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(mon)||!closed(mon))continue;
+      const {id:_x,...rest}=dd;((plan[mon]=plan[mon]||{})[c]=plan[mon][c]||{})[id]=rest}
+    for(const [mon,cols] of Object.entries(plan)){
+      const prev=(S.arc[mon]&&S.arc[mon].cols)||{};const merged={};
+      for(const c of ARC_COLS)merged[c]={...(prev[c]||{}),...(cols[c]||{})};
+      const payload={month:mon,at:Date.now(),cols:merged};
+      if(JSON.stringify(payload).length>900000){console.warn('archivo demasiado grande',mon);continue}
+      await store.rawDoc('archive/'+mon).set(payload);
+      const dels=[];for(const c in cols)for(const id in cols[c])dels.push([c,id]);
+      for(let k=0;k<dels.length;k+=20)await Promise.all(dels.slice(k,k+20).map(([c,id])=>store.rawDoc(c+'/'+id).delete()));
+      moved+=dels.length}
+    try{localStorage.setItem('fifa07_arc',String(Date.now()))}catch(e){}
+  }catch(e){console.error(e);if(force)err(e)}finally{S.archiving=false}
+  return moved}
 function sub(col){
   const t=setTimeout(()=>{if(!S.ready[col]){S.ready[col]=1;render();toast('La conexión va lenta…')}},10000);
   store.collection(col).onSnapshot(snap=>{
     clearTimeout(t);const o={};snap.docs.forEach(d=>o[d.id]={id:d.id,...d.data()});
-    S[col]=o;S.ready[col]=1;
+    if(col==='archive'){S.arc={};for(const id in o)S.arc[id]=o[id];arcIndex();ARC_COLS.forEach(arcRebuild)}
+    else if(ARC_COLS.includes(col)){S.live[col]=o;arcRebuild(col)}
+    else S[col]=o;
+    S.ready[col]=1;
+    if(isAdmin())setTimeout(()=>archiveOld(false),4000);
     if(col==='players'&&me&&!o[me]&&snap.docs.length)me=null;
     renderMe();render();
     if(col==='matches'||col==='config'||col==='players')setTimeout(ensureRecurring,500);
@@ -2649,9 +2700,9 @@ function sub(col){
 }
 (async()=>{
   $('#logo').innerHTML=`${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b>${BETA?'<span class="beta">BETA</span>':''}<small>${esc(SLOGAN)}</small>`;document.title=APP_NAME.join('')+' · Pachangas';
-  try{store=FIREBASE_CONFIG?await firebaseStore(FIREBASE_CONFIG):demoStore()}
+  try{store=wrapStore(FIREBASE_CONFIG?await firebaseStore(FIREBASE_CONFIG):demoStore())}
   catch(e){console.error(e);storeErr=true;render();return}
-  ['players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'].forEach(sub);
+  ['archive','players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'].forEach(sub);
   setInterval(()=>{ensureRecurring();if(!S.sheet&&!document.querySelector('.md'))render()},60000);
 })();
 </script>
