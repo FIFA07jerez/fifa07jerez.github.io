@@ -494,6 +494,7 @@ const SLOGAN = 'Para los amantes del mal fútbol';
 const CREATOR = 'Daniel Lucena';
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
+  {at:'2026-11-19T22:10:00+01:00', e:'⚖️', t:'Niveles igualados', d:'Ahora todos empezamos en 3,0 y la app ha recalculado los niveles con todos los partidos jugados: solo cuenta lo que pasa en el campo y lo que vota el vestuario.'},
   {at:'2026-11-19T21:40:00+01:00', e:'🧤', t:'Portero fijo', d:'¿Eres portero? Edita tu perfil y marca "🧤 Portero fijo": va uno a cada equipo y te puntúan por porterías a cero y tu nota bajo palos, no por goles.'},
   {at:'2026-11-19T21:40:00+01:00', e:'🧳', t:'Ausencias', d:'¿Vas a estar fuera? Toca tu nombre arriba a la derecha → "🧳 Voy a estar fuera". Puedes poner unas fechas o días fijos (por ejemplo, entre semana).'},
   {at:'2026-11-19T17:55:00+01:00', e:'🌴', t:'Semana Vice', d:'Hoy sale el GTA 6 y la app se viste de neón. Y si no vienes por quedarte jugando, en el parte médico ya existe "🎮 Secuestrado por el GTA".'},
@@ -539,6 +540,8 @@ function keepersOf(m){const out={};for(const T of ['A','B']){const team=m['team'
     const g=team.find(isGK);out[T]=g?{mode:'fixed',pid:g,auto:true}:{mode:null}}
   return out}
 function gkIn(m,pid){const T=(m.teamA||[]).includes(pid)?'A':(m.teamB||[]).includes(pid)?'B':null;if(!T)return false;const k=keepersOf(m)[T];return k.mode==='fixed'&&k.pid===pid}
+const START_LV=3; // nivel con el que empieza todo el mundo (escala 1–5)
+const LV_VER=2;   // versión del cálculo de niveles (para no disparar el aviso de carta al cambiarlo)
 const LEVELS={1:'Paquete integral',2:'Me defiendo',3:'Normalito',4:'Apañado',5:'El bueno del grupo'};
 // Motor de nivel tipo Playtomic: empiezas con tus estrellas y cada partido te sube o baja.
 const LV={K:0.15,K_NEW:0.28,NEW_MATCHES:5,SCALE:1.5,MARGIN:0.12,STARS_PULL:0.08,MIN:1,MAX:5,FULL:10};
@@ -689,10 +692,15 @@ function resultFor(m,pid){
 }
 function computeLevels(){return memo('lv',computeLevelsRaw)}
 function computeLevelsRaw(){
-  const L={};for(const id in S.players)L[id]={level:+S.players[id].level0||2,n:0,d:{},pre:{}};
+  // Todos empiezan igual (START_LV). Quien llega más tarde empieza con la media del grupo en ese momento.
+  // Excepción: un admin puede fijar el nivel de partida de alguien (lvStart). Los invitados usan el "qué tal juega" que se puso al apuntarlos.
+  const fixedStart=p=>{const x=S.players[p];if(!x)return null;if(x.lvStart!=null&&x.lvStart!=='')return +x.lvStart;if(x.guest&&x.level0)return +x.level0;return null};
+  const L={};for(const id in S.players){const f=fixedStart(id);L[id]={level:f,start:f,n:0,d:{},pre:{}}}
+  const groupAvg=()=>{const a=Object.values(L).filter(x=>x.n>0);return a.length?a.reduce((s,x)=>s+x.level,0)/a.length:START_LV};
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&(m.teamA||[]).length&&(m.teamB||[]).length).sort((a,b)=>mdt(a)-mdt(b));
   for(const m of played){
     const A=m.teamA.filter(p=>L[p]),B=m.teamB.filter(p=>L[p]);if(!A.length||!B.length)continue;
+    {const ga=groupAvg();for(const p of [...A,...B])if(L[p].level==null){L[p].level=ga;L[p].start=ga}}
     const avg=t=>t.reduce((s,p)=>s+L[p].level,0)/t.length;
     const la=avg(A),lb=avg(B);
     const eA=1/(1+Math.pow(10,(lb-la)/LV.SCALE));
@@ -704,6 +712,7 @@ function computeLevelsRaw(){
       const nl=Math.max(LV.MIN,Math.min(LV.MAX,x.level+d));x.d[m.id]=nl-x.level;x.level=nl;x.n++};
     A.forEach(p=>apply(p,sA,eA));B.forEach(p=>apply(p,1-sA,1-eA));
   }
+  {const ga=groupAvg();for(const id in L)if(L[id].level==null){L[id].level=ga;L[id].start=ga;L[id].auto=true}}
   return L;
 }
 function computeStats(flt){return flt?enrich(computeStatsRaw(flt)):memo('st',()=>enrich(computeStatsRaw()))}
@@ -735,7 +744,7 @@ function computeStatsRaw(flt){
   for(const id in st){
     const s=st[id];if(!flt)s.pts+=s.y*PTS.yellow+s.r*PTS.red;
     s.avg=s.rs.length?s.rs.reduce((x,y)=>x+y,0)/s.rs.length:null;
-    s.level=LVL[id]?.level??s.lv0;
+    s.lv0=LVL[id]?.start??START_LV;s.level=LVL[id]?.level??s.lv0;
     s.rel=Math.min(100,Math.round((LVL[id]?.n||0)/LV.FULL*100));
     const gpm=s.pj?s.g/s.pj:0,cr=s.pj?s.aw.crack/s.pj:0,wr=s.pj?s.v/s.pj:0,vr=s.pj?s.aw.vaya/s.pj:0;
     s.gkAvg=s.gkRs.length?s.gkRs.reduce((x,y)=>x+y,0)/s.gkRs.length:null;
@@ -1208,7 +1217,7 @@ function viewInfo(){
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
     <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ⚡ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
-    <li>Tu nivel inicial (las estrellas que te pones) <b>se congela al jugar tu primer partido</b>; tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
+    <li>⚖️ <b>Todos empezamos con el mismo nivel</b> (3,0; los que llegan después, con la media del grupo). A partir de ahí solo cuentan los resultados y las estrellas del vestuario. Tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
     <li>Tu nivel ⚡ sube si ganas y baja si pierdes (y las estrellas de tus compañeros empujan un poco).</li>
     <li>Después del partido, <b>el organizador apunta el resultado</b> y <b>cada uno sus goles</b> al votar (la app avisa si no cuadran y el organizador corrige).</li>
     <li>Y cada uno vota de forma <b>anónima</b> 1–5 ★ a sus compañeros más ⭐ El Crack, 🎩 El Dandy, 🪨 El Duro y 🤦 Vaya día.</li>
@@ -1334,15 +1343,16 @@ function playerForm(id,asMe){
     <label>Nombre o mote</label><input id="nm" maxlength="18" value="${esc(p.name)}" placeholder="El Pirata, Juanma…">
     <label>Posición (es un decir)</label><div class="opts" id="pos">${Object.entries(POS).map(([k,v])=>`<button class="opt ${k===pos?'on':''}" data-v="${k}">${v}</button>`).join('')}</div>
     <label class="row" style="margin-top:12px;gap:10px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--txt);font-weight:600"><input type="checkbox" id="gkc" ${p.gk?'checked':''} style="width:22px;height:22px;flex-shrink:0"><span>🧤 <b>Portero fijo</b><br><span class="small muted" style="font-weight:500">En el reparto va un portero a cada equipo, y te puntúan por portería, no por goles.</span></span></label>
-    ${id&&levelLocked(id)?`<label>Nivel inicial</label><div class="box small" style="line-height:1.5">🔒 Empezaste con <b>${'★'.repeat(lv)}</b> (${LEVELS[lv]}). Como ya has jugado, ya no se puede cambiar: <b>ahora tu nivel lo deciden tus partidos</b>.</div>`:''}
-    <div style="${id&&levelLocked(id)?'display:none':''}"><label>${asMe||id===me?'¿Qué nivel crees que tienes?':'¿Qué nivel tiene?'}${id&&hasPlayed(id)&&isAdmin()?' <span style="text-transform:none;letter-spacing:0;color:var(--yel)">· ya ha jugado: solo los admins pueden cambiarlo</span>':''}</label><div class="lvpick" id="lvp">${[1,2,3,4,5].map(i=>`<button data-v="${i}" class="${i<=lv?'on':''}">★</button>`).join('')}</div><div class="lvlabel" id="lvl">${LEVELS[lv]}</div>
-    <p class="muted small" style="margin-top:6px">Es orientativo: luego sube si ganas partidos y baja si pierdes. Una vez que juegues tu primer partido ya no se podrá cambiar.</p></div>
+    ${isAdmin()&&!(id&&P(id)?.guest)?`<label>Nivel de partida <span style="text-transform:none;letter-spacing:0;font-weight:500">· solo admins</span></label>
+      <div class="opts" id="lvs">${[['','Automático'],...[1.5,2,2.5,3,3.5,4,4.5].map(v=>[String(v),String(v).replace('.',',')])].map(([v,t])=>`<button class="opt ${String(p.lvStart??'')===v?'on':''}" data-v="${v}">${t}</button>`).join('')}</div>
+      <p class="muted small" style="margin-top:6px">Todos empiezan en ${String(START_LV).replace('.',',')} (y los que llegan después, con la media del grupo). Usa esto solo para casos especiales, como alguien que fue federado. La app recalcula todo desde su primer partido.</p>`:''}
     <label>${photo?'Emoji (si quitas la foto)':'O un emoji'}</label><div class="emojis" id="em">${EMOJIS.map(e=>`<button class="${e===emo?'on':''}" data-v="${e}">${e}</button>`).join('')}</div>
     ${needPin?`<label>${id&&p.pinHash?'Cambiar PIN (déjalo vacío para no tocarlo)':'PIN de 4 cifras'}</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" style="letter-spacing:.4em;font-family:Anton;font-size:22px"><p class="muted small" style="margin-top:6px">Para que nadie vote o se baje en tu nombre.</p>`:''}
     <button class="btn pri full" id="sv" style="margin-top:20px">${id?'Guardar':asMe?(firstEver?'Crear el grupo':'Enviar solicitud'):'Fichar e invitar'}</button>`,
   md=>{
     const grp=(sel,set)=>md.querySelectorAll(sel+' .opt, '+sel+' button').forEach(b=>b.onclick=()=>{set(b.dataset.v);md.querySelectorAll(sel+' .opt, '+sel+' button').forEach(x=>x.classList.toggle('on',x===b))});
     grp('#pos',v=>pos=v);grp('#em',v=>{emo=v;if(!photo)md.querySelector('#phv').textContent=v});
+    let lvs=p.lvStart??'';md.querySelectorAll('#lvs .opt').forEach(b=>b.onclick=()=>{lvs=b.dataset.v;md.querySelectorAll('#lvs .opt').forEach(x=>x.classList.toggle('on',x===b))});
     md.querySelectorAll('#lvp button').forEach(b=>b.onclick=()=>{lv=+b.dataset.v;md.querySelectorAll('#lvp button').forEach(x=>x.classList.toggle('on',+x.dataset.v<=lv));md.querySelector('#lvl').textContent=LEVELS[lv]});
     md.querySelector('#phf').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
       try{photo=await shrinkImage(f,240);md.querySelector('#phv').innerHTML=`<img src="${photo}" alt="">`;md.querySelector('#phx').style.display=''}catch(x){toast('No se ha podido leer la foto')}};
@@ -1355,7 +1365,7 @@ function playerForm(id,asMe){
       if(pinEl&&!pin&&!(id&&p.pinHash)){toast('Ponte un PIN de 4 cifras');return}
       e.target.disabled=true;
       try{
-        const upd={gk:!!md.querySelector('#gkc')?.checked,name,pos,emoji:emo,level0:(id&&levelLocked(id))?(+p.level0||2):lv,photo:photo||null};const phEl=md.querySelector('#ph');if(phEl){const pv=phEl.value.trim();if(pv&&!phoneDigits(pv)){toast('Ese teléfono no parece válido');e.target.disabled=false;return}upd.phone=pv}if(pin)upd.pinHash=await hashPin(pin);
+        const upd={gk:!!md.querySelector('#gkc')?.checked,name,pos,emoji:emo,photo:photo||null};if(isAdmin()&&md.querySelector('#lvs'))upd.lvStart=lvs===''?null:+lvs;const phEl=md.querySelector('#ph');if(phEl){const pv=phEl.value.trim();if(pv&&!phoneDigits(pv)){toast('Ese teléfono no parece válido');e.target.disabled=false;return}upd.phone=pv}if(pin)upd.pinHash=await hashPin(pin);
         if(id){await store.doc('players/'+id).update(upd);close();toast('Guardado');return}
         const nidv=nid();const first=!Object.keys(S.players).length&&(store.mode==='demo'||S.conn?.ok);
         let invitePin=null;if(!asMe){invitePin=randPin();upd.pinHash=await hashPin(invitePin)}
@@ -2124,8 +2134,8 @@ function checkUpgrade(){
   const key='fifa07_card_'+me;let prev=null;try{prev=JSON.parse(localStorage.getItem(key))}catch(e){}
   if(prev&&prev.mid===last.id)return;
   const st=memo('stClosed',()=>computeStats(m=>matchClosed(m)));const s=st[me];if(!s)return;
-  const save=()=>{try{localStorage.setItem(key,JSON.stringify({mid:last.id,ovr:s.ovr}))}catch(e){}};
-  if(!prev||prev.ovr===s.ovr){save();return}
+  const save=()=>{try{localStorage.setItem(key,JSON.stringify({mid:last.id,ovr:s.ovr,v:LV_VER}))}catch(e){}};
+  if(!prev||prev.v!==LV_VER||prev.ovr===s.ovr){save();return}
   save();const up=s.ovr>prev.ovr;
   modal(`<div style="text-align:center;padding-top:6px"><div class="pill ${up?'red':''}" style="margin-bottom:10px">${up?'⬆️ Tu carta mejora':'⬇️ Tu carta baja'}</div>
     <div class="upg">${futCard(me,st,true)}</div>
@@ -2663,7 +2673,7 @@ function adminSection(){
   const pend=Object.values(S.players).filter(p=>p.status==='pending').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   return `<h2 id="admin" style="scroll-margin-top:90px">Panel de admin</h2>
     <div class="box" style="margin-bottom:10px"><b>🙋 Solicitudes para entrar · ${pend.length}</b>
-    ${pend.map(p=>`<div class="pay"><span class="av">${face(p.id)}</span><span class="nm">${esc(p.name)}<br><span class="small muted" style="font-weight:500">${esc(POS[p.pos]||'')} · ${'★'.repeat(+p.level0||2)}</span></span><button class="tog on" data-act="approve" data-id="${esc(p.id)}">Aprobar</button><button class="tog" data-act="reject" data-id="${esc(p.id)}">✕</button></div>`).join('')||'<p class="small muted" style="margin-top:6px">Ninguna pendiente. Para meter a alguien directamente: Jugadores → "Fichar e invitar".</p>'}</div>
+    ${pend.map(p=>`<div class="pay"><span class="av">${face(p.id)}</span><span class="nm">${esc(p.name)}<br><span class="small muted" style="font-weight:500">${esc(POS[p.pos]||'')}</span></span><button class="tog on" data-act="approve" data-id="${esc(p.id)}">Aprobar</button><button class="tog" data-act="reject" data-id="${esc(p.id)}">✕</button></div>`).join('')||'<p class="small muted" style="margin-top:6px">Ninguna pendiente. Para meter a alguien directamente: Jugadores → "Fichar e invitar".</p>'}</div>
     <div class="box" style="margin-bottom:10px"><div class="row"><span class="sp"><b>💾 Copia de seguridad</b><br><span class="small muted">${S.config.app?.lastBackup?`Última: ${new Date(S.config.app.lastBackup).toLocaleDateString('es-ES')}${(Date.now()-S.config.app.lastBackup)>30*864e5?' · ⚠️ hace más de un mes':''}`:'Nunca se ha hecho'}</span></span><button class="btn sm wht" data-act="backup">Descargar</button></div></div>
     <div class="box" style="margin-bottom:10px"><b>🔁 Partidos fijos</b>
     ${recRules().map((r,i)=>{const occ=nextOcc(r),oa=openAt(r,occ);return `<button class="pay" style="width:100%;text-align:left" data-act="recEdit" data-i="${i}"><span class="sp"><b>${WD[r.wd]}s ${esc(r.time)}</b> · ${esc(r.venue)}<br><span class="small muted" style="font-weight:500">${r.active?`Se abre el ${DIA[r.openWd]} a las ${esc(r.openTime)} · próximo ${occ.getDate()}/${occ.getMonth()+1}`:'Pausado'}</span></span><span class="muted">›</span></button>`}).join('')||'<p class="small muted" style="margin-top:6px">Ninguno todavía.</p>'}
