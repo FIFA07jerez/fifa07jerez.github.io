@@ -537,7 +537,8 @@ const promoCfg=()=>S.config?.app?.promo||null;
 // Anuncio (p. ej. Memorial Alberto Lucena): ventana emergente al abrir la app desde 'days' días antes hasta que acaba el día del evento.
 function promoLive(pr=promoCfg()){if(!pr||!pr.on||!pr.date)return false;const ev=new Date(pr.date+'T23:59:59');const from=new Date(pr.date+'T00:00:00');from.setDate(from.getDate()-(+pr.days||30));const n=new Date(Date.now());return n>=from&&n<=ev}
 function promoDaysLeft(pr){const a=new Date(Date.now());a.setHours(0,0,0,0);const b=new Date(pr.date+'T00:00:00');return Math.round((b-a)/864e5)}
-const astOn=()=>!!S.config?.app?.assists; // asistencias ocultas hasta que un admin las active // la Gala está oculta hasta que un admin la active // la equipación está oculta hasta que un admin la active
+const astOn=()=>!!S.config?.app?.assists;
+const wrapOn=()=>!!S.config?.app?.wrapped; // "Tu temporada" (estilo Spotify): oculto hasta que lo active un admin // asistencias ocultas hasta que un admin las active // la Gala está oculta hasta que un admin la active // la equipación está oculta hasta que un admin la active
 
 /* ============ ESTADO ============ */
 const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},duels:{},ready:{},sheet:null};
@@ -1593,7 +1594,7 @@ function profile(id){
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
     ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
     ${(()=>{const sk=streak(s);return sk?`<div class="banner" style="margin-top:12px"><span class="e">${sk.e}</span><span><b>${sk.t[0].toUpperCase()+sk.t.slice(1)}</b></span></div>`:''})()}
-    <div class="row" style="margin-top:14px"><button class="btn wht full" style="flex:1" data-act="share" data-kind="card" data-id="${esc(id)}">📸 Compartir carta</button>${(()=>{const y=seasonOfDate(new Date());return s.hist.some(x=>seasonOf(x.m)===y)?`<button class="btn pri" style="flex:1" data-act="wrapped" data-id="${esc(id)}">🎬 ${id===me?'Mi':'Su'} temporada</button>`:''})()}</div>
+    <div class="row" style="margin-top:14px"><button class="btn wht full" style="flex:1" data-act="share" data-kind="card" data-id="${esc(id)}">📸 Compartir carta</button>${(()=>{const y=seasonOfDate(new Date());return wrapOn()&&s.hist.some(x=>seasonOf(x.m)===y)?`<button class="btn pri" style="flex:1" data-act="wrapped" data-id="${esc(id)}">🎬 ${id===me?'Mi':'Su'} temporada</button>`:''})()}</div>
     ${kitOn()&&id===me&&!p.kit?`<button class="btn full" style="margin-top:8px" data-act="kitOrder">👕 Pedir mi equipación</button>`:''}
     ${kitOn()&&p.kit?`<p class="small muted" style="margin-top:10px">👕 Equipación pedida · dorsal ${+p.dorsal||'-'} · ${s.kitN} partidos equipado</p>`:''}
     ${(()=>{const c=chemistry(id);const row=(e,t,e2)=>e?`<div class="chem"><span class="ce">${t[0]}</span><span class="sp"><span class="ck2">${t[1]}</span><b>${face(e[0])} ${esc(pname(e[0]))}</b></span><span class="cv">${e2(e[1])}</span></div>`:'';
@@ -2015,7 +2016,7 @@ function galaView(st){
   let h=galaOn()?'':`<div class="banner"><span class="e">🔒</span><span><b>Oculta para el grupo</b><br><span class="small">Solo la ven los admins. Actívala en el Panel de admin cuando llegue el momento.</span></span></div>`;
   h+=`<div class="monthnav"><button class="iconbtn" data-act="season" data-d="-1">‹</button><div class="t">Gala ${label}</div><button class="iconbtn" data-act="season" data-d="1">›</button></div>`;
   h+=`<div class="gala-hero"><div class="tro">🏆</div><div><b>Gala de la temporada</b><br><span class="muted small">Premios por números + votación anónima del Balón de Oro y el Balón de Plomo.</span></div></div>`;
-  if(me&&ids.includes(me))h+=`<button class="btn pri full" style="margin-top:12px" data-act="wrapped" data-id="${esc(me)}">🎬 Ver mi temporada ${label}</button>`;
+  if(wrapOn()&&me&&ids.includes(me))h+=`<button class="btn pri full" style="margin-top:12px" data-act="wrapped" data-id="${esc(me)}">🎬 Ver mi temporada ${label}</button>`;
   if(!ids.length)return h+`<div class="empty" style="margin-top:12px"><div class="big">🎬</div>Aún no hay partidos esta temporada.</div>`;
   // votación
   const gv=Object.values(S.galaVotes).filter(v=>v.season===y);const rev=!!S.config['gala_'+y]?.revealed;
@@ -2542,6 +2543,7 @@ function adminSection(){
     <div class="box" style="padding:6px 16px 14px">
     ${(()=>{const pr=promoCfg();const st=!pr?.on?'Apagado':promoLive()?'<b style="color:#4ade80">Saliendo ahora</b>':`Programado · sale ${+pr.days||30} días antes`;return `<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="sp"><b>📣 Anuncio al abrir la app</b><br><span class="small muted">${pr?.title?esc(pr.title)+' · ':''}${st}</span></span><button class="btn sm wht" data-act="promoEdit">Editar</button></div>`})()}
     ${(()=>{const v=S.config?.app?.vice;return `<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="sp"><b>🌴 Modo Vice</b><br><span class="small muted">Colores neón por el GTA 6. ${v===undefined||v===null?'Automático: del 19 al 30 de noviembre':v?'Forzado: encendido':'Forzado: apagado'}</span></span><button class="tog ${viceOn()?'on':''}" data-act="viceToggle">${viceOn()?'Activado':'Apagado'}</button></div>`})()}
+    ${row('🎬','Tu temporada','El resumen tipo Spotify de cada jugador (botón en su carta y en la temporada).',wrapOn(),'wrapToggle')}
     ${row('🏆','Gala de la temporada','Premios de la temporada y votación del Balón de Oro y el de Plomo.',galaOn(),'galaToggle')}
     ${row('🎯','Asistencias','Que cada uno apunte también sus asistencias (suman +2 y tienen ranking).',astOn(),'astToggle')}
     ${row('👕','Equipación oficial','Diseño de las camisetas, pedido conjunto, dorsales y +1 por venir equipado.',kitOn(),'kitToggle')}
@@ -2697,7 +2699,7 @@ document.addEventListener('click',e=>{
     case'pollConvoke':pollConvoke(id);break;
     case'pollClose':confirmBox('Cerrar encuesta','Desaparecerá de la portada.','Cerrar',async()=>{await store.doc('polls/'+id).update({closed:true})});break;
     case'cal':calModal(id);break;
-    case'wrapped':openWrapped(id,a.closest('.md')?seasonOfDate(new Date()):S.season);break;
+    case'wrapped':if(!wrapOn()&&!isAdmin())break;openWrapped(id,a.closest('.md')?seasonOfDate(new Date()):S.season);break;
     case'gateLogin':loginForm();break;
     case'gateJoin':playerForm(null,true);break;
     case'pendCancel':confirmBox('Cancelar solicitud','Se borra tu solicitud para entrar.','Cancelar solicitud',async()=>{await store.doc('players/'+me).delete();setMe(null)},true);break;
@@ -2710,6 +2712,7 @@ document.addEventListener('click',e=>{
     case'instHide':S.instHidden=true;try{localStorage.setItem('fifa07_insthide','1')}catch(e){};render();break;
     case'goAdmin':S.tab='info';render();setTimeout(()=>document.getElementById('admin')?.scrollIntoView({behavior:'smooth'}),50);break;
     case'viceToggle':store.doc('config/app').set({...(S.config.app||{}),vice:!viceOn()}).then(()=>toast(viceOn()?'🌴 Modo Vice activado':'Vuelve el rojo, blanco y negro')).catch(err);break;
+    case'wrapToggle':store.doc('config/app').set({...(S.config.app||{}),wrapped:!wrapOn()}).then(()=>toast(wrapOn()?'🎬 Tu temporada activada':'Tu temporada oculta')).catch(err);break;
     case'galaToggle':confirmBox(galaOn()?'Ocultar la Gala':'Activar la Gala',galaOn()?'La pestaña Gala dejará de verse para el grupo. Los votos se guardan.':'Todo el grupo verá la pestaña Gala en Ranking y podrá votar el Balón de Oro y el de Plomo.',galaOn()?'Ocultar':'🏆 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),gala:!galaOn()})});break;
     case'astToggle':confirmBox(astOn()?'Ocultar asistencias':'Activar asistencias',astOn()?'Dejarán de apuntarse, verse y sumar puntos. Lo apuntado se guarda.':'Cada uno podrá apuntar sus asistencias al votar; suman +2 y salen en rankings.',astOn()?'Ocultar':'🎯 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),assists:!astOn()})});break;
     case'kitToggle':confirmBox(kitOn()?'Ocultar equipación':'Activar equipación',kitOn()?'Dejará de verse para todo el grupo. Los pedidos y dorsales se guardan.':'Todo el grupo verá el diseño de las camisetas, el pedido conjunto y el +1 punto por venir equipado.',kitOn()?'Ocultar':'👕 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),kit:!kitOn()})});break;
