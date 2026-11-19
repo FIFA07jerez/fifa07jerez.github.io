@@ -573,6 +573,8 @@ const dateMin=()=>ymd(new Date()),dateMax=()=>{const d=new Date();d.setDate(d.ge
 const hasPlayed=pid=>Object.values(S.matches).some(m=>m.status==='played'&&attendees(m).includes(pid));
 const levelLocked=pid=>!!pid&&hasPlayed(pid)&&!isAdmin(); // el nivel inicial se congela tras el primer partido (solo admins pueden tocarlo)
 const goalsLocked=m=>(Date.now()-mdt(m).getTime())>GOALS_EDIT_HOURS*36e5;
+const DUEL_HOURS=24; // los retos de nota y caño se cierran 24 h después del partido
+const duelLocked=m=>(Date.now()-mdt(m).getTime())>DUEL_HOURS*36e5;
 // WhatsApp directo: si el jugador ha puesto su teléfono, se abre su chat con el mensaje ya escrito.
 const phoneDigits=ph=>{let d=String(ph||'').replace(/\D/g,'');if(d.length===9)d='34'+d;return d.length>=11?d:''};
 const waLink=(pid,text)=>{const d=phoneDigits(P(pid)?.phone);return d?`https://wa.me/${d}?text=${encodeURIComponent(text)}`:''};
@@ -758,7 +760,7 @@ function boardItems(days){
     else if(d.status==='rejected')it.push({t:d.acceptedAt||d.createdAt||0,e:'🐔',x:`${nm(d.to)} se raja: rechaza el reto de ${nm(d.from)}`,neg:1});
     else if(r.state==='nutclaim')it.push({t:d.nutAt||now,e:'🥜',x:`${nm(d.from)} dice que le hizo un caño a ${nm(d.to)}. Falta que lo confirme…`});
     else if(d.status==='accepted')it.push({t:d.acceptedAt||d.createdAt||0,e:'🤝',x:`${nm(d.to)} acepta el reto de ${nm(d.from)}: ${K.e} ${esc(what)} por ${St.e} ${esc(St.n.toLowerCase())}`});
-    else if(d.status==='pending')it.push({t:d.createdAt||0,e:'⚔️',x:`${nm(d.from)} reta a ${nm(d.to)}: ${K.e} ${esc(what)} por ${St.e} ${esc(St.n.toLowerCase())}`});
+    else if(d.status==='pending'&&r.state==='pending')it.push({t:d.createdAt||0,e:'⚔️',x:`${nm(d.from)} reta a ${nm(d.to)}: ${K.e} ${esc(what)} por ${St.e} ${esc(St.n.toLowerCase())}`});
   }
   // ✚ Lesiones y altas
   for(const p of Object.values(S.players)){if(isPending(p.id))continue;
@@ -878,7 +880,7 @@ function viewMatches(st){
   if(kitOn()&&me&&P(me)&&!P(me).kit&&!S.kitPromoHidden)h+=`<div class="kitpromo"><div class="ks">${shirtSVG('w',{size:54})}${shirtSVG('b',{size:54})}</div><div class="sp"><b>¿Ya tienes la equipación?</b><div class="small" style="opacity:.75;margin-top:2px">Blanca y negra con tu nombre y dorsal. Pedido conjunto del grupo.</div><button class="btn pri sm" style="margin-top:10px" data-act="kitOrder">👕 Pedir la mía</button></div><button class="x" data-act="kitHide" style="align-self:flex-start">✕</button></div>`;
   if(me){
     const mine=Object.values(S.duels).filter(d=>(d.from===me||d.to===me)&&d.status!=='rejected'&&d.status!=='cancelled').filter(d=>{const r=duelResult(d);return r.state==='pending'||r.state==='upcoming'||r.state==='live'||(r.state==='final'&&!d.settled)}).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-    const toMe=mine.filter(d=>d.status==='pending'&&d.to===me);
+    const toMe=mine.filter(d=>d.status==='pending'&&d.to===me&&duelResult(d).state==='pending');
     if(toMe.length)h+=`<div class="banner" style="margin-top:14px"><span class="e">⚔️</span><span><b>${esc(pname(toMe[0].from))} te ha retado</b><br>${DUEL_KINDS[toMe[0].kind].n} · ${stakeTxt(toMe[0])}. ¿Aceptas o te escondes? 🐔</span></div>`;
     if(mine.length){h+=`<h2>Tus duelos <span class="sub">${mine.length}</span></h2>`;mine.forEach(d=>h+=duelLine(d))}
   }
@@ -1127,7 +1129,7 @@ function viewInfo(){
     <li><b>Grupo privado:</b> se entra con aprobación del admin o con invitación. No pases el enlace sin hablarlo.</li>
     <li>Cada uno se apunta <b>a sí mismo</b>. Si te apuntas, <b>vienes</b>.</li>
     <li>🗳️ <b>Para apuntarte tienes que haber puntuado tu último partido.</b></li>
-    <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y nota se cierran a las 48 h.</li>
+    <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y equipo se cierran al acabar el partido; los de nota y caño, a las 24 h.</li>
     <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides, 🟥).</li>
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
@@ -2417,6 +2419,8 @@ const duelsOf=mid=>Object.values(S.duels).filter(d=>d.mid===mid&&d.status!=='rej
 const stakeTxt=d=>{const m=S.matches[d.mid];return d.stake==='court'?`💶 la pista${m?.price?` (${m.price}€)`:''}`:'🍺 una caña'};
 function duelResult(d){
   const m=S.matches[d.mid];if(!m)return{state:'void',why:'el partido se borró'};
+  const started=m.status==='played'||hoursTo(m)<=0;
+  if(d.status==='pending'&&started)return{state:'void',why:'no se aceptó antes del partido'};
   if(d.status!=='accepted')return{state:d.status};
   if(m.status!=='played')return{state:'upcoming'};
   const att=attendees(m);if(!att.includes(d.from)||!att.includes(d.to))return{state:'void',why:'no jugaron los dos'};
@@ -2431,10 +2435,10 @@ function duelResult(d){
     if(d.nut==='yes')return{state:'final',winner:d.from,loser:d.to};
     if(d.nut==='no')return{state:'final',winner:d.to,loser:d.from};
     if(d.nut==='claimed')return{state:'nutclaim'};
-    if(goalsLocked(m))return{state:'final',winner:d.to,loser:d.from,timeout:true};
+    if(duelLocked(m))return{state:'final',winner:d.to,loser:d.from,timeout:true};
     return{state:'nutwait'};
-  }else if(d.kind==='goals'){const g=goalsOf(m);a=g[d.from]||0;b=g[d.to]||0;final=goalsLocked(m)}
-  else{const av=matchAwards(m).avg;a=av[d.from]||0;b=av[d.to]||0;final=goalsLocked(m)}
+  }else if(d.kind==='goals'){const g=goalsOf(m);a=g[d.from]||0;b=g[d.to]||0;final=true}
+  else{const av=matchAwards(m).avg;a=av[d.from]||0;b=av[d.to]||0;final=duelLocked(m)}
   if(a===b)return{state:final?'draw':'live',a,b};
   const w=a>b?d.from:d.to,l=a>b?d.to:d.from;
   return{state:final?'final':'live',winner:w,loser:l,a,b};
@@ -2451,15 +2455,15 @@ function duelLine(d){
   else if(r.state==='nutclaim')st=`<span class="pill wht">🥜 ${esc(pname(d.from))} dice que se lo hizo</span>`;
   else if(r.state==='void')st=`<span class="pill">Nulo · ${esc(r.why||'')}</span>`;
   let acts='';
-  if(d.status==='pending'&&d.to===me)acts=`<button class="btn sm pri" data-act="duelAccept" data-id="${esc(d.id)}">Aceptar</button><button class="btn sm ghost" data-act="duelReject" data-id="${esc(d.id)}">Rechazar</button>`;
+  if(d.status==='pending'&&d.to===me&&r.state==='pending')acts=`<button class="btn sm pri" data-act="duelAccept" data-id="${esc(d.id)}">Aceptar</button><button class="btn sm ghost" data-act="duelReject" data-id="${esc(d.id)}">Rechazar</button>`;
   else if((d.status==='pending'||(d.status==='accepted'&&m&&m.status!=='played'&&hoursTo(m)>0))&&d.from===me)acts=`<button class="btn sm ghost" data-act="duelCancel" data-id="${esc(d.id)}">Retirar</button>`;
   if(r.state==='nutwait'&&d.from===me)acts+=`<button class="btn sm pri" data-act="duelNut" data-v="claimed" data-id="${esc(d.id)}">🥜 ¡Se lo hice!</button><button class="btn sm ghost" data-act="duelNut" data-v="no" data-id="${esc(d.id)}">No pude</button>`;
   if(r.state==='nutclaim'&&(d.to===me||isAdmin()||(m&&canManage(m)&&d.from!==me)))acts+=`<button class="btn sm pri" data-act="duelNut" data-v="yes" data-id="${esc(d.id)}">${d.to===me?'Sí, me lo hizo 😩':'Confirmar caño'}</button><button class="btn sm ghost" data-act="duelNut" data-v="no" data-id="${esc(d.id)}">${d.to===me?'¡Mentira!':'No hubo'}</button>`;
   if(r.state==='final'&&!d.settled&&(r.winner===me||isAdmin()))acts+=`<button class="btn sm wht" data-act="duelSettle" data-id="${esc(d.id)}">✅ Me ha pagado</button>`;
   return `<div class="duel"><div class="dv-top"><span class="av">${face(d.from)}</span><b>${esc(pname(d.from))}</b><span class="vs">⚔️</span><b>${esc(pname(d.to))}</b><span class="av">${face(d.to)}</span></div>
     <div class="small muted" style="margin-top:6px">${K.e} ${K.n} · ${stakeTxt(d)}${m?` · ${esc(fmtShort(m))}`:''}</div>
-    ${d.kind==='nutmeg'&&r.state==='final'?`<div class="small muted" style="margin-top:6px">${d.nut==='yes'?'🥜 Caño confirmado':r.timeout?'Nadie dijo que hubiera caño en 48 h':'🥜 Sin caño'}</div>`:''}
-    ${r.state==='nutwait'&&d.from===me?`<div class="small muted" style="margin-top:6px">Tienes 48 h para decir si se lo hiciste. Si no dices nada, gana ${esc(pname(d.to))}.</div>`:''}
+    ${d.kind==='nutmeg'&&r.state==='final'?`<div class="small muted" style="margin-top:6px">${d.nut==='yes'?'🥜 Caño confirmado':r.timeout?'Nadie dijo que hubiera caño en 24 h':'🥜 Sin caño'}</div>`:''}
+    ${r.state==='nutwait'&&d.from===me?`<div class="small muted" style="margin-top:6px">Tienes 24 h para decir si se lo hiciste. Si no dices nada, gana ${esc(pname(d.to))}.</div>`:''}
     ${r.state==='final'&&!d.settled?`<div class="small" style="margin-top:6px"><b>${esc(pname(r.loser))}</b> le debe ${stakeTxt(d)} a <b>${esc(pname(r.winner))}</b></div>`:''}
     <div class="row wrapr" style="margin-top:8px">${st}<span class="sp"></span>${acts}</div></div>`;
 }
@@ -2654,7 +2658,7 @@ document.addEventListener('click',e=>{
     case'swap':if(canManage(S.matches[id]))swap(id,a.dataset.p);break;
     case'teamEdit':teamEditor(id);break;
     case'duelNew':duelForm(id,a.dataset.rival);break;
-    case'duelAccept':{const d=S.duels[id],mm=d&&S.matches[d.mid];if(mm&&!lineup(mm).in.includes(me)){toast('Estás en reserva: no puedes aceptar hasta entrar en la lista 🪑');break}}store.doc('duels/'+id).update({status:'accepted',acceptedAt:Date.now()}).then(()=>toast('Reto aceptado ⚔️ ¡Que gane el peor!')).catch(err);break;
+    case'duelAccept':{const d=S.duels[id],mm=d&&S.matches[d.mid];if(mm&&(mm.status==='played'||hoursTo(mm)<=0)){toast('El partido ya ha empezado: el reto ha caducado');break}if(mm&&!lineup(mm).in.includes(me)){toast('Estás en reserva: no puedes aceptar hasta entrar en la lista 🪑');break}}store.doc('duels/'+id).update({status:'accepted',acceptedAt:Date.now()}).then(()=>toast('Reto aceptado ⚔️ ¡Que gane el peor!')).catch(err);break;
     case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
     case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
     case'arcNow':a.disabled=true;archiveOld(true).then(n=>{toast(n?`Archivados ${n} documentos 📦`:'No hay nada que archivar todavía (se archivan los meses cerrados hace más de '+ARC_DAYS+' días)');render()});break;
