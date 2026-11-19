@@ -654,16 +654,22 @@ function matchAwards(m){
     const mu=(v.awards||{}).muro;if(mu)mcnt[mu]=(mcnt[mu]||0)+1});
   const gkAvg={};for(const[p,a]of Object.entries(grat))gkAvg[p]=a.reduce((x,y)=>x+y,0)/a.length;
   const avg={};for(const[p,a]of Object.entries(rat))avg[p]=a.reduce((x,y)=>x+y,0)/a.length;
-  // Un solo ganador por premio. Desempates: 1) más votos; 2) nota media del partido (más alta; en "Vaya día", más baja);
-  // 3) goles (más; en "Vaya día", menos); 4) orden alfabético.
-  const g=goalsOf(m),win={},cnt2={};
-  AWARDS.forEach(A=>{const c=cnt[A.k];const max=Math.max(0,...Object.values(c));if(!max){win[A.k]=[];return}
-    const neg=A.pts<0;const tied=Object.keys(c).filter(p=>c[p]===max);
-    tied.sort((x,y)=>{const ax=avg[x]??(neg?9:0),ay=avg[y]??(neg?9:0);if(ax!==ay)return neg?ax-ay:ay-ax;
-      const gx=g[x]||0,gy=g[y]||0;if(gx!==gy)return neg?gx-gy:gy-gx;
-      return pname(x).localeCompare(pname(y))});
-    win[A.k]=[tied[0]];cnt2[A.k]={who:tied[0],votes:max,tie:tied.length>1}});
-  {const max=Math.max(0,...Object.values(mcnt));if(max){const tied=Object.keys(mcnt).filter(p=>mcnt[p]===max).sort((x,y)=>(gkAvg[y]??0)-(gkAvg[x]??0)||pname(x).localeCompare(pname(y)));win.muro=[tied[0]];cnt2.muro={who:tied[0],votes:max,tie:tied.length>1}}else win.muro=[]}
+  // Un ganador por premio y UN premio por jugador. Se reparte de mayor a menor número de votos:
+  // si alguien ya se ha llevado un premio, el siguiente premio pasa al siguiente más votado.
+  // Desempates: 1) más votos; 2) importancia del premio (Crack, Muro, Duro, Dandy, Vaya día);
+  // 3) nota media del partido (más alta; en "Vaya día", más baja); 4) goles (más; en "Vaya día", menos); 5) orden alfabético.
+  const g=goalsOf(m),win={},cnt2={};const ORDER=['crack','muro','duro','dandy','vaya'];
+  const all={...cnt,muro:mcnt};const negK=k=>(AWARDS.find(a=>a.k===k)?.pts??1)<0;
+  const pairs=[];for(const k of ORDER)for(const[p,v]of Object.entries(all[k]||{}))if(v>0)pairs.push({k,p,v});
+  const tb=(k,x,y)=>{const neg=negK(k);const src=k==='muro'?gkAvg:avg;const ax=src[x]??(neg?9:0),ay=src[y]??(neg?9:0);if(ax!==ay)return neg?ax-ay:ay-ax;
+    const gx=g[x]||0,gy=g[y]||0;if(gx!==gy)return neg?gx-gy:gy-gx;return pname(x).localeCompare(pname(y))};
+  pairs.sort((a,b)=>b.v-a.v||ORDER.indexOf(a.k)-ORDER.indexOf(b.k)||tb(a.k,a.p,b.p));
+  const taken=new Set(),done=new Set();
+  for(const q of pairs){if(done.has(q.k)||taken.has(q.p))continue;done.add(q.k);taken.add(q.p);win[q.k]=[q.p];
+    const max=Math.max(...Object.values(all[q.k]));const tie=Object.values(all[q.k]).filter(v=>v===q.v).length>1;
+    const top=Object.keys(all[q.k]).filter(p=>all[q.k][p]===max);
+    cnt2[q.k]={who:q.p,votes:q.v,tie,moved:q.v<max||!top.includes(q.p)?top.filter(p=>p!==q.p):null}}
+  for(const k of ORDER)if(!win[k])win[k]=[];
   return{win,avg,gkAvg,nVotes:vs.length,rat,info:cnt2};
 }
 function resultFor(m,pid){
@@ -1006,8 +1012,8 @@ function matchDetail(m,st){
     x+=`<button class="btn wht full" style="margin-top:12px" data-act="share" data-kind="result" data-id="${esc(m.id)}">📸 Compartir resultado</button>`;
     const aw=matchAwards(m);
     x+=`<h3>Premios del partido · ${aw.nVotes} ${aw.nVotes===1?'voto':'votos'}</h3>`;
-    if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>{const i=aw.info[A.k];return `<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b>${i?`<div class="small muted" style="font-size:11px">${i.votes} ${i.votes===1?'voto':'votos'}${i.tie?' · desempate':''}</div>`:''}</div>`}).join('')}${aw.win.muro&&aw.win.muro.length?`<div class="aw"><div class="ae">${GK_AWARD.e}</div><div class="an">${GK_AWARD.n}</div><b>${esc(pname(aw.win.muro[0]))}</b>${aw.info.muro?`<div class="small muted" style="font-size:11px">${aw.info.muro.votes} ${aw.info.muro.votes===1?'voto':'votos'}</div>`:''}</div>`:''}</div>
-      <p class="small muted" style="margin-top:6px">Un ganador por premio. Si hay empate a votos, gana quien tenga mejor nota del partido (en Vaya día, peor), y luego más goles (en Vaya día, menos).</p>`;
+    if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>{const i=aw.info[A.k];return `<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b>${i?`<div class="small muted" style="font-size:11px">${i.votes} ${i.votes===1?'voto':'votos'}${i.tie?' · desempate':''}${i.moved&&i.moved.length?` · pasa de ${esc(pname(i.moved[0]))}`:''}</div>`:''}</div>`}).join('')}${aw.win.muro&&aw.win.muro.length?`<div class="aw"><div class="ae">${GK_AWARD.e}</div><div class="an">${GK_AWARD.n}</div><b>${esc(pname(aw.win.muro[0]))}</b>${aw.info.muro?`<div class="small muted" style="font-size:11px">${aw.info.muro.votes} ${aw.info.muro.votes===1?'voto':'votos'}</div>`:''}</div>`:''}</div>
+      <p class="small muted" style="margin-top:6px">Un ganador por premio y <b>un premio por jugador</b>: si alguien gana varios, se queda el que más votos tiene y el otro pasa al siguiente más votado. Si hay empate a votos, gana quien tenga mejor nota del partido (en Vaya día, peor), y luego más goles (en Vaya día, menos).</p>`;
     else x+=`<p class="muted small">Todavía nadie ha votado.</p>`;
     if(me&&att.includes(me)&&hasVoted(m.id,me)){const s=myStat(m.id,me);x+=`<button class="btn sm" style="margin-top:10px" data-act="myStats" data-id="${esc(m.id)}">⚽ Mis goles: ${s?`${+s.g||0}${astOn()?` · 🎯 ${+s.a||0}`:''}`:'sin apuntar'} ${goalsLocked(m)?'🔒':'✏️'}</button>`}
     if(me&&att.includes(me))x+=hasVoted(m.id,me)?`<p class="small muted" style="margin-top:10px">✅ Ya has votado (de forma anónima).</p>`:`<button class="btn pri full" style="margin-top:12px" data-act="vote" data-id="${esc(m.id)}">⭐ Puntuar partido</button>`;
