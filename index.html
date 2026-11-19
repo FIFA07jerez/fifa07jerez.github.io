@@ -48,6 +48,14 @@ body.vice h2,body.vice h3{text-shadow:0 0 12px rgba(255,46,147,.25)}
 body.vice::before{content:'';position:fixed;left:0;right:0;bottom:0;height:34vh;pointer-events:none;z-index:-1;opacity:.35;
   background:linear-gradient(transparent 0,transparent 96%,#ff2e93 96%) 0 0/100% 28px,linear-gradient(90deg,transparent 0,transparent 96%,#2de2e6 96%) 0 0/28px 100%;
   -webkit-mask-image:linear-gradient(transparent,#000 70%);mask-image:linear-gradient(transparent,#000 70%);transform:perspective(300px) rotateX(55deg);transform-origin:bottom}
+/* 📢 Tablón */
+.board{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r);padding:4px 14px;margin-top:14px}
+.board .bi{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.board .bi:last-child{border-bottom:0}
+.board .be{font-size:20px;line-height:1.2;width:26px;text-align:center;flex-shrink:0}
+.board .bt{flex:1;font-size:14px;line-height:1.35}
+.board .bw{font-size:11px;color:var(--mut);white-space:nowrap;margin-top:2px}
+.board .bi.neg .bt b{color:var(--mut)}
 /* header & nav */
 header{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.85);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding-top:env(safe-area-inset-top)}
 .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;max-width:720px;margin:0 auto}
@@ -731,6 +739,87 @@ function promoModal(pr=promoCfg(),preview=false){if(!pr)return;
 function maybePromo(){if(S.promoShown||!S.ready.config||!me||!P(me)||needsGate()||S.sheet||$('#modalRoot').innerHTML)return;
   if(!promoLive())return;S.promoShown=true;setTimeout(()=>{if(!$('#modalRoot').innerHTML)promoModal()},700)}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)S.hiddenAt=Date.now();else if(S.hiddenAt&&Date.now()-S.hiddenAt>15*60e3){S.promoShown=false;S.hiddenAt=0;maybePromo()}});
+/* ============ TABLÓN DE ANUNCIOS ============
+   Se construye solo con lo que ya hay en la base de datos: retos, insignias (comparando antes y después de cada partido),
+   lesiones y altas. No guarda nada nuevo salvo la fecha del alta. */
+function ago(t){const s=Math.max(0,(Date.now()-t)/1000);if(s<3600)return `hace ${Math.max(1,Math.round(s/60))} min`;if(s<86400)return `hace ${Math.round(s/3600)} h`;const d=Math.floor(s/86400);return d<=1?'ayer':`hace ${d} días`}
+let boardCache={k:'',v:[]};
+function boardItems(days){
+  const key=[days,Object.keys(S.matches).length,Object.keys(S.votes).length,Object.keys(S.stats).length,Object.keys(S.players).length,
+    Object.values(S.duels).map(d=>d.status+(d.nut||'')+(d.settled?1:0)).join(''),Object.values(S.players).map(p=>(p.injury?.at||0)+'|'+(p.healedAt||0)).join(','),
+    Object.values(S.matches).map(m=>m.status+m.scoreA+m.scoreB+(m.teamA||[]).length+(m.promoted?.at||'')).join(''),Object.keys(S.signups).length,Object.values(S.players).map(p=>(p.cardLog||[]).length+(p.status||'')+(p.approvedAt||'')+(p.accessAt||'')).join(''),new Date().getHours()].join('#');
+  if(boardCache.k===key)return boardCache.v;
+  const now=Date.now(),from=now-days*864e5,it=[];const nm=id=>`<b>${esc(pname(id))}</b>`;
+  // ⚔️ Retos
+  for(const d of Object.values(S.duels)){if(!P(d.from)||!P(d.to)||d.status==='cancelled')continue;
+    const K=DUEL_KINDS[d.kind]||{e:'⚔️',n:'Duelo'},St=DUEL_STAKES[d.stake]||{e:'🍺',n:'Una caña'};const what=d.kind==='nutmeg'?'hacerle un caño':K.n.toLowerCase();
+    const r=duelResult(d);const m=S.matches[d.mid];
+    if(r.state==='final'&&m){it.push({t:d.nutAt||(+mdt(m)+2*36e5),e:'🏆',x:`${nm(r.winner)} gana el reto a ${nm(r.loser)} (${esc(what)}). ${r.loser?esc(pname(r.loser)):''} paga ${St.e} ${esc(St.n.toLowerCase())}.`,id:d.id})}
+    else if(d.status==='rejected')it.push({t:d.acceptedAt||d.createdAt||0,e:'🐔',x:`${nm(d.to)} se raja: rechaza el reto de ${nm(d.from)}`,neg:1});
+    else if(r.state==='nutclaim')it.push({t:d.nutAt||now,e:'🥜',x:`${nm(d.from)} dice que le hizo un caño a ${nm(d.to)}. Falta que lo confirme…`});
+    else if(d.status==='accepted')it.push({t:d.acceptedAt||d.createdAt||0,e:'🤝',x:`${nm(d.to)} acepta el reto de ${nm(d.from)}: ${K.e} ${esc(what)} por ${St.e} ${esc(St.n.toLowerCase())}`});
+    else if(d.status==='pending')it.push({t:d.createdAt||0,e:'⚔️',x:`${nm(d.from)} reta a ${nm(d.to)}: ${K.e} ${esc(what)} por ${St.e} ${esc(St.n.toLowerCase())}`});
+  }
+  // ✚ Lesiones y altas
+  for(const p of Object.values(S.players)){if(isPending(p.id))continue;
+    if(p.injury&&p.injury.at)it.push({t:p.injury.at,e:p.injury.e||'🚑',x:`${nm(p.id)} pasa por la enfermería: <i>${esc(p.injury.label)}</i>${p.injury.note?` · vuelve ${esc(p.injury.note)}`:''}`,neg:1});
+    if(p.healedAt)it.push({t:p.healedAt,e:'💪',x:`${nm(p.id)} recibe el alta médica${p.healedFrom?.label?` (estaba <i>${esc(p.healedFrom.label)}</i>)`:''}. ¡Vuelve!`});
+  }
+  const names=ids=>ids.length<=3?ids.map(nm).join(ids.length===2?' y ':', ').replace(/, ([^,]*)$/,' y $1'):`${ids.slice(0,3).map(nm).join(', ')} y ${ids.length-3} más`;
+  const day=m=>{const d=mdt(m);return `${DIA[d.getDay()]} ${d.getDate()}`};const wel=[];
+  // ⚽ Resultados, ⬆️ reservas que suben, 📅 partidos nuevos y 🔥 casi llenos
+  for(const m of Object.values(S.matches)){
+    if(m.status==='played'&&(m.teamA||[]).length){const aw=matchAwards(m);const cr=aw.win&&aw.win.crack;
+      it.push({t:Math.max(+m.playedAt||0,+mdt(m)+2*36e5),e:'⚽',x:`<b>${TEAM.A.n} ${+m.scoreA||0}–${+m.scoreB||0} ${TEAM.B.n}</b> · ${esc(day(m))} en ${esc(m.venue||'el campo')}${cr&&P(cr)?` · ⭐ El Crack: ${nm(cr)}`:''}`})}
+    if(m.promoted&&m.promoted.pid&&P(m.promoted.pid)&&m.promoted.at)it.push({t:m.promoted.at,e:'⬆️',x:`${nm(m.promoted.pid)} sube de la reserva y entra en el partido del ${esc(day(m))}`});
+    if(m.createdAt&&m.status!=='played'&&hoursTo(m)>-3){
+      it.push({t:m.createdAt,e:m.recurring?'🔁':'📅',x:m.recurring?`Abierto el partido fijo del <b>${esc(day(m))}</b> a las ${esc(m.time)} en ${esc(m.venue||'el campo')}. ¡A apuntarse!`
+        :`${m.createdBy&&P(m.createdBy)?nm(m.createdBy)+' convoca':'Nuevo partido:'} un ${esc(m.format||'partido')} el <b>${esc(day(m))}</b> a las ${esc(m.time)} en ${esc(m.venue||'el campo')}`});
+      const L=lineup(m),free=(m.slots||0)-L.in.length;
+      if(hoursTo(m)>0&&free>0&&free<=2){const last=Math.max(0,...signupsOf(m.id).map(s=>+s.at||0));
+        it.push({t:last>1e12?last:now-6e4,e:'🔥',x:`${free===1?'¡Queda <b>1 plaza</b>':`Quedan <b>${free} plazas</b>`} para el ${esc(day(m))}${free===1?'!':''} (${esc(m.venue||'')})`,hot:1})}}
+  }
+  // 🟨 Tarjetas, 🆕 fichajes
+  for(const p of Object.values(S.players)){if(isPending(p.id))continue;
+    for(const c of (p.cardLog||[])){if(!c.at)continue;const m=S.matches[c.mid];const red=c.type==='red';
+      it.push({t:c.at,e:red?'🟥':'🟨',x:c.reason==='noshow'?`Roja directa para ${nm(p.id)}: se apuntó${m?` al ${esc(day(m))}`:''} y no apareció 👻`:`${red?'Roja':'Amarilla'} para ${nm(p.id)} por bajarse tarde${m?` del partido del ${esc(day(m))}`:''}`,neg:1})}
+    if(!p.guest&&(p.approvedAt||p.createdAt)&&(p.approvedAt||p.createdAt)>=from)wel.push([p.approvedAt||p.createdAt,p.id]);
+    if(p.accessAt)it.push({t:p.accessAt,e:'🔑',x:`${nm(p.id)} deja de ser invitado: ya tiene la app`});
+  }
+  // Si entran muchos de golpe (al principio), se juntan en un solo anuncio
+  wel.sort((a,b)=>b[0]-a[0]);
+  if(wel.length>3)it.push({t:wel[0][0],e:'🆕',x:`Bienvenidos al grupo ${wel.slice(0,3).map(w=>nm(w[1])).join(', ')} y ${wel.length-3} más 👋`});
+  else wel.forEach(([t,id])=>it.push({t,e:'🆕',x:`Bienvenido al grupo, ${nm(id)} 👋`}));
+  // 🏆 Premios del mes (el día 1 del mes siguiente)
+  {const d=new Date(now);const prev=new Date(d.getFullYear(),d.getMonth()-1,1);const mo=ym(prev);const tt=+new Date(d.getFullYear(),d.getMonth(),1,12);
+    if(tt>=from&&tt<=now){const st=computeStatsRaw(m=>(m.date||'').startsWith(mo));const ids=Object.keys(st).filter(i=>st[i].pj>0&&P(i));
+      if(ids.length){const tp=ids.slice().sort((a,b)=>st[b].pts-st[a].pts)[0],tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];const mn=prev.toLocaleDateString('es-ES',{month:'long'});
+        it.push({t:tt,e:'🐐',x:`Jugador de ${esc(mn)}: ${nm(tp)} (${st[tp].pts} pts)${st[tg].g>0?` · 🥇 Pichichi: ${nm(tg)} (${st[tg].g} goles)`:''}`})}}}
+  // 📈 Cambios de nivel (al cruzar medio punto)
+  {const LV2=computeLevels();
+    for(const m of Object.values(S.matches)){if(m.status!=='played'||+mdt(m)<from-864e5)continue;
+      const up=[],dn=[];const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5)-60000;
+      for(const id of attendees(m)){const x=LV2[id];if(!x||x.pre[m.id]==null||x.d[m.id]==null||!P(id))continue;const a=x.pre[m.id],b=a+x.d[m.id];
+        const fa=Math.floor(a*2),fb=Math.floor(b*2);if(fa===fb)continue;(fb>fa?up:dn).push([id,fa,fb])}
+      if(up.length===1)it.push({t:tt,e:'📈',x:`${nm(up[0][0])} sube y pasa del nivel <b>${(up[0][2]/2).toFixed(1)}</b>`});
+      else if(up.length)it.push({t:tt,e:'📈',x:`Suben de nivel ${names(up.map(u=>u[0]))}`});
+      if(dn.length===1)it.push({t:tt,e:'📉',x:`${nm(dn[0][0])} baja del nivel <b>${(dn[0][1]/2).toFixed(1)}</b>`,neg:1});
+      else if(dn.length)it.push({t:tt,e:'📉',x:`Bajan de nivel ${names(dn.map(u=>u[0]))}`,neg:1})}}
+  // 🏅 Insignias nuevas: comparo los logros antes y después de cada partido reciente
+  const played=Object.values(S.matches).filter(m=>m.status==='played'&&mdt(m)>=from-864e5&&mdt(m)<=now).sort((a,b)=>mdt(a)-mdt(b));
+  if(played.length){const list=achList().filter(a=>!/duelRecord|S\.duels/.test(String(a.t)));
+    const has=(st,id,a)=>{try{return !!(st[id]&&a.t(st[id]))}catch(e){return false}};
+    let before=computeStats(m=>mdt(m)<mdt(played[0]));
+    for(const m of played){const after=computeStats(x=>mdt(x)<=mdt(m));
+      const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5)-30000;
+      for(const a of list){const who=attendees(m).filter(id=>P(id)&&has(after,id,a)&&!has(before,id,a));if(!who.length)continue;
+        it.push({t:tt,e:a.e,x:who.length===1?(a.neg?`${nm(who[0])} se gana el antilogro <b>${esc(a.n)}</b> 😅`:`${nm(who[0])} desbloquea la insignia <b>${esc(a.n)}</b>`)
+          :(a.neg?`Antilogro <b>${esc(a.n)}</b> 😅 para ${names(who)}`:`Insignia <b>${esc(a.n)}</b> para ${names(who)}`),neg:a.neg})}
+      before=after}}
+  const v=it.filter(i=>i.t>=from&&i.t<=now+6e4).sort((a,b)=>b.t-a.t);
+  boardCache={k:key,v};return v}
+function boardHTML(items){return `<div class="board">${items.map(i=>`<div class="bi ${i.neg?'neg':''}"><span class="be">${i.e}</span><span class="bt">${i.x}</span><span class="bw">${ago(i.t)}</span></div>`).join('')}</div>`}
+function boardModal(){const items=boardItems(30);modal(`${mh('📢 Tablón')}<p class="muted small">Lo que ha pasado en el grupo en los últimos 30 días.</p>${items.length?boardHTML(items):'<div class="empty">Nada por aquí todavía.</div>'}`)}
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
   return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
 function render(){
@@ -793,6 +882,7 @@ function viewMatches(st){
     if(toMe.length)h+=`<div class="banner" style="margin-top:14px"><span class="e">⚔️</span><span><b>${esc(pname(toMe[0].from))} te ha retado</b><br>${DUEL_KINDS[toMe[0].kind].n} · ${stakeTxt(toMe[0])}. ¿Aceptas o te escondes? 🐔</span></div>`;
     if(mine.length){h+=`<h2>Tus duelos <span class="sub">${mine.length}</span></h2>`;mine.forEach(d=>h+=duelLine(d))}
   }
+  {const items=boardItems(10);if(items.length){h+=`<h2>📢 Tablón ${items.length>5?`<button class="sub" data-act="board" style="background:none;color:var(--red2);font-weight:700">Ver todo ›</button>`:''}</h2>${boardHTML(items.slice(0,5))}`}}
   recTeasers().forEach(({r,occ,oa})=>{h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">🔁</span><span class="sp"><b>${WD[r.wd]} ${occ.getDate()}/${occ.getMonth()+1} · ${esc(r.time)} · ${esc(r.venue)}</b><br><span class="small muted">Las inscripciones se abren el ${DIA[oa.getDay()]} a las ${esc(r.openTime)}</span></span></div>`});
   const pls=openPolls();
   if(pls.length){h+=`<h2>¿Qué día? <span class="sub">${pls.length} ${pls.length===1?'encuesta':'encuestas'}</span></h2>`;pls.forEach(p=>h+=pollCard(p))}
@@ -1215,7 +1305,7 @@ async function join(mid,pid){
   if(!pid){toast('Primero dinos quién eres');pickMe();return}
   if(S.signups[`${mid}__${pid}`])return;
   if(pid===me){const pv=pendingVote(me);if(pv){modal(`${mh('Primero, a votar 🗳️')}<p class="muted">Para apuntarte tienes que puntuar tu último partido: <b style="color:var(--txt)">${esc(fmtShort(pv))} en ${esc(pv.venue||'')}</b>. Es un minuto y es anónimo.</p><button class="btn pri full" style="margin-top:16px" data-act="vote" data-id="${esc(pv.id)}">⭐ Puntuar ahora</button>`);return}}
-  if(pid===me&&injOf(me)&&!S._injOk){const ij=injOf(me);confirmBox('¿Ya estás recuperado?',`Estás marcado como <b>${esc(ij.e)} ${esc(ij.label)}</b>. Si te apuntas, te quitamos la cruz roja.`,'💪 Sí, estoy bien',async()=>{await store.doc('players/'+me).update({injury:null});S._injOk=true;try{await join(mid,pid)}finally{S._injOk=false}});return}
+  if(pid===me&&injOf(me)&&!S._injOk){const ij=injOf(me);confirmBox('¿Ya estás recuperado?',`Estás marcado como <b>${esc(ij.e)} ${esc(ij.label)}</b>. Si te apuntas, te quitamos la cruz roja.`,'💪 Sí, estoy bien',async()=>{await store.doc('players/'+me).update({injury:null,healedAt:Date.now(),healedFrom:{e:ij.e,label:ij.label}});S._injOk=true;try{await join(mid,pid)}finally{S._injOk=false}});return}
   const m=S.matches[mid];const full=lineup(m).in.length>=(m.slots||10);
   try{await store.doc(`signups/${mid}__${pid}`).set({mid,pid,at:Date.now()});autoTeams(mid);
     toast(pid===me?(full?'Estás en reserva 🪑':'¡Dentro! Ahora no falles 😤'):`${pname(pid)} apuntado`)}catch(e){err(e)}
@@ -2568,9 +2658,10 @@ document.addEventListener('click',e=>{
     case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
     case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
     case'arcNow':a.disabled=true;archiveOld(true).then(n=>{toast(n?`Archivados ${n} documentos 📦`:'No hay nada que archivar todavía (se archivan los meses cerrados hace más de '+ARC_DAYS+' días)');render()});break;
-    case'guestAccess':{const p=P(id);confirmBox('Darle acceso a '+esc(p.name),'Le creamos un PIN para que entre en la app con su nombre. Conserva sus partidos, goles y nivel.','🔑 Crear PIN',async()=>{const np=randPin();await store.doc('players/'+id).update({pinHash:await hashPin(np),guest:false});showInvite(p.name,np);S.keepModal=true},false);break}
+    case'guestAccess':{const p=P(id);confirmBox('Darle acceso a '+esc(p.name),'Le creamos un PIN para que entre en la app con su nombre. Conserva sus partidos, goles y nivel.','🔑 Crear PIN',async()=>{const np=randPin();await store.doc('players/'+id).update({pinHash:await hashPin(np),guest:false,accessAt:Date.now()});showInvite(p.name,np);S.keepModal=true},false);break}
+    case'board':boardModal();break;
     case'injOn':injForm(id);break;
-    case'injOff':store.doc('players/'+id).update({injury:null}).then(()=>{close();toast(id===me?'¡Vuelve el crack! 💪':'Lesión quitada')}).catch(err);break;
+    case'injOff':store.doc('players/'+id).update({injury:null,healedAt:Date.now(),healedFrom:injOf(id)?{e:injOf(id).e,label:injOf(id).label}:null}).then(()=>{close();toast(id===me?'¡Vuelve el crack! 💪':'Lesión quitada')}).catch(err);break;
     case'duelNut':{const v=a.dataset.v,d=S.duels[id];if(!d)break;
       const go=()=>store.doc('duels/'+id).update({nut:v,nutAt:Date.now(),nutBy:me}).then(()=>toast(v==='claimed'?`Hecho. Ahora ${pname(d.to)} lo tiene que confirmar 🥜`:v==='yes'?'Caño confirmado 🥜 Duele, eh':'Apuntado: no hubo caño')).catch(err);
       if(v==='no'&&d.from===me)confirmBox('No hubo caño','Entonces gana '+esc(pname(d.to))+' el duelo.','Vale, pago yo',go,true);else go();break}
@@ -2607,7 +2698,7 @@ document.addEventListener('click',e=>{
     case'gateJoin':playerForm(null,true);break;
     case'pendCancel':confirmBox('Cancelar solicitud','Se borra tu solicitud para entrar.','Cancelar solicitud',async()=>{await store.doc('players/'+me).delete();setMe(null)},true);break;
     case'pendCopy':{const adm=Object.values(S.players).filter(p=>p.admin).map(p=>p.name)[0]||'';copyText(`Hola ${adm}, he pedido entrar en ${APP_NAME.join('')} como "${pname(me)}". ¿Me apruebas? 🙏`,'Copiado. Mándaselo por WhatsApp 📲');break}
-    case'approve':store.doc('players/'+id).update({status:'approved'}).then(()=>toast(`${pname(id)} ya está dentro ✅`)).catch(err);break;
+    case'approve':store.doc('players/'+id).update({status:'approved',approvedAt:Date.now()}).then(()=>toast(`${pname(id)} ya está dentro ✅`)).catch(err);break;
     case'reject':confirmBox('Rechazar solicitud',`Se borra la solicitud de <b>${esc(pname(id))}</b>.`,'Rechazar',async()=>{await store.doc('players/'+id).delete()},true);break;
     case'install':installModal();break;
     case'promoEdit':promoForm();break;
@@ -2653,6 +2744,7 @@ async function firebaseStore(cfg){
 function demoStore(){
   let data=null;try{data=JSON.parse(localStorage.getItem('fifa07_demo'))}catch(e){}
   if(!data){data=seed();me='d0';try{localStorage.setItem('fifa07_me','d0')}catch(e){}}
+  if(data&&data.players&&data.players.d7&&!data._heal){data._heal=1;data.players.d7.healedAt=Date.now()-5*36e5;data.players.d7.healedFrom={e:'🦴',label:'Menisco de cristal'}}
   if(data&&data.players&&data.players.d5&&!data._inj){data._inj=1;data.players.d5.injury={e:'🏥',label:'En la UVI',note:'cuando me deje el fisio',at:Date.now()-3*864e5}}
   if(data&&!(data.config&&data.config.app&&data.config.app.promo&&data.config.app.promo.logo!==undefined)){data.config=data.config||{};const d=new Date();d.setDate(d.getDate()+19);
     data.config.app={...((data.config.app)||{}),promo:{on:true,logo:true,title:'Torneo Memorial Alberto Lucena Cortés',kicker:'II Edición',emoji:'🕊️',date:ymd(d),time:'10:00',place:'Lugar por confirmar',text:'Texto de ejemplo: aquí va lo que quieras contar del memorial (torneo, inscripciones, causa solidaria…). Lo cambias todo desde el Panel de admin.',url:'',cta:'Apuntarme',days:30,img:''}}}
@@ -2674,6 +2766,7 @@ function seed(){
   const names=[['Dani','MED','😎',3],['El Pirata','DEL','🥸',3],['Juanma','DEF','🧔',2],['Rafita','POR','🦍',2],['Curro','MED','🐂',3],['Lolo','DEF','🐢',1],['Chino','DEL','🔥',4],['Fran','TODO','🍺',2],['Kike','DEF','🧱',2],['Tito','MED','🐐',3],['Manu','POR','🦥',1],['Javi','DEL','🤠',3],['Nono','TODO','🐷',2],['Moi','MED','🦁',4]];
   const players={};names.forEach(([n,pos,e,l],i)=>players['d'+i]={name:n,pos,emoji:e,level0:l,yellow:i===5?1:0,red:0,cardLog:[],admin:i===0,createdAt:i});
   players.d5.injury={e:'🏥',label:'En la UVI',note:'cuando me deje el fisio',at:Date.now()-3*864e5};
+  players.d7.healedAt=Date.now()-5*36e5;players.d7.healedFrom={e:'🦴',label:'Menisco de cristal'};
   [[1,9,'M'],[2,4,'XL'],[3,1,'L'],[4,8,'L'],[6,10,'S'],[9,6,'M'],[13,23,'L']].forEach(([i,d,sz])=>{players['d'+i].dorsal=d;players['d'+i].kit={size:sz,name:players['d'+i].name,both:true,at:i}});
   const matches={},signups={},votes={},voted={};
   let rnd=7;const R=()=>{rnd=(rnd*9301+49297)%233280;return rnd/233280};
