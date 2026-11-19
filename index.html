@@ -562,7 +562,7 @@ const wrapOn=()=>!!S.config?.app?.wrapped; // "Tu temporada" (estilo Spotify): o
 /* ============ ESTADO ============ */
 const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},duels:{},ready:{},sheet:null};
 // Caché por versión de datos: cada vez que llega algo de la base de datos sube S.ver y se recalcula lo necesario.
-S.ver=0;const _memo=new Map();
+S.ver=0;S.seen={};const _memo=new Map();
 function memo(k,f){const c=_memo.get(k);if(c&&c.v===S.ver)return c.r;const r=f();_memo.set(k,{v:S.ver,r});return r}
 const ALLCOLS=['archive','players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'];
 const allReady=()=>ALLCOLS.every(c=>S.ready[c]);
@@ -629,7 +629,7 @@ function goalCheck(m){const g=goalsOf(m);const sum=t=>(t||[]).reduce((s,p)=>s+(g
 const orgName=m=>m?.createdBy&&P(m.createdBy)?pname(m.createdBy):'el organizador';
 function ym(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 function ymd(d){return `${ym(d)}-${String(d.getDate()).padStart(2,'0')}`}
-function setMe(id){me=id;try{id?localStorage.setItem('fifa07_me',id):localStorage.removeItem('fifa07_me')}catch(e){};renderMe();render();setTimeout(()=>{try{ensureRecurring()}catch(e){}},300)}
+function setMe(id){me=id;setTimeout(()=>{heartbeat(true);maybeSeenSub()},500);try{id?localStorage.setItem('fifa07_me',id):localStorage.removeItem('fifa07_me')}catch(e){};renderMe();render();setTimeout(()=>{try{ensureRecurring()}catch(e){}},300)}
 function toast(t){document.querySelectorAll('.toast').forEach(x=>x.remove());const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2800)}
 function err(e){console.error(e);const c=e?.code||'';
   toast(c==='timeout'?'❌ No se ha guardado: el servidor no responde. Revisa la conexión.':c==='permission-denied'?'❌ No se ha guardado: las reglas de Firebase no lo permiten.':`❌ No se ha guardado (${c||e?.message||'error'}). Prueba otra vez.`)}
@@ -1711,6 +1711,7 @@ function profile(id){
       if(mine||isAdmin())x+=aw?`<button class="btn full" style="margin-top:10px" data-act="awayOff" data-id="${esc(id)}">🏠 ${mine?'Ya estoy disponible':'Quitar ausencia'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="awayOn" data-id="${esc(id)}">🧳 ${mine?'Voy a estar fuera':'Marcar ausencia'}</button>`;
       if(mine||isAdmin())x+=ij?`<button class="btn full" style="margin-top:10px" data-act="injOff" data-id="${esc(id)}">💪 ${mine?'Ya estoy bien':'Quitar la lesión'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="injOn" data-id="${esc(id)}">✚ ${mine?'Me he lesionado':'Marcar como lesionado'}</button>`;
       return x})()}
+    ${isAdmin()&&!P(id).guest?`<p class="small muted" style="margin-top:10px">👀 Última conexión: <b style="color:var(--txt)">${esc(seenAgo(id))}</b> · solo lo ven los admins</p>`:''}
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
     ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
     ${(()=>{const sk=streak(s);return sk?`<div class="banner" style="margin-top:12px"><span class="e">${sk.e}</span><span><b>${sk.t[0].toUpperCase()+sk.t.slice(1)}</b></span></div>`:''})()}
@@ -2676,10 +2677,14 @@ function adminSection(){
     ${row('👕','Equipación oficial','Diseño de las camisetas, pedido conjunto, dorsales y +1 por venir equipado.',kitOn(),'kitToggle')}
     <div style="padding-top:12px" class="small muted">
       <p>🔒 <b style="color:var(--txt)">Grupo privado:</b> nadie entra sin tu aprobación o sin una invitación con PIN.</p>
+      <details style="margin-top:6px"><summary style="cursor:pointer">👀 <b style="color:var(--txt)">Última conexión</b> de cada jugador</summary>
+        <div style="margin-top:8px">${approvedIds().filter(i=>!P(i).guest).sort((a,b)=>(S.seen[b]?.at||0)-(S.seen[a]?.at||0)||pname(a).localeCompare(pname(b))).map(i=>{const t=S.seen[i]?.at;const old=!t||Date.now()-t>14*864e5;
+          return `<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line)"><span class="sp" style="color:var(--txt)">${esc(pname(i))}</span><span style="${old?'color:var(--red2)':''}">${t?ago(t):'—'}</span></div>`}).join('')}</div>
+        <p style="margin-top:6px">Se apunta cada vez que alguien abre la app (desde esta versión). En rojo, los que llevan más de 2 semanas sin entrar o nunca.</p></details>
       <p style="margin-top:6px">👥 <b style="color:var(--txt)">Admins:</b> ${admins.map(esc).join(', ')||'—'}</p>
       <p style="margin-top:6px">🃏 Toca a cualquier jugador para <b style="color:var(--txt)">nombrarlo admin, quitar tarjetas, resetear su PIN o borrarlo</b>.</p>
       <p style="margin-top:6px">🗑 En la ficha de cualquier partido puedes <b style="color:var(--txt)">borrarlo o editarlo</b>.</p>
-      <p style="margin-top:6px">💬 Buzón beta: <b style="color:var(--txt)">${nfb} ${nfb===1?'sugerencia':'sugerencias'}</b> (más abajo).</p>
+      <p style="margin-top:6px">💬 Buzón de sugerencias: <b style="color:var(--txt)">${nfb} ${nfb===1?'sugerencia':'sugerencias'}</b> (más abajo).</p>
       ${(()=>{const live=['players','galaVotes','galaVoted','config','polls','pollVotes','feedback'].reduce((n,c)=>n+Object.keys(S[c]||{}).length,0)+ARC_COLS.reduce((n,c)=>n+Object.keys(S.live[c]||{}).length,0);const na=Object.keys(S.arc).length;
         return `<p style="margin-top:6px">📦 Cada móvil carga <b>${live+na}</b> documentos al abrir${na?` · ${na} ${na===1?'mes archivado':'meses archivados'}`:''}. <span class="muted">Gratis hasta unas 50.000 lecturas al día entre todos.</span></p>
         <button class="btn sm" style="margin-top:6px" data-act="arcNow">📦 Archivar meses cerrados</button>`})()}
@@ -2978,6 +2983,14 @@ async function archiveOld(force){
     try{localStorage.setItem('fifa07_arc',String(Date.now()))}catch(e){}
   }catch(e){console.error(e);if(force)err(e)}finally{S.archiving=false}
   return moved}
+/* 👀 Última conexión: cada móvil apunta cuándo se abrió la app (como mucho cada 10 min).
+   Va en una colección aparte (seen) que solo descargan los admins, para no gastar lecturas en el resto. */
+function heartbeat(force){if(!me||!P(me)||!store||isPending(me))return;let last=0;try{last=+localStorage.getItem('fifa07_hb')||0}catch(e){}
+  if(!force&&Date.now()-last<10*60e3)return;try{localStorage.setItem('fifa07_hb',String(Date.now()))}catch(e){}
+  store.doc('seen/'+me).set({pid:me,at:Date.now()}).catch(()=>{})}
+let seenSub=false;function maybeSeenSub(){if(seenSub||!isAdmin()||!store)return;seenSub=true;sub('seen')}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)heartbeat()});
+function seenAgo(id){const t=S.seen[id]?.at;if(!t)return 'nunca (o antes de esta versión)';return ago(t)}
 let _rq=0;function scheduleRender(){if(_rq)return;_rq=setTimeout(()=>{_rq=0;renderMe();render()},30)}
 function sub(col){
   const t=setTimeout(()=>{if(!S.ready[col]){S.ready[col]=1;render();toast('La conexión va lenta…')}},10000);
@@ -2991,6 +3004,7 @@ function sub(col){
     if(col==='players'&&me&&!o[me]&&snap.docs.length)me=null;
     scheduleRender();
     if(col==='matches'||col==='config'||col==='players')setTimeout(ensureRecurring,500);
+    if(col==='players'){setTimeout(()=>{heartbeat();maybeSeenSub()},800)}
   },e=>{clearTimeout(t);console.error(e);S.ready[col]=1;if(col==='players')storeErr=true;render()});
 }
 (async()=>{
