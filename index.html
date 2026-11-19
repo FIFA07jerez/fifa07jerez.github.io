@@ -548,7 +548,7 @@ const MEMORIAL_LOGO='data:image/webp;base64,UklGRtY+AABXRUJQVlA4WAoAAAAQAAAAtwEA
 const VICE_FROM='2026-11-19T17:00:00+01:00',VICE_TO='2026-12-01T00:00:00+01:00';
 const viceOn=()=>{const v=S.config?.app?.vice;if(v===true)return true;if(v===false)return false;const n=Date.now();return n>=Date.parse(VICE_FROM)&&n<Date.parse(VICE_TO)};
 function applyTheme(){const on=viceOn();if(document.body.classList.contains('vice')!==on){document.body.classList.toggle('vice',on);
-  $('#logo').innerHTML=`${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b>${on?'<span class="vc">🌴</span>':''}${BETA?'<span class="beta">BETA</span>':''}<small>${esc(on?'Edición Vice · semana del GTA':SLOGAN)}</small>`;
+  $('#logo').innerHTML=`${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b>${on?'<span class="vc">🌴</span>':''}${BETA?'<span class="beta">BETA</span>':''}<small>${esc(on?'Edición Vice':SLOGAN)}</small>`;
   const tc=document.querySelector('meta[name=theme-color]');if(tc)tc.content=on?'#120822':'#0a0a0a'}}
 const promoCfg=()=>S.config?.app?.promo||null;
 // Anuncio (p. ej. Memorial Alberto Lucena): ventana emergente al abrir la app desde 'days' días antes hasta que acaba el día del evento.
@@ -559,6 +559,11 @@ const wrapOn=()=>!!S.config?.app?.wrapped; // "Tu temporada" (estilo Spotify): o
 
 /* ============ ESTADO ============ */
 const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},duels:{},ready:{},sheet:null};
+// Caché por versión de datos: cada vez que llega algo de la base de datos sube S.ver y se recalcula lo necesario.
+S.ver=0;const _memo=new Map();
+function memo(k,f){const c=_memo.get(k);if(c&&c.v===S.ver)return c.r;const r=f();_memo.set(k,{v:S.ver,r});return r}
+const ALLCOLS=['archive','players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'];
+const allReady=()=>ALLCOLS.every(c=>S.ready[c]);
 let store=null,me=null,storeErr=false;
 try{S.kitPromoHidden=!!localStorage.getItem('fifa07_kithide');S.instHidden=!!localStorage.getItem('fifa07_insthide')}catch(e){}
 try{me=localStorage.getItem('fifa07_me')}catch(e){}
@@ -646,7 +651,8 @@ function attendees(m){const t=[...(m.teamA||[]),...(m.teamB||[])];return t.lengt
 function votesOf(mid){return Object.values(S.votes).filter(v=>v.mid===mid)}
 const hasVoted=(mid,pid)=>!!S.voted[`${mid}__${pid}`];
 function tally(o){let max=0,w=[];for(const[k,v]of Object.entries(o)){if(v>max){max=v;w=[k]}else if(v===max&&v>0)w.push(k)}return w}
-function matchAwards(m){
+function matchAwards(m){return memo('aw:'+m.id,()=>matchAwardsRaw(m))}
+function matchAwardsRaw(m){
   const vs=votesOf(m.id),cnt={},rat={},grat={},mcnt={};AWARDS.forEach(a=>cnt[a.k]={});
   vs.forEach(v=>{const aw=v.awards||{};AWARDS.forEach(a=>{const p=aw[a.k];if(p)cnt[a.k][p]=(cnt[a.k][p]||0)+1});
     for(const[p,x]of Object.entries(v.ratings||{})){const n=+x;if(n>=1&&n<=5)(rat[p]=rat[p]||[]).push(n)}
@@ -679,7 +685,8 @@ function resultFor(m,pid){
   const a=+m.scoreA||0,b=+m.scoreB||0;if(a===b)return'E';
   return(inA?a>b:b>a)?'V':'D';
 }
-function computeLevels(){
+function computeLevels(){return memo('lv',computeLevelsRaw)}
+function computeLevelsRaw(){
   const L={};for(const id in S.players)L[id]={level:+S.players[id].level0||2,n:0,d:{},pre:{}};
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&(m.teamA||[]).length&&(m.teamB||[]).length).sort((a,b)=>mdt(a)-mdt(b));
   for(const m of played){
@@ -697,7 +704,7 @@ function computeLevels(){
   }
   return L;
 }
-function computeStats(flt){return enrich(computeStatsRaw(flt))}
+function computeStats(flt){return flt?enrich(computeStatsRaw(flt)):memo('st',()=>enrich(computeStatsRaw()))}
 function computeStatsRaw(flt){
   const LVL=computeLevels();
   const st={};
@@ -791,12 +798,10 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)S.hiddenAt=
    Se construye solo con lo que ya hay en la base de datos: retos, insignias (comparando antes y después de cada partido),
    lesiones y altas. No guarda nada nuevo salvo la fecha del alta. */
 function ago(t){const s=Math.max(0,(Date.now()-t)/1000);if(s<3600)return `hace ${Math.max(1,Math.round(s/60))} min`;if(s<86400)return `hace ${Math.round(s/3600)} h`;const d=Math.floor(s/86400);return d<=1?'ayer':`hace ${d} días`}
-let boardCache={k:'',v:[]};
+let boardCache={};const BADGES=new Map();const boardKey=days=>S.ver+'#'+days+'#'+new Date().getHours();
 function boardItems(days){
-  const key=[days,Object.keys(S.matches).length,Object.keys(S.votes).length,Object.keys(S.stats).length,Object.keys(S.players).length,
-    Object.values(S.duels).map(d=>d.status+(d.nut||'')+(d.settled?1:0)).join(''),Object.values(S.players).map(p=>(p.injury?.at||0)+'|'+(p.healedAt||0)+'|'+(p.away?.at||0)+'|'+(p.backAt||0)).join(','),
-    Object.values(S.matches).map(m=>m.status+m.scoreA+m.scoreB+(m.teamA||[]).length+(m.promoted?.at||'')).join(''),Object.keys(S.signups).length,Object.values(S.players).map(p=>(p.cardLog||[]).length+(p.status||'')+(p.approvedAt||'')+(p.accessAt||'')).join(''),new Date().getHours()].join('#');
-  if(boardCache.k===key)return boardCache.v;
+  const key=boardKey(days);
+  if(boardCache[days]?.k===key)return boardCache[days].v;
   const now=Date.now(),from=now-days*864e5,it=[];const nm=id=>`<b>${esc(pname(id))}</b>`;
   // ⚔️ Retos
   for(const d of Object.values(S.duels)){if(!P(d.from)||!P(d.to)||d.status==='cancelled')continue;
@@ -864,15 +869,24 @@ function boardItems(days){
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&mdt(m)>=from-864e5&&mdt(m)<=now).sort((a,b)=>mdt(a)-mdt(b));
   if(played.length){const list=achList().filter(a=>!/duelRecord|S\.duels/.test(String(a.t)));
     const has=(st,id,a)=>{try{return !!(st[id]&&a.t(st[id]))}catch(e){return false}};
-    let before=computeStats(m=>mdt(m)<mdt(played[0]));
-    for(const m of played){const after=computeStats(x=>mdt(x)<=mdt(m));
-      const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5)-30000;
-      for(const a of list){const who=attendees(m).filter(id=>P(id)&&has(after,id,a)&&!has(before,id,a));if(!who.length)continue;
-        it.push({t:tt,e:a.e,x:who.length===1?(a.neg?`${nm(who[0])} se gana el antilogro <b>${esc(a.n)}</b> 😅`:`${nm(who[0])} desbloquea la insignia <b>${esc(a.n)}</b>`)
-          :(a.neg?`Antilogro <b>${esc(a.n)}</b> 😅 para ${names(who)}`:`Insignia <b>${esc(a.n)}</b> para ${names(who)}`),neg:a.neg})}
-      before=after}}
+    // Firma de "todo lo que había hasta ese partido": si no cambia, las insignias de ese partido se sacan de la caché
+    const allM=Object.values(S.matches).filter(x=>x.status==='played'),allV=Object.values(S.votes),allS=Object.values(S.stats||{});
+    const sig=m=>{const t=+mdt(m);let a=0,c=0,v=0,s=0;for(const x of allM)if(+mdt(x)<=t){a++;c+=(+x.scoreA||0)*31+(+x.scoreB||0)+(x.teamA||[]).length}
+      for(const q of allV){const mm=S.matches[q.mid];if(mm&&+mdt(mm)<=t)v++}for(const q of allS){const mm=S.matches[q.mid];if(mm&&+mdt(mm)<=t)s+=1+(+q.g||0)}
+      return [m.id,a,c,v,s,Object.keys(S.players).length,kitOn(),astOn()].join(',')};
+    let before=null;
+    for(const m of played){const k=sig(m);let items=BADGES.get(k);
+      if(!items){if(!before)before=computeStats(x=>mdt(x)<mdt(m));const after=computeStats(x=>mdt(x)<=mdt(m));items=[];
+        const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5)-30000;
+        for(const a of list){const who=attendees(m).filter(id=>P(id)&&has(after,id,a)&&!has(before,id,a));if(!who.length)continue;
+          items.push({t:tt,e:a.e,x:who.length===1?(a.neg?`${nm(who[0])} se gana el antilogro <b>${esc(a.n)}</b> 😅`:`${nm(who[0])} desbloquea la insignia <b>${esc(a.n)}</b>`)
+            :(a.neg?`Antilogro <b>${esc(a.n)}</b> 😅 para ${names(who)}`:`Insignia <b>${esc(a.n)}</b> para ${names(who)}`),neg:a.neg})}
+        BADGES.set(k,items);before=after}
+      else before=null;
+      it.push(...items)}}
   const v=it.filter(i=>i.t>=from&&i.t<=now+6e4).sort((a,b)=>b.t-a.t);
-  boardCache={k:key,v};return v}
+  boardCache[days]={k:key,v};return v}
+function boardBlock(items){return items.length?`<h2>📢 Tablón ${items.length>5?`<button class="sub" data-act="board" style="background:none;color:var(--red2);font-weight:700">Ver todo ›</button>`:''}</h2>${boardHTML(items.slice(0,5))}`:''}
 function boardHTML(items){return `<div class="board">${items.map(i=>`<div class="bi ${i.neg?'neg':''}"><span class="be">${i.e}</span><span class="bt">${i.x}</span><span class="bw">${ago(i.t)}</span></div>`).join('')}</div>`}
 function boardModal(){const items=boardItems(30);modal(`${mh('📢 Tablón')}<p class="muted small">Lo que ha pasado en el grupo en los últimos 30 días.</p>${items.length?boardHTML(items):'<div class="empty">Nada por aquí todavía.</div>'}`)}
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
@@ -902,7 +916,7 @@ function render(){
     const m=S.matches[S.sheet.id];const body=document.querySelector('#sheetBody');
     if(!m)close();else if(body)body.innerHTML=matchDetail(m,st);
   }
-  if(S.ready.votes&&S.ready.signups)checkUpgrade(st);
+  checkUpgrade();
 }
 
 /* ---- Partidos ---- */
@@ -937,7 +951,9 @@ function viewMatches(st){
     if(toMe.length)h+=`<div class="banner" style="margin-top:14px"><span class="e">⚔️</span><span><b>${esc(pname(toMe[0].from))} te ha retado</b><br>${DUEL_KINDS[toMe[0].kind].n} · ${stakeTxt(toMe[0])}. ¿Aceptas o te escondes? 🐔</span></div>`;
     if(mine.length){h+=`<h2>Tus duelos <span class="sub">${mine.length}</span></h2>`;mine.forEach(d=>h+=duelLine(d))}
   }
-  {const items=boardItems(10);if(items.length){h+=`<h2>📢 Tablón ${items.length>5?`<button class="sub" data-act="board" style="background:none;color:var(--red2);font-weight:700">Ver todo ›</button>`:''}</h2>${boardHTML(items.slice(0,5))}`}}
+  // El tablón se calcula después de pintar la pantalla (y solo cuando ya ha llegado todo), para que la app abra rápido
+  if(boardCache[10]?.k===boardKey(10))h+=boardBlock(boardCache[10].v);
+  else{h+=`<div id="boardSlot"></div>`;if(allReady())setTimeout(()=>{const sl=document.getElementById('boardSlot');if(!sl)return;const it=boardItems(10);const s2=document.getElementById('boardSlot');if(s2)s2.outerHTML=boardBlock(it)},40)}
   recTeasers().forEach(({r,occ,oa})=>{h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">🔁</span><span class="sp"><b>${WD[r.wd]} ${occ.getDate()}/${occ.getMonth()+1} · ${esc(r.time)} · ${esc(r.venue)}</b><br><span class="small muted">Las inscripciones se abren el ${DIA[oa.getDay()]} a las ${esc(r.openTime)}</span></span></div>`});
   const pls=openPolls();
   if(pls.length){h+=`<h2>¿Qué día? <span class="sub">${pls.length} ${pls.length===1?'encuesta':'encuestas'}</span></h2>`;pls.forEach(p=>h+=pollCard(p))}
@@ -1011,7 +1027,7 @@ function matchDetail(m,st){
     x+=`<div class="chron"><div class="ck">📰 La crónica</div><div class="ct">${esc(ch.title)}</div>${ch.body.map(p=>`<p>${esc(p)}</p>`).join('')}</div>`;
     x+=`<button class="btn wht full" style="margin-top:12px" data-act="share" data-kind="result" data-id="${esc(m.id)}">📸 Compartir resultado</button>`;
     const aw=matchAwards(m);
-    x+=`<h3>Premios del partido · ${aw.nVotes} ${aw.nVotes===1?'voto':'votos'}</h3>`;
+    {const elig=att.filter(p=>P(p)&&!P(p).guest),nv=elig.filter(p=>hasVoted(m.id,p)).length;x+=`<h3>Premios del partido · ${aw.nVotes} ${aw.nVotes===1?'voto':'votos'}</h3><p class="small muted" style="margin:-4px 0 8px">${matchClosed(m)?'🔒 Votación cerrada':`🗳️ Han votado ${nv} de ${elig.length} · se cierra cuando voten todos o a las ${GOALS_EDIT_HOURS} h`}</p>`}
     if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>{const i=aw.info[A.k];return `<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b>${i?`<div class="small muted" style="font-size:11px">${i.votes} ${i.votes===1?'voto':'votos'}${i.tie?' · desempate':''}${i.moved&&i.moved.length?` · pasa de ${esc(pname(i.moved[0]))}`:''}</div>`:''}</div>`}).join('')}${aw.win.muro&&aw.win.muro.length?`<div class="aw"><div class="ae">${GK_AWARD.e}</div><div class="an">${GK_AWARD.n}</div><b>${esc(pname(aw.win.muro[0]))}</b>${aw.info.muro?`<div class="small muted" style="font-size:11px">${aw.info.muro.votes} ${aw.info.muro.votes===1?'voto':'votos'}</div>`:''}</div>`:''}</div>
       <p class="small muted" style="margin-top:6px">Un ganador por premio y <b>un premio por jugador</b>: si alguien gana varios, se queda el que más votos tiene y el otro pasa al siguiente más votado. Si hay empate a votos, gana quien tenga mejor nota del partido (en Vaya día, peor), y luego más goles (en Vaya día, menos).</p>`;
     else x+=`<p class="muted small">Todavía nadie ha votado.</p>`;
@@ -1457,7 +1473,7 @@ function guestForm(mid){let lv=2.5,pos='TODO';
       if(Object.values(S.players).some(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Ya hay alguien con ese nombre. Búscalo en la lista o cambia el mote');return}
       e.target.disabled=true;e.target.textContent='Guardando…';const id=nid();
       try{await withTimeout(store.doc('players/'+id).set({name,pos,emoji:'👤',level0:lv,photo:null,guest:true,guestBy:me,yellow:0,red:0,cardLog:[],admin:false,status:'approved',createdAt:Date.now()}));
-        S.players[id]=S.players[id]||{id,name,pos,emoji:'👤',level0:lv,guest:true,status:'approved'};
+        if(!S.players[id]){S.players[id]={id,name,pos,emoji:'👤',level0:lv,guest:true,status:'approved'};S.ver++}
         close();await join(mid,id);toast(`${name} apuntado como invitado 👤`)}
       catch(x){e.target.disabled=false;e.target.textContent='Apuntarlo al partido';err(x)}}});
 }
@@ -2075,7 +2091,7 @@ function rombo(lines){
 function totmLines(stM,st){
   const ranked=Object.keys(stM).filter(id=>stM[id].pj>0).sort((a,b)=>stM[b].pts-stM[a].pts||st[b].level-st[a].level);
   const slots=[['DEL',1],['MED',2],['DEF',1],['POR',1]];const used=new Set();const lines=slots.map(()=>[]);
-  slots.forEach(([pos,n],i)=>{for(const id of ranked){if(lines[i].length>=n)break;if(!used.has(id)&&P(id)?.pos===pos){lines[i].push(id);used.add(id)}}});
+  slots.forEach(([pos,n],i)=>{for(const id of ranked){if(lines[i].length>=n)break;if(!used.has(id)&&(pos==='POR'?(isGK(id)||P(id)?.pos==='POR'):(P(id)?.pos===pos&&!isGK(id)))){lines[i].push(id);used.add(id)}}});
   const rest=ranked.filter(id=>!used.has(id));
   slots.forEach(([,n],i)=>{while(lines[i].length<n&&rest.length){const id=rest.shift();lines[i].push(id);used.add(id)}});
   return lines;
@@ -2095,14 +2111,18 @@ async function shareImage(kind,arg){
 }
 
 /* ============ SUBIDA / BAJADA DE CARTA ============ */
-let upgradeChecked=false;
-function checkUpgrade(st){
-  if(!me||!st[me]||document.querySelector('.md'))return;
-  const key='fifa07_seen_'+me;const s=st[me];let prev=null;
-  try{prev=JSON.parse(localStorage.getItem(key))}catch(e){}
-  const save=()=>{try{localStorage.setItem(key,JSON.stringify({ovr:s.ovr,lv:s.level}))}catch(e){}};
-  if(!prev){save();return}
-  if(prev.ovr===s.ovr)return;
+// Aviso de carta: UNA vez por partido, cuando el partido queda cerrado (han votado todos los que jugaron,
+// o han pasado 48 h). Compara la media con la del último aviso, calculada solo con partidos cerrados.
+const matchClosed=m=>m.status==='played'&&(goalsLocked(m)||attendees(m).filter(p=>P(p)&&!P(p).guest).every(p=>hasVoted(m.id,p)));
+function checkUpgrade(){
+  if(!me||!P(me)||!allReady()||document.querySelector('.md'))return;
+  const mine=Object.values(S.matches).filter(m=>attendees(m).includes(me)&&matchClosed(m)).sort((a,b)=>mdt(b)-mdt(a));
+  if(!mine.length)return;const last=mine[0];
+  const key='fifa07_card_'+me;let prev=null;try{prev=JSON.parse(localStorage.getItem(key))}catch(e){}
+  if(prev&&prev.mid===last.id)return;
+  const st=memo('stClosed',()=>computeStats(m=>matchClosed(m)));const s=st[me];if(!s)return;
+  const save=()=>{try{localStorage.setItem(key,JSON.stringify({mid:last.id,ovr:s.ovr}))}catch(e){}};
+  if(!prev||prev.ovr===s.ovr){save();return}
   save();const up=s.ovr>prev.ovr;
   modal(`<div style="text-align:center;padding-top:6px"><div class="pill ${up?'red':''}" style="margin-bottom:10px">${up?'⬆️ Tu carta mejora':'⬇️ Tu carta baja'}</div>
     <div class="upg">${futCard(me,st,true)}</div>
@@ -2956,17 +2976,18 @@ async function archiveOld(force){
     try{localStorage.setItem('fifa07_arc',String(Date.now()))}catch(e){}
   }catch(e){console.error(e);if(force)err(e)}finally{S.archiving=false}
   return moved}
+let _rq=0;function scheduleRender(){if(_rq)return;_rq=setTimeout(()=>{_rq=0;renderMe();render()},30)}
 function sub(col){
   const t=setTimeout(()=>{if(!S.ready[col]){S.ready[col]=1;render();toast('La conexión va lenta…')}},10000);
   store.collection(col).onSnapshot(snap=>{
-    clearTimeout(t);const o={};snap.docs.forEach(d=>o[d.id]={id:d.id,...d.data()});
+    clearTimeout(t);S.ver++;const o={};snap.docs.forEach(d=>o[d.id]={id:d.id,...d.data()});
     if(col==='archive'){S.arc={};for(const id in o)S.arc[id]=o[id];arcIndex();ARC_COLS.forEach(arcRebuild)}
     else if(ARC_COLS.includes(col)){S.live[col]=o;arcRebuild(col)}
     else S[col]=o;
     S.ready[col]=1;
     if(isAdmin())setTimeout(()=>archiveOld(false),4000);
     if(col==='players'&&me&&!o[me]&&snap.docs.length)me=null;
-    renderMe();render();
+    scheduleRender();
     if(col==='matches'||col==='config'||col==='players')setTimeout(ensureRecurring,500);
   },e=>{clearTimeout(t);console.error(e);S.ready[col]=1;if(col==='players')storeErr=true;render()});
 }
@@ -2974,7 +2995,7 @@ function sub(col){
   $('#logo').innerHTML=`${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b>${BETA?'<span class="beta">BETA</span>':''}<small>${esc(SLOGAN)}</small>`;document.title=APP_NAME.join('')+' · Pachangas';
   try{store=wrapStore(FIREBASE_CONFIG?await firebaseStore(FIREBASE_CONFIG):demoStore())}
   catch(e){console.error(e);storeErr=true;render();return}
-  ['archive','players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'].forEach(sub);
+  ALLCOLS.forEach(sub);
   setInterval(()=>{ensureRecurring();if(!S.sheet&&!document.querySelector('.md'))render()},60000);
 })();
 </script>
