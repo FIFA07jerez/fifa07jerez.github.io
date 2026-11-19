@@ -78,7 +78,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.85);-webkit-ba
 .me span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;background:rgba(10,10,10,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs .in{display:flex;max-width:720px;margin:0 auto}
-nav.tabs button{flex:1;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+nav.tabs{touch-action:manipulation}nav.tabs .in{min-height:60px}
+nav.tabs button{flex:1;padding:10px 4px 12px;touch-action:manipulation;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
 nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs button.on{color:var(--txt)}
 nav.tabs button.on svg{stroke:var(--red)}
@@ -1016,11 +1017,14 @@ function futCard(id,st,big=false,opt={}){
   </div></button>`;
 }
 function viewSquad(st){
-  const ids=approvedIds().sort((a,b)=>st[b].ovr-st[a].ovr||pname(a).localeCompare(pname(b)));
+  const all=approvedIds().sort((a,b)=>st[b].ovr-st[a].ovr||pname(a).localeCompare(pname(b)));
+  const ids=all.filter(id=>!P(id).guest),gs=all.filter(id=>P(id).guest);
   let h=`<h2>Jugadores <span class="sub">${ids.length} en el grupo</span></h2>`;
   if(isAdmin())h+=`<button class="btn pri full" data-act="newPlayer" style="margin-bottom:16px">＋ Fichar e invitar a un jugador</button>`;
   if(!ids.length)h+=`<div class="empty"><div class="big">🃏</div>Todavía no hay jugadores.</div>`;
   h+=`<div class="cards">${ids.map(id=>futCard(id,st)).join('')}</div>`;
+  if(gs.length){h+=`<h3 style="margin-top:22px">👤 Invitados <span class="small muted" style="font-weight:500">· juegan sin la app</span></h3>`;
+    h+=gs.map(id=>`<div class="pl" style="cursor:default"><span class="av">${face(id)}</span><span class="nm" data-act="profile" data-id="${esc(id)}">${esc(pname(id))}<br><span class="small muted">${st[id]?.pj||0} PJ · nivel ${(+(st[id]?.level??P(id).level0)||2).toFixed(1)}</span></span>${isAdmin()?`<button class="btn sm" data-act="guestAccess" data-id="${esc(id)}">🔑 Darle acceso</button>`:''}</div>`).join('')}
   h+=`<p class="muted small" style="margin-top:16px;line-height:1.5">Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65 · <b style="color:#f1d27a">negra y dorada</b> para el Crack de la jornada. La media sale del nivel ⚡ (que sube ganando y baja perdiendo) más goles, premios y victorias. CRK cracks · DAN dandys · DUR duros · GOL goles · VIC % victorias · FIA fiabilidad.</p>`;
   return h;
 }
@@ -1241,13 +1245,36 @@ function addOther(mid){
   const ids=approvedIds().filter(i=>!inM.has(i)).sort((a,b)=>pname(a).localeCompare(pname(b)));
   modal(`${mh('Apuntar a otro')}<p class="muted small" style="margin-bottom:10px">Para el que no tiene la app a mano. Lo apuntas tú, se compromete él.</p>
   <input id="q" placeholder="Buscar…" style="margin-bottom:6px">
-  ${ids.map(id=>`<button class="pl" data-pick="${esc(id)}"><span class="av">${face(id)}</span><span class="nm">${esc(pname(id))}</span><span class="muted">＋</span></button>`).join('')||'<div class="empty">Ya están todos.</div>'}
-  ${isAdmin()?'<button class="btn full" id="np" style="margin-top:14px">＋ Fichar e invitar a uno nuevo</button>':''}`,
+  ${ids.map(id=>`<button class="pl" data-pick="${esc(id)}"><span class="av">${face(id)}</span><span class="nm">${esc(pname(id))}${P(id)?.guest?' <span class="small muted">· invitado</span>':''}</span><span class="muted">＋</span></button>`).join('')||'<div class="empty">Ya están todos.</div>'}
+  <button class="btn pri full" id="ng" style="margin-top:14px">👤 Añadir invitado (no está en la app)</button>
+  ${isAdmin()?'<button class="btn full" id="np" style="margin-top:8px">＋ Fichar e invitar a uno nuevo</button>':''}`,
   md=>{
     md.querySelector('#q').oninput=e=>{const q=e.target.value.toLowerCase();md.querySelectorAll('[data-pick]').forEach(b=>b.style.display=b.textContent.toLowerCase().includes(q)?'':'none')};
     md.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{b.disabled=true;b.style.opacity=.35;await join(mid,b.dataset.pick)});
     const np=md.querySelector('#np');if(np)np.onclick=()=>playerForm(null,false);
+    md.querySelector('#ng').onclick=()=>guestForm(mid);
   });
+}
+// Invitado: alguien que juega pero no tiene la app. Cuenta para equipos, goles y votos; no puede entrar (no tiene PIN)
+// hasta que un admin le dé acceso desde Jugadores.
+function guestForm(mid){let lv=2.5,pos='TODO';
+  const lvls=[[1.5,'Paquete'],[2,'Flojo'],[2.5,'Normal'],[3,'Bueno'],[3.5,'Muy bueno'],[4.5,'Crack']];
+  modal(`${mh('👤 Invitado')}<p class="muted small">Para el amigo de un amigo, el primo que viene un día… No necesita la app: cuenta para los equipos, los goles y los votos.</p>
+    <label>Nombre o mote</label><input id="gn" maxlength="18" autocapitalize="words" placeholder="Ej: Primo de Curro">
+    <label>¿Qué tal juega? <span style="text-transform:none;letter-spacing:0;font-weight:500">(para equilibrar los equipos)</span></label>
+    <div class="opts" id="glv">${lvls.map(([v,t])=>`<button class="opt ${v===lv?'on':''}" data-v="${v}">${t}</button>`).join('')}</div>
+    <label>Posición</label><div class="opts" id="gps">${Object.entries(POS).map(([k,t])=>`<button class="opt ${k===pos?'on':''}" data-v="${k}">${t}</button>`).join('')}</div>
+    <button class="btn pri full" id="gsv" style="margin-top:20px">Apuntarlo al partido</button>`,
+  md=>{const grp=(s,f)=>md.querySelectorAll(s+' [data-v]').forEach(b=>b.onclick=()=>{md.querySelectorAll(s+' [data-v]').forEach(x=>x.classList.toggle('on',x===b));f(b.dataset.v)});
+    grp('#glv',v=>lv=+v);grp('#gps',v=>pos=v);setTimeout(()=>md.querySelector('#gn').focus(),60);
+    md.querySelector('#gsv').onclick=async e=>{const name=md.querySelector('#gn').value.trim().replace(/\s+/g,' ');
+      if(name.length<2){toast('Ponle un nombre');return}
+      if(Object.values(S.players).some(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Ya hay alguien con ese nombre. Búscalo en la lista o cambia el mote');return}
+      e.target.disabled=true;e.target.textContent='Guardando…';const id=nid();
+      try{await withTimeout(store.doc('players/'+id).set({name,pos,emoji:'👤',level0:lv,photo:null,guest:true,guestBy:me,yellow:0,red:0,cardLog:[],admin:false,status:'approved',createdAt:Date.now()}));
+        S.players[id]=S.players[id]||{id,name,pos,emoji:'👤',level0:lv,guest:true,status:'approved'};
+        close();await join(mid,id);toast(`${name} apuntado como invitado 👤`)}
+      catch(x){e.target.disabled=false;e.target.textContent='Apuntarlo al partido';err(x)}}});
 }
 async function makeTeams(mid,shuffle){
   const m=S.matches[mid];const st=computeStats();const lv=p=>st[p]?.level||2;
@@ -2506,8 +2533,20 @@ function kitForm(){
 }
 
 /* ============ EVENTOS ============ */
+// Barra inferior blindada: en iPhone, con la página aún deslizándose, el toque podía "atravesar" la barra
+// y abrir la tarjeta que había detrás. Cualquier toque a la altura de la barra cuenta como toque en la barra.
+function navHit(x,y){const nav=document.querySelector('nav.tabs');if(!nav||document.querySelector('#modalRoot .ov,.wr'))return null;
+  const r=nav.getBoundingClientRect();if(y<r.top-2)return null;
+  return [...nav.querySelectorAll('button')].find(b=>{const q=b.getBoundingClientRect();return x>=q.left&&x<=q.right})||null}
+function goTab(t){if(!t)return;S.tab=t;render();window.scrollTo({top:0})}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('nav.tabs'))return;
+  const b=navHit(e.clientX,e.clientY);if(b){e.preventDefault();e.stopPropagation();goTab(b.dataset.tab)}},true);
+let navTouch=null;
+document.addEventListener('touchstart',e=>{const t=e.touches[0];navTouch=t&&navHit(t.clientX,t.clientY)?{x:t.clientX,y:t.clientY}:null},{capture:true,passive:true});
+document.addEventListener('touchend',e=>{if(!navTouch)return;const t=e.changedTouches[0];const b=t&&Math.abs(t.clientX-navTouch.x)<12&&Math.abs(t.clientY-navTouch.y)<12&&navHit(t.clientX,t.clientY);navTouch=null;
+  if(b){e.preventDefault();e.stopPropagation();goTab(b.dataset.tab)}},{capture:true,passive:false});
 document.addEventListener('click',e=>{
-  const tb=e.target.closest('nav.tabs button');if(tb){S.tab=tb.dataset.tab;render();window.scrollTo({top:0});return}
+  const tb=e.target.closest('nav.tabs button');if(tb){goTab(tb.dataset.tab);return}
   if(e.target.closest('#meBtn')){pickMe();return}
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id,act=a.dataset.act;
@@ -2529,6 +2568,7 @@ document.addEventListener('click',e=>{
     case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
     case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
     case'arcNow':a.disabled=true;archiveOld(true).then(n=>{toast(n?`Archivados ${n} documentos 📦`:'No hay nada que archivar todavía (se archivan los meses cerrados hace más de '+ARC_DAYS+' días)');render()});break;
+    case'guestAccess':{const p=P(id);confirmBox('Darle acceso a '+esc(p.name),'Le creamos un PIN para que entre en la app con su nombre. Conserva sus partidos, goles y nivel.','🔑 Crear PIN',async()=>{const np=randPin();await store.doc('players/'+id).update({pinHash:await hashPin(np),guest:false});showInvite(p.name,np);S.keepModal=true},false);break}
     case'injOn':injForm(id);break;
     case'injOff':store.doc('players/'+id).update({injury:null}).then(()=>{close();toast(id===me?'¡Vuelve el crack! 💪':'Lesión quitada')}).catch(err);break;
     case'duelNut':{const v=a.dataset.v,d=S.duels[id];if(!d)break;
