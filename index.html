@@ -438,6 +438,7 @@ td.pts{font-family:'Anton';font-size:18px}
 .pin{display:flex;gap:10px;justify-content:center;margin:18px 0}
 .pin input{width:56px;height:64px;text-align:center;font-family:'Anton';font-size:28px;padding:0}
 .toast{position:fixed;left:50%;bottom:calc(98px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#0a0a0a;font-weight:800;padding:12px 20px;border-radius:999px;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.5);animation:su .2s;max-width:90%;text-align:center;font-size:14px}
+.callbtn{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#22c55e;color:#fff;font-size:19px;text-decoration:none;flex-shrink:0;box-shadow:0 3px 10px rgba(34,197,94,.35)}
 .venue{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
 .venue:last-child{border-bottom:0}
 .venue a{color:var(--red2);text-decoration:none;font-weight:800;font-family:'Barlow Condensed';font-size:17px;white-space:nowrap;letter-spacing:.02em}
@@ -516,7 +517,7 @@ const VENUES=[
   {n:'La Granja',p:'+34 956 14 90 11',f:'Fut6+'},
   {n:'Club Social Av. de Arcos',p:'+34 956 39 60 39',f:'Fut6'},
   {n:'Pistas futsal Vallesequillo',p:'+34 669 33 24 81',f:'Futsal'},
-  {n:'Polideportivo Guadalcacín',p:'+34 663 72 63 96',f:'Fut5'},
+  {n:'Polideportivo Guadalcacín',p:'+34 663 72 63 96',f:'Fut5',a:['guadalcacin']},
 ];
 const FORMATS={Fut5:10,Fut6:12,Fut7:14,Fut8:16};
 const MAX_DAYS_AHEAD=7;
@@ -582,6 +583,11 @@ const pname=id=>P(id)?.name||'¿?';
 const pemo=id=>P(id)?.emoji||'⚽';
 const okPhoto=ph=>typeof ph==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ph);
 const INJURIES=[['🚑','Lesionado'],['🏥','En la UVI'],['🛣️','En la cuneta'],['🦴','Menisco de cristal'],['🛋️','En el dique seco'],['🧊','Con hielo y paciencia'],['🧈','Isquios de mantequilla'],['🍺','Lesionado del tercer tiempo'],['⚰️','Dado por muerto'],['🧓','Baja por la edad'],['🩼','Con muletas y dignidad'],['🙏','Rezando al fisio'],['🎮','Secuestrado por el GTA'],['🛌','KO en el sofá']];
+// 🟥 Sanción: con una roja no puedes apuntarte a partidos de los 7 días siguientes a la tarjeta
+const RED_BAN_DAYS=7;
+const banUntil=id=>{const reds=(P(id)?.cardLog||[]).filter(c=>c.type==='red'&&c.at).map(c=>+c.at);return reds.length?Math.max(...reds)+RED_BAN_DAYS*864e5:0};
+const bannedFor=(id,m)=>{const u=banUntil(id);return u>Date.now()&&(!m||+mdt(m)<u)};
+const fmtBan=id=>{const d=new Date(banUntil(id));return `${DIA[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`};
 const injOf=id=>{const j=P(id)?.injury;return j&&j.label?j:null};
 // 🧳 Ausencias: por fechas (from–to) o fijas por días de la semana (days: 0=domingo … 6=sábado)
 const AWAYS=[['✈️','De viaje'],['🧳','Fuera de Jerez'],['💼','Esclavo del curro'],['🏖️','De vacaciones'],['👶','Modo papá'],['💍','De boda'],['🏠','Castigado en casa']];
@@ -601,7 +607,9 @@ const randPin=()=>String(Math.floor(Math.random()*10000)).padStart(4,'0');
 const appUrl=()=>location.href.split('#')[0];
 const canManage=m=>!!m&&(isAdmin()||(me&&m.createdBy===me)); // admin del partido: quien lo convocó o un admin
 const isManual=m=>m?.teamMode==='manual';
-const normV=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const normV0=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+// Mismo campo con otro nombre (p. ej. "Guadalcacín Pabellón" = "Polideportivo Guadalcacín"): se cuenta como el mismo
+const normV=s=>{const k=normV0(s);const v=VENUES.find(v=>normV0(v.n)===k||(v.a||[]).some(a=>k.includes(a)));return v?normV0(v.n):k};
 // Evita partidos duplicados: mismo día, misma hora y mismo campo.
 function aheadErr(date,time){
   const dt=new Date(`${date}T${time||'21:00'}:00`).getTime(),now=Date.now();
@@ -855,7 +863,7 @@ function boardItems(days){
   // 🟨 Tarjetas, 🆕 fichajes
   for(const p of Object.values(S.players)){if(isPending(p.id))continue;
     for(const c of (p.cardLog||[])){if(!c.at)continue;const m=S.matches[c.mid];const red=c.type==='red';
-      it.push({t:c.at,e:red?'🟥':'🟨',x:c.reason==='noshow'?`Roja directa para ${nm(p.id)}: se apuntó${m?` al ${esc(day(m))}`:''} y no apareció 👻`:`${red?'Roja':'Amarilla'} para ${nm(p.id)} por bajarse tarde${m?` del partido del ${esc(day(m))}`:''}`,neg:1})}
+      it.push({t:c.at,e:red?'🟥':'🟨',x:(c.reason==='noshow'?`Roja directa para ${nm(p.id)}: se apuntó${m?` al ${esc(day(m))}`:''} y no apareció 👻`:`${red?'Roja':'Amarilla'} para ${nm(p.id)} por bajarse tarde${m?` del partido del ${esc(day(m))}`:''}`)+(red?` · 🚫 ${RED_BAN_DAYS} días sin jugar`:''),neg:1})}
     if(!p.guest&&(p.approvedAt||p.createdAt)&&(p.approvedAt||p.createdAt)>=from)wel.push([p.approvedAt||p.createdAt,p.id]);
     if(p.accessAt)it.push({t:p.accessAt,e:'🔑',x:`${nm(p.id)} deja de ser invitado: ya tiene la app`});
   }
@@ -980,6 +988,7 @@ function viewMatches(st){
   if(S.conn&&!S.conn.ok)h+=`<div class="banner" style="border-color:#ffd400;background:rgba(255,212,0,.1)"><span class="e">⚠️</span><span><b>Sin conexión con la base de datos</b><br><span class="small">${S.conn.code==='reglas'?'Las reglas de Firebase no dejan leer ni escribir. Revisa la pestaña Seguridad.':`Lo que hagas no se guardará (${esc(S.conn.code)}). Recarga en un rato.`}</span></span></div>`;
   if(pushReady()&&me&&P(me)&&['ask','install'].includes(pushState())){let hid=0;try{hid=+localStorage.getItem('fifa07_pushask')||0}catch(e){}
     if(Date.now()-hid>14*864e5)h+=`<div class="banner"><span class="e">🔔</span><span class="sp"><b>Activa los avisos</b><br><span class="small">Para enterarte al momento si subes de la reserva, te retan o se abre partido.</span></span><button class="btn sm pri" data-act="push">Activar</button><button class="x" data-act="pushHide" style="width:28px;height:28px;font-size:14px;margin-left:6px" aria-label="Ahora no">✕</button></div>`}
+  if(me&&P(me)&&bannedFor(me))h+=`<div class="banner" style="border-color:#e10600;background:rgba(225,6,0,.16)"><span class="e">🟥</span><span class="sp"><b>Estás sancionado</b><br><span class="small">Por la roja no puedes apuntarte hasta el ${esc(fmtBan(me))}. A reflexionar 🙃</span></span></div>`;
   liveUpdates().forEach(u=>{h+=`<div class="banner upd"><span class="e">${u.e}</span><span class="sp"><b>${esc(u.t)}</b><br><span class="small">${esc(u.d)}</span></span><button class="x" data-act="updHide" data-id="${esc(u.at)}" style="width:28px;height:28px;font-size:14px" aria-label="Cerrar">✕</button></div>`});
   const npend=Object.values(S.players).filter(p=>p.status==='pending').length;
   if(isAdmin()&&npend)h+=`<button class="banner" style="width:100%;text-align:left" data-act="goAdmin"><span class="e">🙋</span><span><b>${npend} ${npend===1?'persona quiere':'personas quieren'} entrar</b><br>Toca para aprobar o rechazar.</span></button>`;
@@ -1257,6 +1266,7 @@ function viewInfo(){
     <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y equipo se cierran al acabar el partido; los de nota y caño, a las 24 h.</li>
     <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides, 🟥).</li>
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
+    <li>🟥 <b>Roja = una semana sin poder apuntarte</b> (a los partidos de los 7 días siguientes a la tarjeta).</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
     <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ⚡ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
     <li>⚖️ <b>Todos empezamos con el mismo nivel</b> (3,0; los que llegan después, con la media del grupo). A partir de ahí solo cuentan los resultados y las estrellas del vestuario. Tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
@@ -1271,9 +1281,9 @@ function viewInfo(){
    const extra=Object.entries(fsx).filter(([k])=>!VENUES.some(v=>normV(v.n)===k)).map(([,r])=>({n:r.name,f:'',p:'',r}));
    const all=[...list,...extra].sort((a,b)=>(b.r?.avg||0)-(a.r?.avg||0)||(b.r?.n||0)-(a.r?.n||0));
    h+=`<h2>Campos <span class="sub">📍 Jerez · ranking por votos</span></h2><div class="box" style="padding:2px 16px">`;
-   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b><div class="muted small">${esc(v.f||'')}${v.r?`${v.f?' · ':''}<span style="color:var(--yel)">★ ${v.r.avg.toFixed(1)}</span> (${v.r.n})${v.r.top.length?' · '+v.r.top.map(esc).join(' '):''}`:`${v.f?' · ':''}sin valorar`}</div></div>${v.p?`<a href="tel:${v.p.replace(/\s/g,'')}">${esc(v.p)}</a>`:''}</div>`});
+   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div></div>${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
    h+=`</div><p class="small muted" style="margin-top:6px">Las notas salen de lo que vota cada uno al puntuar el partido (es anónimo).</p>`}
-  h+=`<h2>Buzón beta</h2><div class="box"><p class="small muted">¿Algo falla, no se entiende o se te ocurre una idea? Escríbelo aquí.</p><textarea id="fbt" rows="3" maxlength="500" placeholder="Ej: al apuntarme no me sale…" style="margin-top:10px"></textarea><button class="btn pri full" style="margin-top:10px" data-act="fbSend">Enviar sugerencia</button></div>`;
+  h+=`<h2>Buzón de sugerencias</h2><div class="box"><p class="small muted">¿Algo falla, no se entiende o se te ocurre una idea? Escríbelo aquí.</p><textarea id="fbt" rows="3" maxlength="500" placeholder="Ej: al apuntarme no me sale…" style="margin-top:10px"></textarea><button class="btn pri full" style="margin-top:10px" data-act="fbSend">Enviar sugerencia</button></div>`;
   if(isAdmin()){const fl=Object.values(S.feedback).sort((a,b)=>(b.at||0)-(a.at||0));
     h+=`<h3>Sugerencias recibidas · ${fl.length}</h3>${fl.map(f=>`<div class="box" style="margin-bottom:8px;padding:12px"><div class="small muted">${esc(f.pid?pname(f.pid):'Anónimo')} · ${new Date(f.at).toLocaleDateString('es-ES')}</div><div style="margin-top:4px;white-space:pre-wrap">${esc(f.text)}</div><button class="btn sm ghost" style="margin-top:6px" data-act="fbDel" data-id="${esc(f.id)}">Hecho ✓</button></div>`).join('')||'<p class="muted small">Ninguna todavía.</p>'}`}
   h+=`<div class="credit"><div class="logo" style="font-size:22px">${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b></div><div>Un proyecto creado por <b>${esc(CREATOR)}</b></div><div class="small muted" style="margin-top:4px">${esc(SLOGAN)} · Jerez</div></div>`;
@@ -1469,6 +1479,7 @@ function matchForm(id,pre){
 async function join(mid,pid){
   if(!pid){toast('Primero dinos quién eres');pickMe();return}
   if(S.signups[`${mid}__${pid}`])return;
+  if(bannedFor(pid,S.matches[mid])&&!(isAdmin()&&pid!==me)){modal(`${mh('🟥 Sancionado')}<p>${pid===me?'Tienes':esc(pname(pid))+' tiene'} una <b>roja</b>: una semana sin poder apuntarse, hasta el <b>${esc(fmtBan(pid))}</b>.</p><p class="small muted" style="margin-top:8px">Así funciona: roja = ${RED_BAN_DAYS} días sin jugar. Si crees que es un error, habla con un admin (puede perdonar la tarjeta).</p>`);return}
   if(pid===me){const pv=pendingVote(me);if(pv){modal(`${mh('Primero, a votar 🗳️')}<p class="muted">Para apuntarte tienes que puntuar tu último partido: <b style="color:var(--txt)">${esc(fmtShort(pv))} en ${esc(pv.venue||'')}</b>. Es un minuto y es anónimo.</p><button class="btn pri full" style="margin-top:16px" data-act="vote" data-id="${esc(pv.id)}">⭐ Puntuar ahora</button>`);return}}
   if(pid===me&&!S._awayOk&&awayOn(me,S.matches[mid]?.date)){const a=awayCfg(me);confirmBox('¿Al final sí estás?',`Tienes puesto <b>${esc(a.e)} ${esc(a.label)}</b> (${esc(awayText(a))}). ¿Te apuntas igualmente?`,'💪 Sí, me apunto',async()=>{S._awayOk=true;S.keepModal=true;close();try{await join(mid,pid)}finally{S._awayOk=false}});return}
   if(pid===me&&injOf(me)&&!S._injOk){const ij=injOf(me);confirmBox('¿Ya estás recuperado?',`Estás marcado como <b>${esc(ij.e)} ${esc(ij.label)}</b>. Si te apuntas, te quitamos la cruz roja.`,'💪 Sí, estoy bien',async()=>{await store.doc('players/'+me).update({injury:null,healedAt:Date.now(),healedFrom:{e:ij.e,label:ij.label}});S._injOk=true;try{await join(mid,pid)}finally{S._injOk=false}});return}
@@ -1501,7 +1512,7 @@ function addOther(mid){
   const ids=approvedIds().filter(i=>!inM.has(i)).sort((a,b)=>pname(a).localeCompare(pname(b)));
   modal(`${mh('Apuntar a otro')}<p class="muted small" style="margin-bottom:10px">Para el que no tiene la app a mano. Lo apuntas tú, se compromete él.</p>
   <input id="q" placeholder="Buscar…" style="margin-bottom:6px">
-  ${ids.map(id=>`<button class="pl" data-pick="${esc(id)}"><span class="av">${face(id)}</span><span class="nm">${esc(pname(id))}${P(id)?.guest?' <span class="small muted">· invitado</span>':''}</span><span class="muted">＋</span></button>`).join('')||'<div class="empty">Ya están todos.</div>'}
+  ${ids.map(id=>`<button class="pl" data-pick="${esc(id)}"><span class="av">${face(id)}</span><span class="nm">${esc(pname(id))}${P(id)?.guest?' <span class="small muted">· invitado</span>':''}${bannedFor(id)?' <span class="small" style="color:#ff8a92">· 🟥 sancionado</span>':''}</span><span class="muted">＋</span></button>`).join('')||'<div class="empty">Ya están todos.</div>'}
   <button class="btn pri full" id="ng" style="margin-top:14px">👤 Añadir invitado (no está en la app)</button>
   ${isAdmin()?'<button class="btn full" id="np" style="margin-top:8px">＋ Fichar e invitar a uno nuevo</button>':''}`,
   md=>{
@@ -1759,6 +1770,7 @@ function profile(id){
     <p class="small muted" style="margin-top:4px">${esc(POS[p.pos]||'Todocampista')} · Tarjetas: ${s.y?`🟨×${s.y} `:''}${s.r?`🟥×${s.r}`:''}${!s.y&&!s.r?'limpio 😇':''}${p.admin?' · <span class="pill red">Admin</span>':''}</p>
     ${(()=>{const ij=injOf(id);const mine=id===me;let x='';
       if(ij){const d=Math.floor((Date.now()-(ij.at||Date.now()))/864e5);x+=`<div class="banner" style="margin-top:12px;border-color:#e10600;background:rgba(225,6,0,.12)"><span class="e" style="color:#e10600;font-weight:900">✚</span><span class="sp"><b>${esc(ij.e||'🚑')} ${esc(ij.label)}</b><br><span class="small">${d<1?'Desde hoy':d===1?'Desde ayer':`Desde hace ${d} días`}${ij.note?` · Vuelve: ${esc(ij.note)}`:''}</span></span></div>`}
+      if(bannedFor(id))x+=`<div class="banner" style="margin-top:12px;border-color:#e10600;background:rgba(225,6,0,.16)"><span class="e">🟥</span><span class="sp"><b>Sancionado</b><br><span class="small">Una semana sin poder apuntarse por roja · hasta el ${esc(fmtBan(id))}</span></span></div>`;
       const aw=awayCfg(id);
       if(aw)x+=`<div class="banner" style="margin-top:12px;border-color:#6b8fbf;background:rgba(60,106,168,.14)"><span class="e">${esc(aw.e)}</span><span class="sp"><b>${esc(aw.label)}</b><br><span class="small">${awayOn(id)?'Ahora mismo fuera':'Ausente'} · ${esc(awayText(aw))}${aw.note?` · ${esc(aw.note)}`:''}</span></span></div>`;
       if(mine||isAdmin())x+=aw?`<button class="btn full" style="margin-top:10px" data-act="awayOff" data-id="${esc(id)}">🏠 ${mine?'Ya estoy disponible':'Quitar ausencia'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="awayOn" data-id="${esc(id)}">🧳 ${mine?'Voy a estar fuera':'Marcar ausencia'}</button>`;
@@ -1887,9 +1899,31 @@ function enrich(st){
       orgN:H.filter(x=>x.m.createdBy===id).length,
       votedN:voted[id]||0,noShows:(S.players[id]?.cardLog||[]).filter(c=>c.reason==='noshow').length,
       potm:hon.potm[id]||0,pich:hon.pich[id]||0});
+    // Extra para logros
+    const won=x=>Math.abs((+x.m.scoreA||0)-(+x.m.scoreB||0));
+    const firsts=H.filter(x=>{const sg=signupsOf(x.m.id);return sg.length>1&&sg[0].pid===id}).length;
+    const lastMin=H.filter(x=>{const sg=S.signups[`${x.m.id}__${id}`];return sg&&+sg.at>1e12&&(+mdt(x.m)-sg.at)<3*36e5&&(+mdt(x.m)-sg.at)>0}).length;
+    let maxWeek=0;H.forEach((x,i)=>{const t=+mdt(x.m);let n=0;for(let j=i;j<H.length&&+mdt(H[j].m)-t<7*864e5;j++)n++;maxWeek=Math.max(maxWeek,n)});
+    const mates=new Set();H.forEach(x=>{const T=(x.m.teamA||[]).includes(id)?x.m.teamA:x.m.teamB||[];T.forEach(q=>{if(q!==id)mates.add(q)})});
+    let cu=0,maxU=0;H.forEach(x=>{if(x.res!=='D'){cu++;maxU=Math.max(maxU,cu)}else cu=0});
+    let cnw=0,maxNW=0;H.forEach(x=>{if(x.res!=='V'){cnw++;maxNW=Math.max(maxNW,cnw)}else cnw=0});
+    const ds=duelStats(id);
+    Object.assign(s,{bigW:H.filter(x=>x.res==='V'&&won(x)>=5).length,bigL:H.filter(x=>x.res==='D'&&won(x)>=5).length,
+      hats:H.filter(x=>x.g>=3).length,tops:H.filter(x=>{const gg=goalsOf(x.m);const mx=Math.max(0,...Object.values(gg).map(Number));return x.g>0&&x.g===mx}).length,
+      crackLoss:H.filter(x=>x.res==='D'&&x.aws.includes('⭐')).length,vayaWin:H.filter(x=>x.res==='V'&&x.aws.includes('🤦')).length,
+      nil:H.filter(x=>!(+x.m.scoreA)&&!(+x.m.scoreB)).length,oneGoal:H.filter(x=>x.res==='V'&&won(x)===1).length,
+      months:new Set(H.map(x=>(x.m.date||'').slice(0,7))).size,maxWeek,mates:mates.size,firsts,lastMin,maxU,maxNW,
+      thu:H.filter(x=>mdt(x.m).getDay()===4).length,sat:H.filter(x=>mdt(x.m).getDay()===6).length,sun:H.filter(x=>mdt(x.m).getDay()===0).length,
+      morning:H.filter(x=>+(x.m.time||'0').split(':')[0]<14).length,goalWin:H.filter(x=>x.res==='V'&&x.g>0).length,
+      dW:ds.w,dL:ds.l,dN:ds.n,nutW:ds.nutW,nutL:ds.nutL,rej:ds.rej,maxStar:Math.max(0,...H.map(x=>x.avg||0)),minStar:Math.min(9,...H.filter(x=>x.avg!=null).map(x=>x.avg))});
   }
   return st;
 }
+function duelStats(pid){return memo('ds:'+pid,()=>{const o={w:0,l:0,n:0,nutW:0,nutL:0,rej:0};
+  for(const d of Object.values(S.duels)){if(d.from!==pid&&d.to!==pid)continue;if(d.status==='rejected'&&d.to===pid)o.rej++;
+    const r=duelResult(d);if(r.state!=='final'&&r.state!=='draw')continue;o.n++;if(r.state!=='final')continue;
+    if(r.winner===pid){o.w++;if(d.kind==='nutmeg'&&d.from===pid)o.nutW++}else{o.l++;if(d.kind==='nutmeg'&&d.to===pid&&d.nut==='yes')o.nutL++}}
+  return o})}
 // Jugador del mes y pichichi de cada mes ya terminado (se calcula una vez por cambio de datos).
 let _honKey='',_hon={potm:{},pich:{}};
 function monthHonors(){
@@ -1954,6 +1988,97 @@ const ACH=[
   {e:'🔥',n:'En racha',d:'3 victorias seguidas',t:s=>s.maxW>=3},
   {e:'🚀',n:'Imparable',d:'5 victorias seguidas',t:s=>s.maxW>=5},
   {e:'📈',n:'Subidón',d:'Subir medio nivel desde el inicial',t:s=>s.level-s.lv0>=0.5},
+  // Más partidos
+  {e:'🐣',n:'Rodaje',d:'5 partidos jugados',t:s=>s.pj>=5},
+  {e:'🏃',n:'Habitual',d:'15 partidos jugados',t:s=>s.pj>=15},
+  {e:'🗓️',n:'Asiduo',d:'20 partidos jugados',t:s=>s.pj>=20},
+  {e:'🦾',n:'Incombustible',d:'40 partidos jugados',t:s=>s.pj>=40},
+  {e:'🏟️',n:'Institución',d:'75 partidos jugados',t:s=>s.pj>=75},
+  {e:'🗿',n:'Monumento',d:'150 partidos jugados',t:s=>s.pj>=150},
+  {e:'🦕',n:'Dinosaurio',d:'200 partidos jugados',t:s=>s.pj>=200},
+  {e:'🔂',n:'El de siempre',d:'25 partidos fijos',t:s=>s.fixed>=25},
+  {e:'🌍',n:'Nómada',d:'Jugar en 6 campos distintos',t:s=>s.venues>=6},
+  {e:'🦉',n:'Búho',d:'15 partidos a partir de las 22:00',t:s=>s.nights>=15},
+  {e:'☀️',n:'Madrugón',d:'3 partidos antes de las 14:00',t:s=>s.morning>=3},
+  {e:'🧡',n:'Jueves sagrado',d:'10 partidos en jueves',t:s=>s.thu>=10},
+  {e:'🍻',n:'Sabadete',d:'10 partidos en sábado',t:s=>s.sat>=10},
+  {e:'⛪',n:'Misa de domingo',d:'5 partidos en domingo',t:s=>s.sun>=5},
+  {e:'🤤',n:'Adicto',d:'3 partidos en una misma semana',t:s=>s.maxWeek>=3},
+  {e:'📆',n:'Medio año dando guerra',d:'Jugar en 6 meses distintos',t:s=>s.months>=6},
+  {e:'🎂',n:'Un año de pachangas',d:'Jugar en 12 meses distintos',t:s=>s.months>=12},
+  {e:'🤗',n:'Sociable',d:'Jugar con 20 compañeros distintos',t:s=>s.mates>=20},
+  {e:'🌐',n:'Todo el grupo',d:'Jugar con 40 compañeros distintos',t:s=>s.mates>=40},
+  {e:'🐓',n:'Madrugador',d:'Ser el primero en apuntarte 5 veces',t:s=>s.firsts>=5},
+  {e:'🏁',n:'Primero de la lista',d:'Ser el primero en apuntarte 20 veces',t:s=>s.firsts>=20},
+  {e:'🦸',n:'Salvador',d:'Entrar desde la reserva 10 veces',t:s=>s.fromRes>=10},
+  {e:'🎪',n:'Organizador nato',d:'Organizar 15 partidos',t:s=>s.orgN>=15},
+  {e:'🏢',n:'Presidente',d:'Organizar 40 partidos',t:s=>s.orgN>=40},
+  {e:'⚖️',n:'Jurado popular',d:'Votar en 30 partidos',t:s=>s.votedN>=30},
+  {e:'🧑‍⚖️',n:'Tribunal Supremo',d:'Votar en 75 partidos',t:s=>s.votedN>=75},
+  {e:'🤵',n:'Caballero',d:'30 partidos sin tarjetas',t:s=>s.pj>=30&&!s.y&&!s.r},
+  {e:'💰',n:'Buen pagador',d:'Pagar tu parte en 30 partidos',t:s=>s.paidN>=30},
+  // Más goles
+  {e:'4️⃣',n:'Póker',d:'4 goles en un partido',t:s=>s.maxG>=4},
+  {e:'🎰',n:'Media docena',d:'6 goles en un partido',t:s=>s.maxG>=6},
+  {e:'🎳',n:'Coleccionista de balones',d:'3 hat-tricks',t:s=>s.hats>=3},
+  {e:'🧺',n:'Hat-trick en serie',d:'10 hat-tricks',t:s=>s.hats>=10},
+  {e:'🏹',n:'Francotirador',d:'Marcar 5 partidos seguidos',t:s=>s.maxGS>=5},
+  {e:'🔫',n:'Metralleta',d:'Marcar 10 partidos seguidos',t:s=>s.maxGS>=10},
+  {e:'🔟',n:'Decena',d:'10 goles en total',t:s=>s.g>=10},
+  {e:'🎯',n:'Goleador',d:'50 goles en total',t:s=>s.g>=50},
+  {e:'🦈',n:'Depredador',d:'75 goles en total',t:s=>s.g>=75},
+  {e:'💯',n:'Centenario goleador',d:'100 goles en total',t:s=>s.g>=100},
+  {e:'👽',n:'De otro planeta',d:'150 goles en total',t:s=>s.g>=150},
+  {e:'🌟',n:'Leyenda del gol',d:'200 goles en total',t:s=>s.g>=200},
+  {e:'👟',n:'Bota de oro del partido',d:'Ser el máximo goleador de un partido 5 veces',t:s=>s.tops>=5},
+  {e:'🥾',n:'Pichichi crónico',d:'Ser el máximo goleador de un partido 20 veces',t:s=>s.tops>=20},
+  {e:'🥇',n:'Bota de oro',d:'Pichichi del mes 3 veces',t:s=>s.pich>=3},
+  {e:'💪',n:'Decisivo',d:'Marcar y ganar en 10 partidos',t:s=>s.goalWin>=10},
+  // Más victorias
+  {e:'✅',n:'Ganador',d:'10 victorias',t:s=>s.v>=10},
+  {e:'🏆',n:'Campeón',d:'25 victorias',t:s=>s.v>=25},
+  {e:'🏅',n:'Coleccionista de victorias',d:'50 victorias',t:s=>s.v>=50},
+  {e:'👑',n:'Rey de las pachangas',d:'100 victorias',t:s=>s.v>=100},
+  {e:'⚡',n:'Apisonadora',d:'7 victorias seguidas',t:s=>s.maxW>=7},
+  {e:'🌪️',n:'Huracán',d:'10 victorias seguidas',t:s=>s.maxW>=10},
+  {e:'🛡️',n:'Invicto',d:'10 partidos seguidos sin perder',t:s=>s.maxU>=10},
+  {e:'🔨',n:'Paliza',d:'Ganar por 5 goles o más',t:s=>s.bigW>=1},
+  {e:'🧨',n:'Rodillo',d:'Ganar por 5 o más en 5 partidos',t:s=>s.bigW>=5},
+  {e:'😮‍💨',n:'Sufridor',d:'Ganar 5 partidos por un solo gol',t:s=>s.oneGoal>=5},
+  {e:'🧠',n:'Ganador nato',d:'Ganar el 70% de 15 partidos o más',t:s=>s.pj>=15&&s.v/s.pj>=.7},
+  {e:'🎚️',n:'Nivel PRO',d:'Llegar a nivel 4',t:s=>s.level>=4},
+  {e:'🔱',n:'Nivel leyenda',d:'Llegar a nivel 4,5',t:s=>s.level>=4.5},
+  {e:'🚀',n:'Cohete',d:'Subir un nivel entero desde el inicial',t:s=>s.level-s.lv0>=1},
+  {e:'🥇',n:'Carta de oro',d:'Tener una media de 75 o más',t:s=>s.ovr>=75},
+  {e:'💎',n:'Carta 85+',d:'Tener una media de 85 o más',t:s=>s.ovr>=85},
+  {e:'🌠',n:'Carta 90+',d:'Tener una media de 90 o más',t:s=>s.ovr>=90},
+  // Más vestuario
+  {e:'🌟',n:'Triple Crack',d:'Ser El Crack 3 veces',t:s=>s.aw.crack>=3},
+  {e:'🏛️',n:'Mito',d:'Ser El Crack 10 veces',t:s=>s.aw.crack>=10},
+  {e:'🐐',n:'GOAT',d:'Ser El Crack 20 veces',t:s=>s.aw.crack>=20},
+  {e:'🕺',n:'Dandy',d:'Ser El Dandy una vez',t:s=>s.aw.dandy>=1},
+  {e:'🎩',n:'Lord',d:'Ser El Dandy 10 veces',t:s=>s.aw.dandy>=10},
+  {e:'🔩',n:'Duro de pelar',d:'Ser El Duro una vez',t:s=>s.aw.duro>=1},
+  {e:'⛓️',n:'Leñero',d:'Ser El Duro 10 veces',t:s=>s.aw.duro>=10},
+  {e:'🧤',n:'Manos de seda',d:'Ser El Muro bajo palos una vez',t:s=>s.aw.muro>=1},
+  {e:'🎖️',n:'Triple corona',d:'Haber sido Crack, Dandy y Duro',t:s=>s.aw.crack>=1&&s.aw.dandy>=1&&s.aw.duro>=1},
+  {e:'💖',n:'Querido por el vestuario',d:'Nota media de 4 o más con 10 partidos',t:s=>s.pj>=10&&s.avg!=null&&s.avg>=4},
+  {e:'✨',n:'Partidazo',d:'Sacar una nota media de 4,5 en un partido',t:s=>s.maxStar>=4.5},
+  {e:'🐐',n:'Mejor del mes x3',d:'Jugador del mes 3 veces',t:s=>s.potm>=3},
+  {e:'💔',n:'Crack sin premio',d:'Ser El Crack en un partido que perdiste',t:s=>s.crackLoss>=1},
+  // Porteros
+  {e:'🚫',n:'Portería a cero',d:'Un partido de portero sin encajar',t:s=>s.cs>=1},
+  {e:'🦁',n:'León bajo palos',d:'10 porterías a cero',t:s=>s.cs>=10},
+  {e:'🧤',n:'Guardameta',d:'10 partidos de portero fijo',t:s=>s.gkPJ>=10},
+  {e:'🏰',n:'Fortaleza',d:'Ser El Muro bajo palos 10 veces',t:s=>s.aw.muro>=10},
+  // Duelos
+  {e:'🤺',n:'Primera sangre',d:'Ganar tu primer duelo',t:s=>s.dW>=1},
+  {e:'🔫',n:'Pistolero veterano',d:'Ganar 10 duelos',t:s=>s.dW>=10},
+  {e:'🏴‍☠️',n:'Cazarrecompensas',d:'Ganar 25 duelos',t:s=>s.dW>=25},
+  {e:'⚔️',n:'Duelista',d:'Jugar 10 duelos',t:s=>s.dN>=10},
+  {e:'🥜',n:'Caño',d:'Ganar un duelo de caño',t:s=>s.nutW>=1},
+  {e:'🪄',n:'Mago del caño',d:'Ganar 5 duelos de caño',t:s=>s.nutW>=5},
+  {e:'🍻',n:'Barra libre',d:'Que te paguen 5 cañas en duelos',t:s=>s.dW>=5},
   // Antilogros (con cariño)
   {e:'🥶',n:'Pecho frío',d:'Perder 3 partidos seguidos',t:s=>s.maxL>=3,neg:true},
   {e:'💀',n:'Gafe',d:'Perder 5 partidos seguidos',t:s=>s.maxL>=5,neg:true},
@@ -1966,6 +2091,28 @@ const ACH=[
   {e:'👻',n:'Fantasma',d:'Apuntarte y no presentarte',t:s=>s.noShows>=1,neg:true},
   {e:'🟨',n:'Tarjetero',d:'Llevarte una amarilla por bajarte tarde',t:s=>s.y+s.r>=1,neg:true},
   {e:'📉',n:'Caída libre',d:'Bajar medio nivel desde el inicial',t:s=>s.lv0-s.level>=0.5,neg:true},
+  {e:'🕳️',n:'Pozo sin fondo',d:'Bajar un nivel entero desde el inicial',t:s=>s.lv0-s.level>=1,neg:true},
+  {e:'⚰️',n:'Maldito',d:'Perder 8 partidos seguidos',t:s=>s.maxL>=8,neg:true},
+  {e:'🌵',n:'Sequía',d:'10 partidos seguidos sin marcar',t:s=>s.maxDry>=10,neg:true},
+  {e:'🏜️',n:'Desierto del Sáhara',d:'20 partidos seguidos sin marcar',t:s=>s.maxDry>=20,neg:true},
+  {e:'🌧️',n:'Racha negra',d:'10 partidos seguidos sin ganar',t:s=>s.maxNW>=10,neg:true},
+  {e:'🥊',n:'Saco de boxeo',d:'Perder por 5 goles o más',t:s=>s.bigL>=1,neg:true},
+  {e:'🧲',n:'Imán de derrotas',d:'Perder el 70% de 15 partidos o más',t:s=>s.pj>=15&&s.d/s.pj>=.7,neg:true},
+  {e:'😴',n:'0-0',d:'Jugar un partido que acabó 0-0',t:s=>s.nil>=1,neg:true},
+  {e:'🤡',n:'Payaso oficial',d:'Ser Vaya día 5 veces',t:s=>s.aw.vaya>=5,neg:true},
+  {e:'🎪',n:'Circo ambulante',d:'Ser Vaya día 10 veces',t:s=>s.aw.vaya>=10,neg:true},
+  {e:'🍀',n:'Ganó a pesar de ti',d:'Ser Vaya día en un partido que ganaste',t:s=>s.vayaWin>=1,neg:true},
+  {e:'🫠',n:'Partido para olvidar',d:'Sacar una nota media de 1,5 o menos en un partido',t:s=>s.minStar<=1.5,neg:true},
+  {e:'🧊',n:'Nevera',d:'Nota media de 2,5 o menos con 10 partidos',t:s=>s.pj>=10&&s.avg!=null&&s.avg<=2.5,neg:true},
+  {e:'🕳️',n:'Túnel',d:'Que te hagan un caño en un duelo',t:s=>s.nutL>=1,neg:true},
+  {e:'🚇',n:'Metro de Madrid',d:'Que te hagan 5 caños en duelos',t:s=>s.nutL>=5,neg:true},
+  {e:'💸',n:'Cajero automático',d:'Perder 10 duelos',t:s=>s.dL>=10,neg:true},
+  {e:'🐥',n:'Gallina clueca',d:'Rechazar 3 duelos',t:s=>s.rej>=3,neg:true},
+  {e:'🔁',n:'Reincidente',d:'3 tarjetas amarillas',t:s=>s.y>=3,neg:true},
+  {e:'🟥',n:'Expulsado',d:'Llevarte una roja',t:s=>s.r>=1,neg:true},
+  {e:'🕵️',n:'Desaparecido',d:'No presentarte 3 veces',t:s=>s.noShows>=3,neg:true},
+  {e:'⏱️',n:'Última hora',d:'Apuntarte 3 veces con menos de 3 h de margen',t:s=>s.lastMin>=3,neg:true},
+  {e:'🎈',n:'Coladero total',d:'Encajar 50 goles de portero',t:s=>s.conc>=50,neg:true},
 ];
 function achList(){return ACH.filter(a=>(!a.kit||kitOn())&&(!a.ast||astOn()))}
 function chemistry(pid){
