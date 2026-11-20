@@ -386,7 +386,27 @@ td.pts{font-family:'Anton';font-size:18px}
 .ach .a{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;opacity:.35;filter:grayscale(1)}
 .ach .a.on{opacity:1;filter:none;border-color:rgba(227,6,19,.5)}
 .ach .a.neg.on{border-color:#5a5a5a;background:repeating-linear-gradient(135deg,var(--s1) 0 8px,#181818 8px 16px)}
-.ach .ae{font-size:26px}.ach .an{font-size:12px;font-weight:800;margin-top:2px}.ach .ad{font-size:10px;color:var(--mut);margin-top:2px;line-height:1.2}
+.ach .a.lock{opacity:.6;filter:none;border-style:dashed}
+.ach .ae{font-size:26px}
+/* 🏅 Ventana de logro desbloqueado */
+.unl{text-align:center;padding:6px 0 4px}
+.unl .kick{font-size:11px;letter-spacing:.28em;text-transform:uppercase;font-weight:900;color:var(--yel)}
+.unl.neg .kick{color:var(--mut)}
+.unl .badge{width:118px;height:118px;margin:16px auto 10px;border-radius:50%;display:grid;place-items:center;font-size:62px;
+  background:radial-gradient(circle at 35% 30%,#fff6c9 0,#f5c542 35%,#b8860b 100%);box-shadow:0 0 0 5px rgba(245,197,66,.25),0 12px 40px rgba(245,197,66,.45);animation:unlPop .7s cubic-bezier(.2,1.6,.4,1) both}
+.unl.neg .badge{background:radial-gradient(circle at 35% 30%,#eee 0,#9a9a9a 40%,#4a4a4a 100%);box-shadow:0 0 0 5px rgba(160,160,160,.2),0 12px 40px rgba(0,0,0,.5)}
+.unl .nm{font-family:'Archivo';font-weight:900;font-size:26px;line-height:1.1;margin-top:6px}
+.unl .ds{color:var(--mut);margin-top:6px}
+.unl .more{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.unl .more span{background:var(--s2);border:1px solid var(--line2);border-radius:99px;padding:5px 10px;font-size:13px;font-weight:700}
+.unl .rays{position:absolute;left:50%;top:92px;width:260px;height:260px;margin-left:-130px;border-radius:50%;pointer-events:none;
+  background:repeating-conic-gradient(rgba(245,197,66,.16) 0 10deg,transparent 10deg 20deg);animation:unlSpin 12s linear infinite;-webkit-mask-image:radial-gradient(circle,#000 30%,transparent 70%);mask-image:radial-gradient(circle,#000 30%,transparent 70%)}
+.unl.neg .rays{display:none}
+@keyframes unlPop{0%{transform:scale(.2) rotate(-25deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes unlSpin{to{transform:rotate(360deg)}}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:cf 2.4s ease-in forwards}
+@keyframes cf{to{transform:translateY(105vh) rotate(720deg);opacity:.9}}.ach .an{font-size:12px;font-weight:800;margin-top:2px}.ach .ad{font-size:10px;color:var(--mut);margin-top:2px;line-height:1.2}
 .chem{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .chem .ce{font-size:24px}.chem .ck2{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
 .chem .cv{font-family:'Barlow Condensed';font-weight:700;color:var(--mut);text-align:right}
@@ -941,13 +961,31 @@ async function pushRefresh(){if(pushState()!=='on'||S._pushRef)return;S._pushRef
   try{const {tok}=await pushToken();let old='';try{old=localStorage.getItem('fifa07_ptok')||''}catch(e){}
     if(tok&&(tok!==old||Date.now()-(+localStorage.getItem('fifa07_ptat')||0)>7*864e5)){await store.doc('tokens/'+tok).set({pid:me,at:Date.now(),ua:navigator.userAgent.slice(0,140)});
       if(old&&old!==tok)store.doc('tokens/'+old).delete().catch(()=>{});try{localStorage.setItem('fifa07_ptok',tok);localStorage.setItem('fifa07_ptat',String(Date.now()))}catch(e){}}}catch(e){console.warn('push',e)}}
+// 🩺 Diagnóstico de avisos (se puede hacer desde el propio móvil)
+async function pushDiag(){const rows=[];const add=(ok,t,d)=>rows.push(`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start;gap:10px"><span>${ok===true?'✅':ok===false?'❌':'⚠️'}</span><span class="sp"><b>${t}</b>${d?`<br><span class="small muted" style="word-break:break-all">${d}</span>`:''}</span></div>`);
+  const show=(tok)=>modal(`${mh('🩺 Diagnóstico de avisos')}${rows.join('')}${tok?`<button class="btn full" id="cpt" style="margin-top:14px">📋 Copiar código del móvil (token)</button>`:''}<p class="small muted" style="margin-top:10px">Haz captura de esta pantalla y mándasela a Claude.</p>`,
+    md=>{const b=md.querySelector('#cpt');if(b)b.onclick=async()=>{try{await navigator.clipboard.writeText(tok);toast('Copiado 📋')}catch(e){prompt('Copia el código:',tok)}}});
+  const iv=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]);
+  add(store?.mode==='live','Conectada a la base de datos',store?.mode||'');
+  if(isIOS())add(iv[1]?(+iv[1]>16||(+iv[1]===16&&+iv[2]>=4)):null,'Versión de iOS',iv[1]?`iOS ${iv[1]}.${iv[2]} (hace falta 16.4 o más)`:'no se pudo leer');
+  add(!isIOS()||isStandalone(),'Abierta desde el icono de la pantalla de inicio',isStandalone()?'sí':'no: en iPhone tiene que ser desde el icono');
+  add(pushSupported(),'El navegador admite avisos','');
+  add(window.Notification?Notification.permission==='granted':false,'Permiso de notificaciones',window.Notification?Notification.permission:'no disponible');
+  let reg=null;try{reg=await navigator.serviceWorker?.getRegistration('./')}catch(e){}
+  add(!!reg?.active,'Receptor de avisos (firebase-messaging-sw.js)',reg?.active?reg.active.scriptURL:'no registrado (¿subiste firebase-messaging-sw.js a GitHub?)');
+  let tok='';if(window.Notification&&Notification.permission==='granted'&&pushReady()){try{tok=(await pushToken()).tok||''}catch(e){add(false,'Código del móvil (token)',esc(e.code||e.message||String(e)))}}
+  if(tok){add(true,'Código del móvil (token)',tok.slice(0,24)+'…');
+    try{await store.doc('tokens/'+tok).set({pid:me,at:Date.now(),ua:navigator.userAgent.slice(0,140)});add(true,'Guardado en la base de datos (colección tokens)','a nombre de '+esc(pname(me)));try{localStorage.setItem('fifa07_push',me);localStorage.setItem('fifa07_ptok',tok)}catch(e){}}
+    catch(e){add(false,'Guardado en la base de datos',esc(e.code||e.message))}}
+  show(tok)}
 function pushModal(){const st=pushState();
   const txt={on:'Los avisos están <b>activados</b> en este móvil.',ask:'Te avisamos cuando subas de la reserva, te reten, se abra un partido, te falte votar o queden las últimas plazas.',
     install:'En iPhone los avisos solo funcionan con la app <b>añadida a la pantalla de inicio</b> (el icono de FIFA07). Ábrela desde ese icono y vuelve aquí.',denied:'Los avisos están bloqueados en los ajustes del móvil.',nosupport:'Este navegador no admite avisos.'}[st]||'';
   modal(`${mh('🔔 Avisos')}<p>${txt}</p>
     <ul class="small muted" style="margin:10px 0 0 18px;line-height:1.6"><li>⬆️ Has subido de la reserva</li><li>⚔️ Alguien te reta (o acepta tu reto)</li><li>📅 Se abre un partido nuevo</li><li>🗳️ Te falta votar</li><li>🔥 Quedan las últimas plazas</li></ul>
-    ${st==='on'?`<button class="btn full" style="margin-top:16px" id="poff">🔕 Desactivar en este móvil</button>`:st==='install'?`<button class="btn pri full" style="margin-top:16px" id="pins">📲 Cómo añadirla a la pantalla de inicio</button>`:st==='ask'||st==='denied'?`<button class="btn pri full" style="margin-top:16px" id="pon">🔔 Activar avisos</button>`:''}`,
-  md=>{const q=s=>md.querySelector(s);q('#poff')&&(q('#poff').onclick=pushDisable);q('#pins')&&(q('#pins').onclick=()=>{close();installModal()});q('#pon')&&(q('#pon').onclick=e=>pushEnable(e.target))})}
+    <button class="btn full" style="margin-top:16px" id="pdg">🩺 Diagnóstico</button>
+    ${st==='on'?`<button class="btn full" style="margin-top:8px" id="poff">🔕 Desactivar en este móvil</button>`:st==='install'?`<button class="btn pri full" style="margin-top:16px" id="pins">📲 Cómo añadirla a la pantalla de inicio</button>`:st==='ask'||st==='denied'?`<button class="btn pri full" style="margin-top:16px" id="pon">🔔 Activar avisos</button>`:''}`,
+  md=>{const q=s=>md.querySelector(s);q('#pdg').onclick=pushDiag;q('#poff')&&(q('#poff').onclick=pushDisable);q('#pins')&&(q('#pins').onclick=()=>{close();installModal()});q('#pon')&&(q('#pon').onclick=e=>pushEnable(e.target))})}
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
   return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
 function render(){
@@ -975,7 +1013,7 @@ function render(){
     const m=S.matches[S.sheet.id];const body=document.querySelector('#sheetBody');
     if(!m)close();else if(body)body.innerHTML=matchDetail(m,st);
   }
-  checkUpgrade();
+  checkUpgrade();setTimeout(checkAch,1200);
 }
 
 /* ---- Partidos ---- */
@@ -1786,8 +1824,11 @@ function profile(id){
     ${(()=>{const c=chemistry(id);const row=(e,t,e2)=>e?`<div class="chem"><span class="ce">${t[0]}</span><span class="sp"><span class="ck2">${t[1]}</span><b>${face(e[0])} ${esc(pname(e[0]))}</b></span><span class="cv">${e2(e[1])}</span></div>`:'';
       const body=row(c.best,['🤝','Mejor dupla'],v=>`${Math.round(v.w/v.pj*100)}% en ${v.pj}`)+row(c.worst,['💔','Dupla gafe'],v=>`${Math.round(v.w/v.pj*100)}% en ${v.pj}`)+row(c.nemesis,['😈','Bestia negra'],v=>`${v.l} derrotas de ${v.pj}`)+row(c.victim,['🍖','Víctima favorita'],v=>`${v.w} victorias de ${v.pj}`);
       return `<h3>Química</h3>${body||'<p class="muted small">Hace falta jugar al menos 2 partidos con (o contra) alguien.</p>'}`})()}
-    ${(()=>{const L=achList().filter(a=>!a.neg),N=achList().filter(a=>a.neg);const card=a=>`<div class="a ${a.t(s)?'on':''} ${a.neg?'neg':''}" title="${esc(a.d)}"><div class="ae">${a.e}</div><div class="an">${a.n}</div><div class="ad">${a.d}</div></div>`;
-      return `<h3>Logros · ${L.filter(a=>a.t(s)).length}/${L.length}</h3><div class="ach">${L.map(card).join('')}</div><h3>Antilogros 😅 · ${N.filter(a=>a.t(s)).length}/${N.length}</h3><div class="ach">${N.map(card).join('')}</div>`})()}
+    ${(()=>{const has=a=>{try{return !!a.t(s)}catch(e){return false}};const L=achList().filter(a=>!a.neg),N=achList().filter(a=>a.neg);const gl=L.filter(has),gn=N.filter(has);
+      const card=a=>`<div class="a on ${a.neg?'neg':''}" title="${esc(a.d)}"><div class="ae">${a.e}</div><div class="an">${a.n}</div><div class="ad">${a.d}</div></div>`;
+      const hid=n=>`<div class="a lock"><div class="ae">❔</div><div class="an">${n} por descubrir</div><div class="ad">Se desbloquean jugando</div></div>`;
+      return `<h3>Logros · ${gl.length}/${L.length}</h3><div class="ach">${gl.map(card).join('')}${L.length>gl.length?hid(L.length-gl.length):''}</div>
+        <h3>Antilogros 😅 · ${gn.length}/${N.length}</h3><div class="ach">${gn.map(card).join('')}${N.length>gn.length?hid(N.length-gn.length):''}</div>`})()}
 
     <h3>Historial</h3>
     ${s.hist.slice().reverse().map(h=>`<div class="hist"><span>${esc(fmtShort(h.m))} · ${esc(h.m.venue||'')}</span><span>${h.res==='V'?'✅':h.res==='E'?'🤝':h.res==='D'?'❌':''} ${h.g?'⚽'.repeat(Math.min(h.g,5)):''} ${h.aws.join('')} ${h.dl!=null?(h.dl>=0?`<span class="up">▲${h.dl.toFixed(2)}</span>`:`<span class="down">▼${(-h.dl).toFixed(2)}</span>`):''} <span class="muted">${h.pts>0?'+':''}${h.pts}pts</span></span></div>`).join('')||'<p class="muted small">Aún no ha jugado.</p>'}
@@ -2317,6 +2358,24 @@ async function shareImage(kind,arg){
 // Aviso de carta: UNA vez por partido, cuando el partido queda cerrado (han votado todos los que jugaron,
 // o han pasado 48 h). Compara la media con la del último aviso, calculada solo con partidos cerrados.
 const matchClosed=m=>m.status==='played'&&(goalsLocked(m)||attendees(m).filter(p=>P(p)&&!P(p).guest).every(p=>hasVoted(m.id,p)));
+// 🏅 Logros nuevos: se avisa con una ventana la primera vez que aparecen (la primera vez que se abre esta versión, se guardan sin avisar)
+function checkAch(){if(!me||!P(me)||!allReady()||document.querySelector('.md'))return;
+  const st=computeStats();const s=st[me];if(!s)return;const list=achList();
+  const got=list.filter(a=>{try{return !!a.t(s)}catch(e){return false}}).map(a=>a.n);
+  const key='fifa07_ach_'+me;let prev=null;try{prev=JSON.parse(localStorage.getItem(key))}catch(e){}
+  const save=()=>{try{localStorage.setItem(key,JSON.stringify(got))}catch(e){}};
+  if(!Array.isArray(prev)){save();return}
+  const nw=got.filter(n=>!prev.includes(n));if(!nw.length){if(got.length!==prev.length)save();return}
+  save();const items=nw.map(n=>list.find(a=>a.n===n)).filter(Boolean).sort((a,b)=>(a.neg?1:0)-(b.neg?1:0));
+  const a=items[0],neg=!!a.neg;
+  if(!neg){const cf=document.createElement('div');cf.className='confetti';const cols=['#f5c542','#e30613','#fff','#22c55e','#3b82f6'];
+    for(let i=0;i<60;i++){const c=document.createElement('i');c.style.left=Math.random()*100+'%';c.style.background=cols[i%cols.length];c.style.animationDelay=(Math.random()*.6)+'s';c.style.animationDuration=(1.8+Math.random()*1.4)+'s';cf.appendChild(c)}
+    document.body.appendChild(cf);setTimeout(()=>cf.remove(),3800)}
+  modal(`<div class="unl ${neg?'neg':''}" style="position:relative"><div class="rays"></div><div class="kick">${neg?'😅 Antilogro desbloqueado':'🏅 ¡Logro desbloqueado!'}</div>
+    <div class="badge">${a.e}</div><div class="nm">${esc(a.n)}</div><div class="ds">${esc(a.d)}</div>
+    ${items.length>1?`<div class="small muted" style="margin-top:14px">Y además:</div><div class="more">${items.slice(1,7).map(x=>`<span>${x.e} ${esc(x.n)}</span>`).join('')}${items.length>7?`<span>+${items.length-7}</span>`:''}</div>`:''}
+    <p class="small muted" style="margin-top:14px">${neg?'Con cariño. Ya está en tu carta para que no se te olvide 🙃':'Ya está en tu carta para siempre.'}</p>
+    <button class="btn pri full" id="ulok" style="margin-top:12px">${neg?'Vale, vale…':'¡Vamos! 💪'}</button></div>`,md=>{md.querySelector('#ulok').onclick=close})}
 function checkUpgrade(){
   if(!me||!P(me)||!allReady()||document.querySelector('.md'))return;
   const mine=Object.values(S.matches).filter(m=>attendees(m).includes(me)&&matchClosed(m)).sort((a,b)=>mdt(b)-mdt(a));
