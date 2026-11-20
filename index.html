@@ -503,7 +503,9 @@ const UPDATES = [
   {at:'2026-11-17T00:40:00+01:00', e:'⚔️', t:'Nuevo: duelos', d:'Reta a alguien de tu partido y jugaos una caña o la pista. Lo tienes en la ficha del partido.'},
 ];
 const UPDATE_HOURS = 24;
-const BETA = false;                      // quita la etiqueta BETA poniendo false
+const BETA = false;
+// 🔔 Notificaciones: clave pública "Certificados push web" de Firebase (Configuración del proyecto → Cloud Messaging). Vacía = avisos apagados.
+const VAPID_KEY = 'BMPL3-C5ZeeXCr8ScXn0G7uAk000Kt9-eJhfoMZrWwDDLIeg9wieoM0dHuFEQcGNf4Y5vjBdNIfFbgU8YJMty_A';                      // quita la etiqueta BETA poniendo false
 
 const VENUES=[
   {n:'Altillo',p:'+34 616 89 99 35',f:'Fut5 / Fut7'},
@@ -900,6 +902,44 @@ function boardItems(days){
 function boardBlock(items){return items.length?`<h2>📢 Tablón ${items.length>5?`<button class="sub" data-act="board" style="background:none;color:var(--red2);font-weight:700">Ver todo ›</button>`:''}</h2>${boardHTML(items.slice(0,5))}`:''}
 function boardHTML(items){return `<div class="board">${items.map(i=>`<div class="bi ${i.neg?'neg':''}"><span class="be">${i.e}</span><span class="bt">${i.x}</span><span class="bw">${ago(i.t)}</span></div>`).join('')}</div>`}
 function boardModal(){const items=boardItems(30);modal(`${mh('📢 Tablón')}<p class="muted small">Lo que ha pasado en el grupo en los últimos 30 días.</p>${items.length?boardHTML(items):'<div class="empty">Nada por aquí todavía.</div>'}`)}
+/* ============ 🔔 NOTIFICACIONES (Firebase Cloud Messaging) ============
+   El móvil pide permiso, se registra el service worker (firebase-messaging-sw.js, en la raíz del repositorio) y se guarda
+   el "token" del móvil en tokens/{token} con el jugador. Los avisos los manda el servidor (Cloud Functions). */
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const pushSupported=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const pushReady=()=>!!VAPID_KEY&&store?.mode==='live';
+function pushState(){if(!pushReady())return 'off';if(isIOS()&&!isStandalone())return 'install';if(!pushSupported())return 'nosupport';
+  if(Notification.permission==='denied')return 'denied';let on=false;try{on=localStorage.getItem('fifa07_push')===me}catch(e){}return Notification.permission==='granted'&&on?'on':'ask'}
+async function pushToken(){const reg=await navigator.serviceWorker.register('./firebase-messaging-sw.js');await navigator.serviceWorker.ready;
+  const msg=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');const m=msg.getMessaging(store.app);
+  if(!S._pushFg){S._pushFg=1;msg.onMessage(m,p=>{const n=p.notification||p.data||{};toast(`🔔 ${n.title||''}${n.body?' · '+n.body:''}`)})}
+  return {tok:await msg.getToken(m,{vapidKey:VAPID_KEY,serviceWorkerRegistration:reg}),msg,m}}
+async function pushEnable(btn){
+  const st=pushState();if(st==='install'){installModal();return}
+  if(st==='nosupport'){toast('Este navegador no admite avisos 😕');return}
+  if(st==='denied'){modal(`${mh('🔕 Avisos bloqueados')}<p>Has dicho que no a los avisos. Para activarlos: <b>Ajustes del iPhone → Notificaciones → FIFA07</b> (o en Android, los ajustes del navegador) y permite las notificaciones. Luego vuelve aquí.</p>`);return}
+  if(btn){btn.disabled=true;btn.textContent='Activando…'}
+  try{const perm=await Notification.requestPermission();if(perm!=='granted'){toast('Sin permiso no hay avisos');render();return}
+    const {tok}=await pushToken();if(!tok)throw new Error('sin token');
+    await store.doc('tokens/'+tok).set({pid:me,at:Date.now(),ua:navigator.userAgent.slice(0,140)});
+    try{localStorage.setItem('fifa07_push',me);localStorage.setItem('fifa07_ptok',tok)}catch(e){}
+    toast('🔔 Avisos activados');close();render()}
+  catch(e){console.error(e);toast('No se pudieron activar los avisos: '+(e.code||e.message||e));if(btn){btn.disabled=false;btn.textContent='🔔 Activar avisos'}}}
+async function pushDisable(){let tok='';try{tok=localStorage.getItem('fifa07_ptok')||'';localStorage.removeItem('fifa07_push')}catch(e){}
+  try{if(tok)await store.doc('tokens/'+tok).delete();const {msg,m}=await pushToken();await msg.deleteToken(m)}catch(e){}
+  toast('🔕 Avisos desactivados');close();render()}
+// Al abrir la app, si los avisos están activados, se refresca el token (caducan de vez en cuando)
+async function pushRefresh(){if(pushState()!=='on'||S._pushRef)return;S._pushRef=1;
+  try{const {tok}=await pushToken();let old='';try{old=localStorage.getItem('fifa07_ptok')||''}catch(e){}
+    if(tok&&(tok!==old||Date.now()-(+localStorage.getItem('fifa07_ptat')||0)>7*864e5)){await store.doc('tokens/'+tok).set({pid:me,at:Date.now(),ua:navigator.userAgent.slice(0,140)});
+      if(old&&old!==tok)store.doc('tokens/'+old).delete().catch(()=>{});try{localStorage.setItem('fifa07_ptok',tok);localStorage.setItem('fifa07_ptat',String(Date.now()))}catch(e){}}}catch(e){console.warn('push',e)}}
+function pushModal(){const st=pushState();
+  const txt={on:'Los avisos están <b>activados</b> en este móvil.',ask:'Te avisamos cuando subas de la reserva, te reten, se abra un partido, te falte votar o queden las últimas plazas.',
+    install:'En iPhone los avisos solo funcionan con la app <b>añadida a la pantalla de inicio</b> (el icono de FIFA07). Ábrela desde ese icono y vuelve aquí.',denied:'Los avisos están bloqueados en los ajustes del móvil.',nosupport:'Este navegador no admite avisos.'}[st]||'';
+  modal(`${mh('🔔 Avisos')}<p>${txt}</p>
+    <ul class="small muted" style="margin:10px 0 0 18px;line-height:1.6"><li>⬆️ Has subido de la reserva</li><li>⚔️ Alguien te reta (o acepta tu reto)</li><li>📅 Se abre un partido nuevo</li><li>🗳️ Te falta votar</li><li>🔥 Quedan las últimas plazas</li></ul>
+    ${st==='on'?`<button class="btn full" style="margin-top:16px" id="poff">🔕 Desactivar en este móvil</button>`:st==='install'?`<button class="btn pri full" style="margin-top:16px" id="pins">📲 Cómo añadirla a la pantalla de inicio</button>`:st==='ask'||st==='denied'?`<button class="btn pri full" style="margin-top:16px" id="pon">🔔 Activar avisos</button>`:''}`,
+  md=>{const q=s=>md.querySelector(s);q('#poff')&&(q('#poff').onclick=pushDisable);q('#pins')&&(q('#pins').onclick=()=>{close();installModal()});q('#pon')&&(q('#pon').onclick=e=>pushEnable(e.target))})}
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
   return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
 function render(){
@@ -938,6 +978,8 @@ function viewMatches(st){
   const played=all.filter(m=>m.status==='played').sort((a,b)=>mdt(b)-mdt(a));
   let h='';
   if(S.conn&&!S.conn.ok)h+=`<div class="banner" style="border-color:#ffd400;background:rgba(255,212,0,.1)"><span class="e">⚠️</span><span><b>Sin conexión con la base de datos</b><br><span class="small">${S.conn.code==='reglas'?'Las reglas de Firebase no dejan leer ni escribir. Revisa la pestaña Seguridad.':`Lo que hagas no se guardará (${esc(S.conn.code)}). Recarga en un rato.`}</span></span></div>`;
+  if(pushReady()&&me&&P(me)&&['ask','install'].includes(pushState())){let hid=0;try{hid=+localStorage.getItem('fifa07_pushask')||0}catch(e){}
+    if(Date.now()-hid>14*864e5)h+=`<div class="banner"><span class="e">🔔</span><span class="sp"><b>Activa los avisos</b><br><span class="small">Para enterarte al momento si subes de la reserva, te retan o se abre partido.</span></span><button class="btn sm pri" data-act="push">Activar</button><button class="x" data-act="pushHide" style="width:28px;height:28px;font-size:14px;margin-left:6px" aria-label="Ahora no">✕</button></div>`}
   liveUpdates().forEach(u=>{h+=`<div class="banner upd"><span class="e">${u.e}</span><span class="sp"><b>${esc(u.t)}</b><br><span class="small">${esc(u.d)}</span></span><button class="x" data-act="updHide" data-id="${esc(u.at)}" style="width:28px;height:28px;font-size:14px" aria-label="Cerrar">✕</button></div>`});
   const npend=Object.values(S.players).filter(p=>p.status==='pending').length;
   if(isAdmin()&&npend)h+=`<button class="banner" style="width:100%;text-align:left" data-act="goAdmin"><span class="e">🙋</span><span><b>${npend} ${npend===1?'persona quiere':'personas quieren'} entrar</b><br>Toca para aprobar o rechazar.</span></button>`;
@@ -1309,8 +1351,9 @@ function pickMe(){
   if(needsGate()){loginForm();return}
   const ids=approvedIds().sort((a,b)=>pname(a).localeCompare(pname(b)));
   const mine=me&&P(me)?`<div class="row" style="gap:8px;margin:4px 0 14px"><button class="btn" style="flex:1" data-act="profile" data-id="${esc(me)}">🃏 Mi carta</button>${injOf(me)?`<button class="btn" style="flex:1" data-act="injOff" data-id="${esc(me)}">💪 Ya estoy bien</button>`:`<button class="btn" style="flex:1;border-color:#e10600" data-act="injOn" data-id="${esc(me)}"><b style="color:#e10600">✚</b> Me he lesionado</button>`}</div>`:'';
+  const mine3=me&&P(me)&&pushReady()?`<button class="btn full" style="margin:-6px 0 14px" data-act="push">${pushState()==='on'?'🔔 Avisos activados':'🔕 Activar avisos en el móvil'}</button>`:'';
   const mine2=me&&P(me)?`<div class="row" style="gap:8px;margin:-6px 0 14px">${awayCfg(me)?`<button class="btn" style="flex:1" data-act="awayOff" data-id="${esc(me)}">🏠 Ya estoy disponible</button>`:`<button class="btn" style="flex:1;border-color:#6b8fbf" data-act="awayOn" data-id="${esc(me)}">🧳 Voy a estar fuera</button>`}</div>`:'';
-  modal(`${mh(me&&P(me)?esc(pname(me)):'¿Quién eres?')}${mine}${mine2}${mine?'<h3 style="margin-top:6px">Cambiar de jugador</h3>':''}<p class="muted small" style="margin-bottom:12px">Para cambiar de jugador en este móvil hace falta su PIN.</p>
+  modal(`${mh(me&&P(me)?esc(pname(me)):'¿Quién eres?')}${mine}${mine2}${mine3}${mine?'<h3 style="margin-top:6px">Cambiar de jugador</h3>':''}<p class="muted small" style="margin-bottom:12px">Para cambiar de jugador en este móvil hace falta su PIN.</p>
     <input id="q" placeholder="Buscar…" style="margin-bottom:6px">
     <div>${ids.map(id=>`<button class="pl" data-pick="${esc(id)}"><span class="av">${face(id)}</span><span class="nm">${esc(pname(id))}</span>${id===me?'<span class="pill red">Tú</span>':'<span class="muted">🔒</span>'}</button>`).join('')}</div>
     <button class="btn ghost full" id="out" style="margin-top:14px">Cerrar sesión en este móvil</button>`,
@@ -2809,6 +2852,8 @@ document.addEventListener('click',e=>{
     case'guestAccess':{const p=P(id);confirmBox('Darle acceso a '+esc(p.name),'Le creamos un PIN para que entre en la app con su nombre. Conserva sus partidos, goles y nivel.','🔑 Crear PIN',async()=>{const np=randPin();await store.doc('players/'+id).update({pinHash:await hashPin(np),guest:false,accessAt:Date.now()});showInvite(p.name,np);S.keepModal=true},false);break}
     case'board':boardModal();break;
     case'keepers':keeperForm(id);break;
+    case'push':pushModal();break;
+    case'pushHide':try{localStorage.setItem('fifa07_pushask',String(Date.now()))}catch(e){};render();break;
     case'awayOn':awayForm(id);break;
     case'awayOff':store.doc('players/'+id).update({away:null,backAt:Date.now(),backFrom:awayCfg(id)?{e:awayCfg(id).e,label:awayCfg(id).label}:null}).then(()=>{close();toast(id===me?'¡De vuelta! 🏠':'Ausencia quitada')}).catch(err);break;
     case'injOn':injForm(id);break;
@@ -2889,7 +2934,7 @@ async function firebaseStore(cfg){
   if(good){fdb=good.d;diag={ok:good.ok,code:good.ok?'':'reglas',db:good.id}}
   else{const r=results.find(x=>x.id==='(default)')||results[0];fdb=r.d;diag={ok:false,code:results.map(x=>x.code).join('/'),db:''}}
   S.conn=diag;
-  return{mode:'live',
+  return{mode:'live',app:fb,
     doc:p=>{const r=fs.doc(fdb,p);return{set:(d,o)=>withTimeout(o?fs.setDoc(r,d,o):fs.setDoc(r,d)),update:d=>withTimeout(fs.updateDoc(r,d)),delete:()=>withTimeout(fs.deleteDoc(r))}},
     collection:c=>({onSnapshot:(cb,er)=>fs.onSnapshot(fs.collection(fdb,c),s=>cb({docs:s.docs.map(d=>({id:d.id,data:()=>d.data()})),fromCache:s.metadata.fromCache}),er)})};
 }
@@ -3014,7 +3059,8 @@ function sub(col){
     if(col==='players'&&me&&!o[me]&&snap.docs.length)me=null;
     scheduleRender();
     if(col==='matches'||col==='config'||col==='players')setTimeout(ensureRecurring,500);
-    if(col==='players'){setTimeout(()=>{heartbeat();maybeSeenSub()},800)}
+    if(col==='matches'&&!S._deep){const q=new URLSearchParams(location.search).get('m');if(q){S._deep=1;setTimeout(()=>{if(S.matches[q]&&me)openMatch(q)},600)}}
+    if(col==='players'){setTimeout(()=>{heartbeat();maybeSeenSub();pushRefresh()},800)}
   },e=>{clearTimeout(t);console.error(e);S.ready[col]=1;if(col==='players')storeErr=true;render()});
 }
 (async()=>{
