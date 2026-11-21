@@ -732,6 +732,57 @@ function matchRatings(m){return memo('mr_'+m.id,()=>{const sum={},n={};let fs=0,
   const avg={};let all=0,an=0;for(const p in sum){avg[p]=sum[p]/n[p];all+=sum[p];an+=n[p]}
   return{avg,n,all:an?all/an:0,field:fn?fs/fn:0,votes:Object.values(S.votes).filter(v=>v.mid===m.id).length}})}
 const R0=m=>m.status==='played'&&!matchClosed(m);
+// 🔗 Fusionar / sustituir jugadores. Pasa TODO lo de un id a otro: equipos, apuntados, goles, pagos, porteros,
+// votos (estrellas y premios), estadísticas y duelos. Sirve para el invitado que luego se registra y para limpiar los “???”.
+function ghostIds(m){const ids=new Set([...(m.teamA||[]),...(m.teamB||[]),...(m.noShow||[]),...signupsOf(m.id).map(s=>s.pid)]);return [...ids].filter(p=>p&&!S.players[p])}
+function matchesWith(pid){return Object.values(S.matches).filter(m=>[...(m.teamA||[]),...(m.teamB||[])].includes(pid)||S.signups[`${m.id}__${pid}`])}
+async function mergeIds(oldId,newId,onlyMid){
+  const rmap=a=>{if(!Array.isArray(a))return a;const o=a.map(x=>x===oldId?newId:x);return newId?[...new Set(o)].filter(Boolean):o.filter(x=>x&&x!==oldId)};
+  const kmap=o=>{if(!o||typeof o!=='object'||!(oldId in o))return o;const r={...o};const v=r[oldId];delete r[oldId];if(newId&&r[newId]==null)r[newId]=v;return r};
+  const ms=Object.values(S.matches).filter(m=>(!onlyMid||m.id===onlyMid));let n=0;
+  for(const m of ms){const up={};
+    for(const f of ['teamA','teamB','noShow'])if((m[f]||[]).includes(oldId))up[f]=rmap(m[f]);
+    for(const f of ['goals','assists','paid','kit'])if(m[f]&&oldId in m[f])up[f]=kmap(m[f]);
+    if(m.keepers){const k={...m.keepers};let ch=false;for(const t of ['A','B'])if(k[t]?.pid===oldId){k[t]={...k[t],pid:newId||null};if(!newId)k[t].mode='none';ch=true}if(ch)up.keepers=k}
+    for(const f of ['promoted','bumped'])if(m[f]?.pid===oldId)up[f]={...m[f],pid:newId||null};
+    if(Array.isArray(m.novote)&&m.novote.includes(oldId))up.novote=rmap(m.novote);
+    if(Object.keys(up).length){await store.doc('matches/'+m.id).update(up);n++}
+    for(const c of ['signups','stats','voted']){const o=S[c]?.[`${m.id}__${oldId}`];if(!o)continue;
+      if(newId&&!S[c][`${m.id}__${newId}`])await store.doc(`${c}/${m.id}__${newId}`).set({...o,pid:newId});
+      await store.doc(`${c}/${m.id}__${oldId}`).delete()}
+    for(const [vid,v] of Object.entries(S.votes)){if(v.mid!==m.id)continue;const up2={};
+      if(v.ratings&&oldId in v.ratings)up2.ratings=kmap(v.ratings);if(v.gk&&oldId in v.gk)up2.gk=kmap(v.gk);
+      if(v.awards&&Object.values(v.awards).includes(oldId)){const a={...v.awards};for(const k in a)if(a[k]===oldId){if(newId)a[k]=newId;else delete a[k]}up2.awards=a}
+      if(Object.keys(up2).length)await store.doc('votes/'+vid).update(up2)}
+    for(const [did,d] of Object.entries(S.duels||{})){if(d.mid!==m.id)continue;
+      if(d.from===oldId||d.to===oldId){if(newId)await store.doc('duels/'+did).update({from:d.from===oldId?newId:d.from,to:d.to===oldId?newId:d.to});else await store.doc('duels/'+did).update({status:'cancelled'})}}
+  }
+  return n}
+function ghostForm(mid){const m=S.matches[mid];if(!m)return;const gh=ghostIds(m);if(!gh.length){toast('Ya está todo bien ✅');return}
+  const inM=new Set([...(m.teamA||[]),...(m.teamB||[]),...signupsOf(mid).map(s=>s.pid)]);
+  const cands=approvedIds().sort((a,b)=>(S.players[b].createdAt||0)-(S.players[a].createdAt||0));
+  const g0=m.goals?.[gh[0]];
+  modal(`${mh('Arreglar jugador borrado')}
+    ${gh.map((g,i)=>{const t=(m.teamA||[]).includes(g)?TEAM.A.n:(m.teamB||[]).includes(g)?TEAM.B.n:'Apuntados';const nv=Object.values(S.votes).filter(v=>v.mid===mid&&v.ratings&&g in v.ratings).length;
+      return `<div class="box" style="margin-top:12px"><b>“???” · ${esc(t)}</b><div class="small muted" style="margin-top:2px">${nv} ${nv===1?'voto le puntúa':'votos le puntúan'}${m.goals?.[g]?` · ${m.goals[g]} gol(es)`:''}. Al sustituirlo se pasan a su usuario real.</div>
+        <label>¿Quién es en realidad?</label><select class="gsel" data-g="${esc(g)}"><option value="">— Elige al jugador —</option>${cands.map(p=>`<option value="${esc(p)}">${esc(pname(p))}${S.players[p].guest?' (invitado)':''}${inM.has(p)?' · ya está en el partido':''}</option>`).join('')}</select>
+        <div class="row" style="margin-top:10px;gap:8px"><button class="btn pri sm gok" data-g="${esc(g)}">🔗 Sustituir</button><button class="btn sm dan grm" data-g="${esc(g)}">🗑️ Quitar del partido</button></div></div>`}).join('')}
+    <p class="small muted" style="margin-top:12px">Los votos de los demás no se han perdido: siguen guardados y se pasan al jugador que elijas.</p>`,
+  md=>{
+    md.querySelectorAll('.gok').forEach(b=>b.onclick=async()=>{const g=b.dataset.g;const to=md.querySelector(`.gsel[data-g="${CSS.escape(g)}"]`).value;if(!to){toast('Elige al jugador');return}
+      b.disabled=true;try{await mergeIds(g,to,mid);close();toast(`Listo: ahora es ${pname(to)} ✅`)}catch(e){b.disabled=false;err(e)}});
+    md.querySelectorAll('.grm').forEach(b=>b.onclick=()=>confirmBox('Quitar del partido','Se quita de los equipos y de la lista, y se borran sus estrellas en los votos. El resultado no cambia.','Quitar',async()=>{await mergeIds(b.dataset.g,null,mid);toast('Quitado ✅')},true));
+  })}
+function mergeForm(gid){const g=P(gid);if(!g)return;const cands=approvedIds().filter(p=>p!==gid&&!S.players[p].guest).sort((a,b)=>(S.players[b].createdAt||0)-(S.players[a].createdAt||0));
+  const n=matchesWith(gid).length;
+  modal(`${mh('Fusionar invitado')}
+    <p class="muted small"><b>${esc(g.name)}</b> (invitado) sale en ${n} ${n===1?'partido':'partidos'}. Elige su usuario real: se le pasan los partidos, goles, votos recibidos, pagos y duelos, y el invitado se borra.</p>
+    <label>Usuario real</label><select id="to"><option value="">— Elige —</option>${cands.map(p=>`<option value="${esc(p)}">${esc(pname(p))}</option>`).join('')}</select>
+    <button class="btn pri full" id="sv" style="margin-top:18px">🔗 Fusionar</button>`,
+  md=>{md.querySelector('#sv').onclick=e=>{const to=md.querySelector('#to').value;if(!to){toast('Elige el usuario real');return}
+    confirmBox('Fusionar',`Todo lo de <b>${esc(g.name)}</b> pasa a <b>${esc(pname(to))}</b> y el invitado se borra. No se puede deshacer.`,'Fusionar',async()=>{
+      await mergeIds(gid,to);const pl=P(to),gl=P(gid);const up={};if(gl?.cardLog?.length){up.cardLog=[...(pl.cardLog||[]),...gl.cardLog];up.yellow=(pl.yellow||0)+(gl.yellow||0);up.red=(pl.red||0)+(gl.red||0)}
+      if(Object.keys(up).length)await store.doc('players/'+to).update(up);await store.doc('players/'+gid).delete();close();toast(`Fusionado con ${pname(to)} ✅`)})}})}
 function goalsOf(m){const o={};Object.values(S.stats).forEach(s=>{if(s.mid===m.id&&+s.g)o[s.pid]=+s.g});Object.entries(m.goals||{}).forEach(([p,v])=>o[p]=+v||0);return o}
 function assistsOf(m){const o={};Object.values(S.stats).forEach(s=>{if(s.mid===m.id&&+s.a)o[s.pid]=+s.a});Object.entries(m.assists||{}).forEach(([p,v])=>o[p]=+v||0);return o}
 function goalCheck(m){const g=goalsOf(m);const sum=t=>(t||[]).reduce((s,p)=>s+(g[p]||0),0);return{A:sum(m.teamA),B:sum(m.teamB),sa:+m.scoreA||0,sb:+m.scoreB||0}}
@@ -1431,6 +1482,8 @@ function matchDetail(m,st){
     }
   }
 
+  // 🔧 Jugadores borrados que siguen en el partido (salen como ???)
+  if(isAdmin()){const gh=ghostIds(m);if(gh.length)x+=`<div class="banner" style="margin-top:12px;border-color:rgba(225,6,0,.5);background:rgba(225,6,0,.12)"><span class="e">⚠️</span><span class="sp"><b>Hay ${gh.length===1?'un jugador borrado':gh.length+' jugadores borrados'} en este partido</b><br><span class="small">Sale como “???”. Sustitúyelo por su usuario real o quítalo.</span></span><button class="btn sm pri" data-act="fixGhost" data-id="${esc(m.id)}">🔧 Arreglar</button></div>`}
   // Lista
   if(!played&&me&&P(me)&&!S.signups[`${m.id}__${me}`]){const pv=prevPlayed(m);const pu=prioUntil(m);
     if(pv&&S.signups[`${pv.id}__${me}`]&&![...(pv.teamA||[]),...(pv.teamB||[])].includes(me)&&Date.now()<pu)x+=`<div class="banner" style="margin-top:12px"><span class="e">⭐</span><span><b>Tienes prioridad</b> por quedarte de reserva la última vez<br><span class="small">Apúntate antes de ${hLeft(pu)==='0 min'?'ya':`que pasen ${hLeft(pu)}`} y entras por delante.</span></span></div>`}
@@ -2117,6 +2170,7 @@ function profile(id){
       ${id===me||isAdmin()?`<button class="btn sm" id="ed">✏️ Editar${id===me?' / PIN':''}</button>`:''}
       ${isAdmin()&&(s.y||s.r)?`<button class="btn sm" id="unc">Quitar última tarjeta</button>`:''}
       ${isAdmin()&&id!==me?`<button class="btn sm" id="adm">${p.admin?'Quitar admin':'Hacer admin'}</button>`:''}
+      ${isAdmin()&&id!==me&&p.guest?`<button class="btn sm" id="mrg">🔗 Ya tiene usuario: fusionar</button>`:''}
       ${isAdmin()&&id!==me?`<button class="btn sm dan" id="del">Borrar</button>`:''}
       ${isAdmin()&&id!==me?`<button class="btn sm" id="rpin">${p.pinHash?'Nuevo PIN':'Generar PIN'}</button>`:''}
     </div>`,
@@ -2128,7 +2182,8 @@ function profile(id){
       try{await store.doc('players/'+id).update(t==='red'?{red:Math.max(0,(p.red||0)-1),cardLog:log}:{yellow:Math.max(0,(p.yellow||0)-1),cardLog:log});close();toast('Tarjeta perdonada 🙏')}catch(e){err(e)}});
     q('#adm')&&(q('#adm').onclick=async()=>{try{await store.doc('players/'+id).update({admin:!p.admin});close();toast(p.admin?'Ya no es admin':'Ahora es admin')}catch(e){err(e)}});
     q('#rpin')&&(q('#rpin').onclick=async()=>{const np=randPin();try{await store.doc('players/'+id).update({pinHash:await hashPin(np)});close();showInvite(p.name,np,true)}catch(e){err(e)}});
-    q('#del')&&(q('#del').onclick=()=>confirmBox('Borrar jugador',`¿Seguro que quieres borrar a <b>${esc(p.name)}</b>?`,'Borrar',async()=>{await store.doc('players/'+id).delete()},true));
+    q('#mrg')&&(q('#mrg').onclick=()=>mergeForm(id));
+    q('#del')&&(q('#del').onclick=()=>{const n=matchesWith(id).length;confirmBox('Borrar jugador',`¿Seguro que quieres borrar a <b>${esc(p.name)}</b>?${n?`<br><br>⚠️ Sale en <b>${n} ${n===1?'partido':'partidos'}</b>: ahí se quedará como “???”. Si se ha registrado con otro usuario, mejor usa <b>🔗 Fusionar</b>.`:''}`,'Borrar',async()=>{await store.doc('players/'+id).delete()},true)});
   });
 }
 
@@ -3421,6 +3476,7 @@ document.addEventListener('click',e=>{
     case'pollVote':pollVote(id,+a.dataset.i);break;
     case'pollConvoke':pollConvoke(id);break;
     case'pollShare':copyPoll(id);break;
+    case'fixGhost':ghostForm(id);break;
     case'pollClose':confirmBox('Cerrar encuesta','Desaparecerá de la portada.','Cerrar',async()=>{await store.doc('polls/'+id).update({closed:true})});break;
     case'cal':calModal(id);break;
     case'wrapped':if(!wrapOn()&&!isAdmin())break;openWrapped(id,a.closest('.md')?seasonOfDate(new Date()):S.season);break;
