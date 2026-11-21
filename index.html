@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -543,7 +546,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "495674924122",
   appId: "1:495674924122:web:17deb31c95f341903a0c63"
 };
-const FIREBASE_DB = null;               // nombre de la base de datos si no es la de por defecto (p. ej. 'default')
+const FIREBASE_DB = 'default';              // nombre de la base de datos si no es la de por defecto (p. ej. 'default')
 const APP_NAME = ['FIFA','07'];          // nombre del grupo: [parte blanca, parte roja]
 const SLOGAN = 'Para los amantes del mal fútbol';
 const CREATOR = 'Daniel Lucena';
@@ -857,7 +860,7 @@ function promoModal(pr=promoCfg(),preview=false){if(!pr)return;
   const cd=dl>1?`<b>${dl}</b><span>días</span>`:dl===1?`<b>1</b><span>día</span>`:`<b>HOY</b><span>es el día</span>`;
   const url=(pr.url||'').trim();const href=url&&!/^https?:\/\//i.test(url)?'https://'+url:url;
   const share=encodeURIComponent(`${pr.title||'Memorial'} · ${fecha}${pr.time?' · '+pr.time:''}${pr.place?' · '+pr.place:''}${href?'\n'+href:''}`);
-  modal(`<div class="promo">${pr.img?`<img class="pimg" src="${esc(pr.img)}" alt="">`:(pr.logo!==false?`<div class="pph logo"><img src="${MEMORIAL_LOGO}" alt="${esc(pr.title||'Memorial')}"></div>`:`<div class="pph"><div class="bigE">${esc(pr.emoji||'🕊️')}</div><div class="kick">${esc(pr.kicker||'Memorial')}</div><div class="ttl">${esc(pr.title||'Memorial Alberto Lucena')}</div></div>`)}
+  modal(`${preview?'':'<i data-auto hidden></i>'}<div class="promo">${pr.img?`<img class="pimg" src="${esc(pr.img)}" alt="">`:(pr.logo!==false?`<div class="pph logo"><img src="${MEMORIAL_LOGO}" alt="${esc(pr.title||'Memorial')}"></div>`:`<div class="pph"><div class="bigE">${esc(pr.emoji||'🕊️')}</div><div class="kick">${esc(pr.kicker||'Memorial')}</div><div class="ttl">${esc(pr.title||'Memorial Alberto Lucena')}</div></div>`)}
     <span class="tag">${preview?'Vista previa':'Anuncio'}</span><button class="x" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);color:#fff">✕</button>
     <div class="body">${pr.img?`<h2 style="margin:0 0 10px">${esc(pr.title||'')}</h2>`:''}
       <div class="when"><div class="cd">${cd}</div><div><b>${esc(fecha)}</b>${pr.time?` · ${esc(pr.time)}`:''}${pr.place?`<br><span class="small muted">📍 ${esc(pr.place)}</span>`:''}</div></div>
@@ -1157,10 +1160,14 @@ function interviewModal(wk){const qs=ivQuestions(me,wk);const pp=paperOf(new Dat
 function maybeInterview(){if(S._ivDone||!me||!P(me)||!allReady()||needsGate())return;const wd=new Date().getDay();if(wd===0||wd===6)return;
   const wk=weekKey();if(S.interviews['iv_'+wk]){S._ivDone=1;return}if(interviewee(wk)!==me){S._ivDone=1;return}
   setTimeout(()=>{if(S._ivDone||document.querySelector('.md')||S.interviews['iv_'+wk])return;S._ivDone=1;interviewModal(wk)},4500)}
-function paperModal(day){modal(buildPaper(day)+`<button class="btn pri full" style="margin-top:14px" id="ppok">Cerrar el periódico</button>`,md=>{md.querySelector('#ppok').onclick=close})}
+function paperModal(day){modal(`<i data-auto hidden></i>`+buildPaper(day)+`<button class="btn pri full" style="margin-top:14px" id="ppok">Cerrar el periódico</button>`,md=>{md.querySelector('#ppok').onclick=close})}
 function maybePaper(){if(S._paperDone||!me||!P(me)||!allReady()||needsGate())return;const k=ymd(new Date());let seen='';try{seen=localStorage.getItem('fifa07_paper')||''}catch(e){}
   if(seen===k){S._paperDone=1;return}
-  setTimeout(()=>{if(S._paperDone||document.querySelector('.md'))return;S._paperDone=1;try{localStorage.setItem('fifa07_paper',k)}catch(e){};paperModal()},2600)}
+  setTimeout(()=>{if(S._paperDone||document.querySelector('.md')||document.hidden||!me||!P(me)||needsGate())return;S._paperDone=1;try{localStorage.setItem('fifa07_paper',k)}catch(e){};paperModal()},1200)}
+// iPhone guarda una "foto" de la pantalla al salir de la app y la enseña al volver a abrirla. Si el periódico
+// estaba abierto, se veía un amago de periódico que desaparecía al recargar. Al salir se cierra (se puede reabrir con el botón).
+const autoClose=()=>{if(document.querySelector('#modalRoot [data-auto]'))close()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)autoClose()});window.addEventListener('pagehide',autoClose);
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
   return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
 function render(){
@@ -1509,7 +1516,7 @@ function viewInfo(){
 function modal(html,onMount,sheet=null){
   S.sheet=sheet;
   const r=$('#modalRoot');r.innerHTML=`<div class="ov"><div class="md"><div class="grab"></div>${html}</div></div>`;
-  const ov=r.firstChild;ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.x'))close()});
+  const ov=r.firstChild,t0=Date.now();ov.addEventListener('click',e=>{if(e.target===ov&&Date.now()-t0<700)return;if(e.target===ov||e.target.closest('.x'))close()});
   onMount&&onMount(ov.querySelector('.md'));
 }
 function close(){S.sheet=null;$('#modalRoot').innerHTML=''}
@@ -2933,6 +2940,7 @@ let recBusy=false;const recDone=new Set();
 async function ensureRecurring(){
   if(recBusy||!store||(store.mode==='live'&&!S.conn?.ok))return;
   if(!S.ready.matches||!S.ready.config||!S.ready.players||!me||!P(me)||isPending(me))return;
+  if(!['matches','config','players'].every(c=>S.fresh?.[c]))return;
   recBusy=true;
   try{
     for(const r of recRules()){
@@ -3308,9 +3316,22 @@ async function firebaseStore(cfg){
   const app=await import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`);
   const fs=await import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`);
   const fb=app.initializeApp(cfg);
-  const cands=FIREBASE_DB?[FIREBASE_DB]:['(default)','default'];
+  // Caché en el móvil (IndexedDB): al abrir, la app pinta al instante con lo guardado y luego se sincroniza.
+  const mk=(id,cache)=>{const o={ignoreUndefinedProperties:true};if(cache){try{o.localCache=fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})}catch(e){}}
+    try{return id==='(default)'?fs.initializeFirestore(fb,o):fs.initializeFirestore(fb,o,id)}catch(e){delete o.localCache;return id==='(default)'?fs.initializeFirestore(fb,o):fs.initializeFirestore(fb,o,id)}};
+  const api=fdb=>({mode:'live',app:fb,
+    doc:p=>{const r=fs.doc(fdb,p);return{set:(d,o)=>withTimeout(o?fs.setDoc(r,d,o):fs.setDoc(r,d)),update:d=>withTimeout(fs.updateDoc(r,d)),delete:()=>withTimeout(fs.deleteDoc(r))}},
+    collection:c=>({onSnapshot:(cb,er)=>{let first=true;return fs.onSnapshot(fs.collection(fdb,c),{includeMetadataChanges:true},s=>{const meta=!first&&s.docChanges().length===0;first=false;
+      cb({docs:meta?[]:s.docs.map(d=>({id:d.id,data:()=>d.data()})),fromCache:s.metadata.fromCache,metaOnly:meta})},er)}})});
+  if(FIREBASE_DB){
+    // Base de datos conocida: sin pruebas previas, se suscribe ya. La comprobación de conexión va en segundo plano.
+    const fdb=mk(FIREBASE_DB,true);
+    withTimeout(fs.getDocFromServer(fs.doc(fdb,'config','ping')),10000).then(()=>{S.conn={ok:true,code:'',db:FIREBASE_DB}},e=>{S.conn={ok:false,code:e?.code==='permission-denied'?'reglas':(e?.code||'error'),db:FIREBASE_DB}})
+      .finally(()=>{scheduleRender();setTimeout(ensureRecurring,300)});
+    return api(fdb)}
+  const cands=['(default)','default'];
   // Se prueban las dos a la vez y se usa la primera que responda (un "permiso denegado" también indica que existe).
-  const probes=cands.map(id=>{const d=id==='(default)'?fs.initializeFirestore(fb,{ignoreUndefinedProperties:true}):fs.initializeFirestore(fb,{ignoreUndefinedProperties:true},id);
+  const probes=cands.map(id=>{const d=mk(id,false);
     return withTimeout(fs.getDocFromServer(fs.doc(d,'config','ping')),10000).then(()=>({d,id,ok:true}),e=>({d,id,ok:false,code:e?.code||'error'}))});
   let fdb=null,diag={ok:false,code:'',db:''};
   const results=await new Promise(res=>{const out=[];probes.forEach(p=>p.then(r=>{out.push(r);if(r.ok||r.code==='permission-denied'||out.length===probes.length)res(out)}))});
@@ -3318,9 +3339,7 @@ async function firebaseStore(cfg){
   if(good){fdb=good.d;diag={ok:good.ok,code:good.ok?'':'reglas',db:good.id}}
   else{const r=results.find(x=>x.id==='(default)')||results[0];fdb=r.d;diag={ok:false,code:results.map(x=>x.code).join('/'),db:''}}
   S.conn=diag;
-  return{mode:'live',app:fb,
-    doc:p=>{const r=fs.doc(fdb,p);return{set:(d,o)=>withTimeout(o?fs.setDoc(r,d,o):fs.setDoc(r,d)),update:d=>withTimeout(fs.updateDoc(r,d)),delete:()=>withTimeout(fs.deleteDoc(r))}},
-    collection:c=>({onSnapshot:(cb,er)=>fs.onSnapshot(fs.collection(fdb,c),s=>cb({docs:s.docs.map(d=>({id:d.id,data:()=>d.data()})),fromCache:s.metadata.fromCache}),er)})};
+  return api(fdb);
 }
 function demoStore(){
   let data=null;try{data=JSON.parse(localStorage.getItem('fifa07_demo'))}catch(e){}
@@ -3400,7 +3419,7 @@ function wrapStore(st){const raw=st.doc.bind(st);st.rawDoc=raw;
         if(live()||!mon)return d.delete()}}};
   return st}
 async function archiveOld(force){
-  if(!isAdmin()||S.archiving)return 0;if(![...ARC_COLS,'archive'].every(c=>S.ready[c]))return 0;
+  if(!isAdmin()||S.archiving)return 0;if(![...ARC_COLS,'archive'].every(c=>S.ready[c]&&S.fresh?.[c]))return 0;
   if(!force){let last=0;try{last=+localStorage.getItem('fifa07_arc')||0}catch(e){}if(Date.now()-last<12*3600e3)return 0}
   S.archiving=true;let moved=0;
   try{
@@ -3434,6 +3453,9 @@ let _rq=0;function scheduleRender(){if(_rq)return;_rq=setTimeout(()=>{_rq=0;rend
 function sub(col){
   const t=setTimeout(()=>{if(!S.ready[col]){S.ready[col]=1;render();toast('La conexión va lenta…')}},10000);
   store.collection(col).onSnapshot(snap=>{
+    S.fresh=S.fresh||{};
+    if(snap.metaOnly){const was=S.fresh[col];S.fresh[col]=!snap.fromCache;if(!was&&S.fresh[col]){if(isAdmin())setTimeout(()=>archiveOld(false),4000);setTimeout(ensureRecurring,500)}return}
+    S.fresh[col]=!snap.fromCache;
     clearTimeout(t);S.ver++;const o={};snap.docs.forEach(d=>o[d.id]={id:d.id,...d.data()});
     if(col==='archive'){S.arc={};for(const id in o)S.arc[id]=o[id];arcIndex();ARC_COLS.forEach(arcRebuild)}
     else if(ARC_COLS.includes(col)){S.live[col]=o;arcRebuild(col)}
