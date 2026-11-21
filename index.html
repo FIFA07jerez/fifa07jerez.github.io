@@ -48,6 +48,39 @@ body.vice h2,body.vice h3{text-shadow:0 0 12px rgba(255,46,147,.25)}
 body.vice::before{content:'';position:fixed;left:0;right:0;bottom:0;height:34vh;pointer-events:none;z-index:-1;opacity:.35;
   background:linear-gradient(transparent 0,transparent 96%,#ff2e93 96%) 0 0/100% 28px,linear-gradient(90deg,transparent 0,transparent 96%,#2de2e6 96%) 0 0/28px 100%;
   -webkit-mask-image:linear-gradient(transparent,#000 70%);mask-image:linear-gradient(transparent,#000 70%);transform:perspective(300px) rotateX(55deg);transform-origin:bottom}
+/* 📰 Periódico diario */
+.paper{background:#f3eee2;color:#141414;border-radius:6px;margin:-8px -6px 0;padding:14px 14px 18px;font-family:Georgia,'Times New Roman',serif;box-shadow:inset 0 0 60px rgba(120,90,40,.18)}
+.paper .mast{text-align:center;padding:6px 4px 8px;border-bottom:3px double #141414;margin-bottom:6px}
+.paper .mast .t{font-weight:900;line-height:.95;letter-spacing:-.01em}
+.paper .mast .s{font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-top:4px;opacity:.75}
+.paper .meta{display:flex;justify-content:space-between;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #141414;padding:3px 0 5px;margin-bottom:10px;gap:6px}
+.paper .kick{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pc,#c00)}
+.paper h1{font-family:'Anton','Archivo',sans-serif;font-size:30px;line-height:1.02;margin:2px 0 8px;text-transform:uppercase;color:#111}
+.paper .lead{font-size:14px;line-height:1.4;margin-bottom:10px}
+.paper .photo{position:relative;margin:4px 0 10px;border:1px solid #141414;background:#ddd}
+.paper .photo svg{display:block}
+.paper .photo .emo{aspect-ratio:4/3;display:grid;place-items:center;font-size:96px;background:repeating-linear-gradient(45deg,#e4ddcc 0 8px,#d9d1bd 8px 16px)}
+.paper .photo .cap{font-size:11px;font-style:italic;padding:5px 7px;background:#f3eee2;border-top:1px solid #141414}
+.paper .photo .stamp{position:absolute;top:10px;right:10px;transform:rotate(8deg);border:3px solid var(--pc,#c00);color:var(--pc,#c00);font-family:'Anton',sans-serif;font-size:15px;padding:2px 8px;background:rgba(243,238,226,.85);text-transform:uppercase}
+.paper .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:2px solid #141414;padding-top:8px}
+.paper .it{border-bottom:1px solid rgba(0,0,0,.25);padding-bottom:7px}
+.paper .it b{display:block;font-family:'Archivo',sans-serif;font-weight:900;font-size:13.5px;line-height:1.15;margin:2px 0 3px}
+.paper .it p{font-size:12px;line-height:1.35;margin:0}
+.paper .cifra{grid-column:1/-1;display:flex;align-items:center;gap:12px;background:#141414;color:#f3eee2;padding:8px 12px;margin-top:2px}
+.paper .cifra .n{font-family:'Anton',sans-serif;font-size:40px;line-height:1;color:var(--pc2,#ffd23f)}
+.paper .foot{font-size:10px;text-align:center;margin-top:10px;opacity:.65;font-style:italic}
+/* 🎙️ Rueda de prensa */
+.press{position:relative;margin:4px 0 8px;border:1px solid #141414;overflow:hidden;aspect-ratio:16/10;
+  background:#1b2b52;background-image:repeating-linear-gradient(0deg,transparent 0 34px,rgba(255,255,255,.06) 34px 35px),repeating-linear-gradient(90deg,transparent 0 78px,rgba(255,255,255,.06) 78px 79px)}
+.press .wall{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:35px;align-items:center;justify-items:center;
+  font-family:'Anton',Impact,sans-serif;font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.5);white-space:nowrap}
+.press .wall span:nth-child(odd){color:rgba(255,80,90,.75)}
+.press .pface{position:absolute;left:50%;top:12%;width:38%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;overflow:hidden;border:3px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.5);background:#ddd;display:grid;place-items:center;font-size:64px}
+.press .pface img{width:100%;height:100%;object-fit:cover}
+.press .tbl{position:absolute;left:0;right:0;bottom:0;height:24%;background:linear-gradient(#e30613,#9e0410);border-top:3px solid #fff;display:flex;align-items:center;justify-content:center}
+.press .tbl b{font-family:'Anton',Impact,sans-serif;color:#fff;font-size:17px;letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.25);padding:2px 12px;border-radius:3px}
+.press svg.mics{position:absolute;left:50%;bottom:16%;width:62%;transform:translateX(-50%)}
+.press .live{position:absolute;top:8px;left:8px;background:#e30613;color:#fff;font:800 10px 'Archivo',sans-serif;letter-spacing:.12em;padding:3px 7px;border-radius:3px}
 /* 📢 Tablón */
 .board{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r);padding:4px 14px;margin-top:14px}
 .board .bi{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -62,7 +95,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.85);-webkit-ba
 .logo{font-family:'Anton';font-size:28px;line-height:1;letter-spacing:.01em}
 .logo b{color:var(--red);font-weight:400}
 .logo small{display:block;font-family:'Archivo';font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-top:4px}
-.me{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--line);padding:5px 14px 5px 5px;border-radius:999px;font-weight:700;font-size:14px;max-width:58%}
+.me:not(.pl):not(.f){display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--line);padding:5px 14px 5px 5px;border-radius:999px;font-weight:700;font-size:14px;max-width:58%}
 .av{width:30px;height:30px;border-radius:50%;background:var(--s2);display:grid;place-items:center;font-size:17px;flex:none}
 .ph{width:1.5em;height:1.5em;border-radius:50%;object-fit:cover;vertical-align:middle;display:inline-block}
 .av .ph,.faces .f .ph{width:100%;height:100%;font-size:inherit}
@@ -89,7 +122,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.85);-webkit-ba
 .lvpick button.on{color:var(--red2)}
 .lvlabel{font-weight:800;margin-top:4px}
 .up{color:#4ade80;font-weight:700}.down{color:var(--red2);font-weight:700}
-.me span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me:not(.pl):not(.f) span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;background:rgba(10,10,10,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs .in{display:flex;max-width:720px;margin:0 auto}
 nav.tabs{touch-action:manipulation}nav.tabs .in{min-height:60px}
@@ -189,6 +222,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .pl .nm{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pl .lv{font-family:'Barlow Condensed';font-weight:700;color:var(--mut)}
 .pl.me .nm{color:var(--red2)}
+.pl.me{background:linear-gradient(90deg,var(--redbg),transparent 70%);border-radius:12px}
 .pl.res{opacity:.55}
 .pl.empty-slot .nm{color:#444;font-weight:500}
 .teams{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -232,8 +266,8 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .fut .fl i{display:block;width:13cqw;height:.6cqw;background:currentColor;opacity:.35;margin:2.2cqw 0}
 .fut .lvl{font-family:'Barlow Condensed';font-weight:700;font-size:8cqw;line-height:1}
 .fut .strk{font-family:'Barlow Condensed';font-weight:700;font-size:7cqw;margin-top:2cqw;background:rgba(0,0,0,.18);border-radius:99px;padding:.4cqw 2.4cqw;line-height:1.3}
-.fut .face{position:absolute;top:9%;right:6%;width:57cqw;height:57cqw;display:grid;place-items:center;font-size:36cqw;line-height:1;z-index:1}
-.fut .face .ph{width:100%;height:100%;object-fit:cover;border-radius:0;-webkit-mask-image:radial-gradient(circle at 50% 45%,#000 52%,transparent 70%);mask-image:radial-gradient(circle at 50% 45%,#000 52%,transparent 70%)}
+.fut .face{position:absolute;top:11%;right:8%;width:50cqw;height:50cqw;display:grid;place-items:center;font-size:36cqw;line-height:1;z-index:1}
+.fut .face .ph{width:100%;height:100%;object-fit:cover;border-radius:50%;box-shadow:0 0 0 1.4cqw rgba(255,255,255,.75),0 0 0 2.4cqw rgba(0,0,0,.25),0 3cqw 7cqw rgba(0,0,0,.35)}
 .fut .nm{position:absolute;left:7%;right:7%;top:54%;font-family:'Anton';font-size:11.5cqw;line-height:1.1;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}
 .fut .sep{position:absolute;top:65%;left:18%;right:18%;height:.5cqw;background:currentColor;opacity:.35}
 .fut .st{position:absolute;top:67.5%;left:12%;right:12%;display:grid;grid-template-columns:1fr .5cqw 1fr;column-gap:4cqw;font-family:'Barlow Condensed';z-index:2}
@@ -586,11 +620,11 @@ const astOn=()=>!!S.config?.app?.assists;
 const wrapOn=()=>!!S.config?.app?.wrapped; // "Tu temporada" (estilo Spotify): oculto hasta que lo active un admin // asistencias ocultas hasta que un admin las active // la Gala está oculta hasta que un admin la active // la equipación está oculta hasta que un admin la active
 
 /* ============ ESTADO ============ */
-const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},duels:{},ready:{},sheet:null};
+const S={tab:'partidos',month:ym(new Date()),season:null,players:{},matches:{},signups:{},votes:{},voted:{},galaVotes:{},galaVoted:{},config:{},polls:{},pollVotes:{},feedback:{},stats:{},duels:{},interviews:{},ready:{},sheet:null};
 // Caché por versión de datos: cada vez que llega algo de la base de datos sube S.ver y se recalcula lo necesario.
 S.ver=0;S.seen={};const _memo=new Map();
 function memo(k,f){const c=_memo.get(k);if(c&&c.v===S.ver)return c.r;const r=f();_memo.set(k,{v:S.ver,r});return r}
-const ALLCOLS=['archive','players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels'];
+const ALLCOLS=['archive','players','matches','signups','votes','voted','galaVotes','galaVoted','config','polls','pollVotes','feedback','stats','duels','interviews'];
 const allReady=()=>ALLCOLS.every(c=>S.ready[c]);
 let store=null,me=null,storeErr=false;
 try{S.kitPromoHidden=!!localStorage.getItem('fifa07_kithide');S.instHidden=!!localStorage.getItem('fifa07_insthide')}catch(e){}
@@ -927,7 +961,7 @@ function boardItems(days){
       it.push(...items)}}
   const v=it.filter(i=>i.t>=from&&i.t<=now+6e4).sort((a,b)=>b.t-a.t);
   boardCache[days]={k:key,v};return v}
-function boardBlock(items){return items.length?`<h2>📢 Tablón ${items.length>5?`<button class="sub" data-act="board" style="background:none;color:var(--red2);font-weight:700">Ver todo ›</button>`:''}</h2>${boardHTML(items.slice(0,5))}`:''}
+function boardBlock(items){return `<button class="btn full" data-act="paper" style="margin-top:14px;justify-content:center">📰 El periódico de hoy · ${esc(paperOf(new Date()).p.n)}</button>`+(items.length?`<h2>📢 Tablón ${items.length>5?`<button class="sub" data-act="board" style="background:none;color:var(--red2);font-weight:700">Ver todo ›</button>`:''}</h2>${boardHTML(items.slice(0,5))}`:'')}
 function boardHTML(items){return `<div class="board">${items.map(i=>`<div class="bi ${i.neg?'neg':''}"><span class="be">${i.e}</span><span class="bt">${i.x}</span><span class="bw">${ago(i.t)}</span></div>`).join('')}</div>`}
 function boardModal(){const items=boardItems(30);modal(`${mh('📢 Tablón')}<p class="muted small">Lo que ha pasado en el grupo en los últimos 30 días.</p>${items.length?boardHTML(items):'<div class="empty">Nada por aquí todavía.</div>'}`)}
 /* ============ 🔔 NOTIFICACIONES (Firebase Cloud Messaging) ============
@@ -986,6 +1020,147 @@ function pushModal(){const st=pushState();
     <button class="btn full" style="margin-top:16px" id="pdg">🩺 Diagnóstico</button>
     ${st==='on'?`<button class="btn full" style="margin-top:8px" id="poff">🔕 Desactivar en este móvil</button>`:st==='install'?`<button class="btn pri full" style="margin-top:16px" id="pins">📲 Cómo añadirla a la pantalla de inicio</button>`:st==='ask'||st==='denied'?`<button class="btn pri full" style="margin-top:16px" id="pon">🔔 Activar avisos</button>`:''}`,
   md=>{const q=s=>md.querySelector(s);q('#pdg').onclick=pushDiag;q('#poff')&&(q('#poff').onclick=pushDisable);q('#pins')&&(q('#pins').onclick=()=>{close();installModal()});q('#pon')&&(q('#pon').onclick=e=>pushEnable(e.target))})}
+/* ============ 📰 EL PERIÓDICO DEL DÍA ============
+   Una portada al día, cada día de una cabecera distinta (todas inventadas, en clave de humor).
+   Se escribe sola con lo que hay en la app: resultados, goleadores, lesiones, viajes, próximos partidos… */
+const PAPERS=[
+  {k:'charca',n:'CHARCA',s:'El diario del mal fútbol',font:"'Anton',sans-serif",size:58,bg:'#d7141a',fg:'#fff',pc:'#d7141a',pc2:'#ffd23f',italic:true},
+  {k:'zas',n:'Diario ¡ZAS!',s:'En toda la boca desde 2026',font:"'Archivo',sans-serif",size:44,bg:'#141414',fg:'#ffd23f',pc:'#e1251b',pc2:'#ffd23f'},
+  {k:'despectivo',n:'MUNDO DESPECTIVO',s:'Opinamos de todo sin saber de nada',font:"'Barlow Condensed',sans-serif",size:42,bg:'#173f8a',fg:'#fff',pc:'#173f8a',pc2:'#8fd3ff'},
+  {k:'sufre',n:'SUFREDEPORTE',s:'Porque ver esto también es sufrir',font:"'Anton',sans-serif",size:44,bg:'#ff7a00',fg:'#141414',pc:'#d35f00',pc2:'#ffb15c'},
+  {k:'reves',n:'Diario del Revés',s:'Jerez · Las noticias, al revés de como pasaron',font:"Georgia,'Times New Roman',serif",size:40,bg:'#f3eee2',fg:'#141414',pc:'#7a1b1b',pc2:'#e9c46a',serif:true},
+];
+const PAPER_START=Date.parse('2026-11-01T00:00:00+01:00');
+// 🎨 Ilustración de partido (SVG): jugador de espaldas celebrando, con su nombre y dorsal en la camiseta.
+// Pabellón de futsal si el partido es Fut5/Futsal; césped si es Fut6/Fut7 o más.
+const isIndoor=m=>{const f=String(m?.format||'')+' '+String(m?.venue||'');return /5|sala|futsal|pabell|indoor/i.test(f)};
+const dorsalOf=id=>+P(id)?.dorsal||((hashStr(id)%22)+2);
+function sceneSVG(o){const R=rng(hashStr(o.seed||'x'));const W=400,H=280,A=o.team!=='B';
+  const shirt=A?'#f4f4f4':'#141414',shirt2=A?'#d9d9d9':'#000',ink=A?'#141414':'#f4f4f4',skin=['#e7b796','#d29a72','#a8714d','#f0c8a8'][hashStr(o.name||'')%4],hair=['#2b1d14','#4a3020','#111','#7a5230'][hashStr((o.name||'')+'h')%4];
+  let bg='';
+  if(o.indoor){const court=R()<.5?'#c9783c':'#2f6db3';
+    bg=`<defs><linearGradient id="wl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121c33"/><stop offset="1" stop-color="#2b3d63"/></linearGradient><radialGradient id="lt"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+      <rect width="${W}" height="150" fill="url(#wl)"/>${[60,160,240,340].map(x=>`<circle cx="${x}" cy="18" r="26" fill="url(#lt)"/><circle cx="${x}" cy="18" r="5" fill="#fff"/>`).join('')}
+      <rect x="0" y="118" width="${W}" height="24" fill="#e30613"/><text x="200" y="135" text-anchor="middle" font-family="Anton,Impact,sans-serif" font-size="15" fill="#fff" letter-spacing="3" textLength="380" lengthAdjust="spacingAndGlyphs">FIFA07 · JEREZ · FIFA07 · JEREZ · FIFA07</text>
+      <polygon points="0,150 ${W},150 ${W},${H} 0,${H}" fill="${court}"/>${court==='#c9783c'?Array.from({length:12},(_,i)=>`<line x1="0" y1="${155+i*11}" x2="${W}" y2="${155+i*11}" stroke="#a55f2c" stroke-width="1" opacity=".5"/>`).join(''):''}
+      <path d="M0 196 L${W} 196 M200 150 L200 ${H}" stroke="#fff" stroke-width="2.5" opacity=".85"/><ellipse cx="200" cy="200" rx="60" ry="16" fill="none" stroke="#fff" stroke-width="2.5" opacity=".85"/>
+      <rect x="22" y="128" width="46" height="30" fill="none" stroke="#fff" stroke-width="3"/><path d="M22 128 l8 6 h30 l8 -6 M30 134 v24 M60 134 v24" stroke="#ddd" stroke-width="1"/>`}
+  else{bg=`<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#07122a"/><stop offset="1" stop-color="#1d3b66"/></linearGradient><radialGradient id="fl"><stop offset="0" stop-color="#fffbe0" stop-opacity=".9"/><stop offset="1" stop-color="#fffbe0" stop-opacity="0"/></radialGradient></defs>
+      <rect width="${W}" height="150" fill="url(#sk)"/>${[40,360].map(x=>`<circle cx="${x}" cy="30" r="44" fill="url(#fl)"/><rect x="${x-14}" y="20" width="28" height="12" fill="#fffbe0"/><rect x="${x-2}" y="32" width="4" height="100" fill="#333"/>`).join('')}
+      <rect x="0" y="112" width="${W}" height="38" fill="#0c1424"/>${Array.from({length:70},()=>`<circle cx="${Math.round(R()*W)}" cy="${Math.round(116+R()*30)}" r="${(1+R()*1.6).toFixed(1)}" fill="${['#e30613','#fff','#ffd23f','#7aa7ff'][Math.floor(R()*4)]}" opacity=".8"/>`).join('')}
+      ${Array.from({length:7},(_,i)=>`<rect x="0" y="${150+i*19}" width="${W}" height="19" fill="${i%2?'#2f8a3b':'#37a046'}"/>`).join('')}
+      <path d="M0 200 L${W} 200 M200 150 L200 ${H}" stroke="#fff" stroke-width="2.5" opacity=".8"/><ellipse cx="200" cy="205" rx="70" ry="18" fill="none" stroke="#fff" stroke-width="2.5" opacity=".8"/>
+      <rect x="18" y="122" width="64" height="34" fill="none" stroke="#fff" stroke-width="3"/>${Array.from({length:6},(_,i)=>`<line x1="${22+i*11}" y1="124" x2="${22+i*11}" y2="156" stroke="#fff" stroke-width=".6" opacity=".6"/>`).join('')}`}
+  const mate=(x,s)=>`<g transform="translate(${x} 150) scale(${s})" opacity=".85"><rect x="-12" y="20" width="24" height="34" rx="6" fill="${shirt}"/><circle cx="0" cy="10" r="9" fill="${hair}"/><path d="M-12 26 L-26 0 M12 26 L26 0" stroke="${skin}" stroke-width="6" stroke-linecap="round"/><rect x="-10" y="54" width="8" height="26" fill="${skin}"/><rect x="2" y="54" width="8" height="26" fill="${skin}"/></g>`;
+  const P0={wide:[[96,112],[304,112]],up:[[148,50],[252,50]],point:[[146,196],[256,44]],fist:[[150,196],[258,80]]}[o.pose||'wide']||[[96,112],[304,112]];
+  const arm=(sx,sy,[hx,hy],elbow)=>{const ex=elbow?elbow[0]:(sx+hx)/2,ey=elbow?elbow[1]:(sy+hy)/2;
+    return `<path d="M${sx} ${sy} L${ex} ${ey} L${hx} ${hy}" fill="none" stroke="${skin}" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M${sx} ${sy} L${sx+(ex-sx)*.45} ${sy+(ey-sy)*.45}" stroke="${shirt}" stroke-width="20" stroke-linecap="round"/><circle cx="${hx}" cy="${hy}" r="9" fill="${skin}"/>`};
+  const elbowR=o.pose==='fist'?[272,128]:null;
+  const nm=String(o.name||'').toUpperCase().slice(0,12);const fs=nm.length>9?13:nm.length>6?16:19;
+  const player=`<ellipse cx="200" cy="268" rx="62" ry="9" fill="#000" opacity=".3"/>
+    ${arm(160,130,P0[0])}${arm(240,130,P0[1],elbowR)}
+    <rect x="172" y="210" width="22" height="52" rx="6" fill="${skin}"/><rect x="206" y="210" width="22" height="52" rx="6" fill="${skin}"/>
+    <rect x="170" y="232" width="26" height="30" rx="5" fill="${shirt}"/><rect x="204" y="232" width="26" height="30" rx="5" fill="${shirt}"/>
+    <path d="M168 260 h30 v8 h-34 z M202 260 h30 l4 8 h-34 z" fill="#111"/>
+    <path d="M166 196 h68 l4 26 h-76 z" fill="${shirt2}"/>
+    <path d="M150 128 Q200 112 250 128 L240 200 Q200 206 160 200 Z" fill="${shirt}"/><path d="M150 128 Q200 112 250 128" fill="none" stroke="${ink}" stroke-width="3" opacity=".5"/>
+    <text x="200" y="150" text-anchor="middle" font-family="Anton,Impact,'Arial Black',sans-serif" font-size="${fs}" fill="${ink}" letter-spacing="1.5"${nm.length>7?` textLength="${Math.min(84,nm.length*9)}" lengthAdjust="spacingAndGlyphs"`:''}>${esc(nm)}</text>
+    <text x="200" y="192" text-anchor="middle" font-family="Anton,Impact,'Arial Black',sans-serif" font-size="44" fill="${ink}">${+o.num||10}</text>
+    <rect x="191" y="104" width="18" height="14" fill="${skin}"/><circle cx="200" cy="94" r="20" fill="${hair}"/><ellipse cx="180" cy="97" rx="4" ry="6" fill="${skin}"/><ellipse cx="220" cy="97" rx="4" ry="6" fill="${skin}"/>`;
+  const ball=`<circle cx="${o.indoor?52:62}" cy="${o.indoor?146:144}" r="5" fill="#fff" stroke="#222" stroke-width="1"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">${bg}${ball}${mate(95,.9)}${mate(318,.85)}${player}</svg>`}
+function paperOf(d){const n=Math.floor((+d-PAPER_START)/864e5);return {p:PAPERS[((n%PAPERS.length)+PAPERS.length)%PAPERS.length],num:n+1}}
+function buildPaper(day){
+  const d=day||new Date(),key=ymd(d);const R=rng(hashStr('paper'+key));const pick=a=>a[Math.floor(R()*a.length)];
+  const {p,num}=paperOf(d);const nm=id=>esc(pname(id));const now=+d;
+  const played=Object.values(S.matches).filter(m=>m.status==='played'&&(m.teamA||[]).length&&+mdt(m)<=now).sort((a,b)=>mdt(b)-mdt(a));
+  const up=Object.values(S.matches).filter(m=>m.status!=='played'&&+mdt(m)>now).sort((a,b)=>mdt(a)-mdt(b));
+  const st=computeStats();const ids=Object.keys(st).filter(i=>P(i)&&!P(i).guest);
+  const last=played[0],recent=last&&now-+mdt(last)<4*864e5;
+  let main={};
+  if(recent){const ch=chronicle(last);const aw=matchAwards(last);const g=goalsOf(last);const top=Object.entries(g).filter(([q,x])=>x>0&&P(q)).sort((a,b)=>b[1]-a[1])[0];
+    const hero=(top&&top[1]>=2?top[0]:null)||aw.win.crack[0]||(top&&top[0])||null;
+    main={kick:`Crónica · ${esc(DIA[mdt(last).getDay()])} en ${esc(last.venue||'el campo')}`,title:esc(ch.title),lead:esc(ch.body.slice(0,2).join(' ')),hero,m:last,team:hero&&(last.teamB||[]).includes(hero)?'B':'A',pose:pick(['wide','up','fist']),
+      stamp:`${TEAM.A.n} ${+last.scoreA||0}-${+last.scoreB||0} ${TEAM.B.n}`,cap:hero?pick([`${nm(hero)} celebra a lo grande. Recreación de nuestro dibujante, que tampoco estaba allí.`,`Así lo celebró ${nm(hero)}, según testigos poco fiables.`,`${nm(hero)}, de espaldas para que no se le vea la cara de sorpresa.`]):'Recreación artística. Nadie quiso posar.'}}
+  else if(up[0]){const m=up[0],L=lineup(m),free=(m.slots||0)-L.in.length;const org=m.createdBy&&P(m.createdBy)?m.createdBy:null;
+    main={kick:'Previa',title:free>0?pick([`Se buscan ${free} valientes para el ${esc(DIA[mdt(m).getDay()])}`,`${free} plazas libres y mucho miedo escénico`,`El ${esc(DIA[mdt(m).getDay()])} hay pachanga y faltan ${free}`]):pick(['Lleno absoluto: no cabe ni un cono más','Cartel de «no hay billetes» para el próximo partido']),
+      lead:`${esc(m.format||'Partido')} el ${esc(DIA[mdt(m).getDay()])} a las ${esc(m.time)} en ${esc(m.venue||'el campo')}. ${L.in.length} apuntados${L.res.length?` y ${L.res.length} en la reserva rezando`:''}. ${pick(['Los expertos no se mojan.','Se esperan pocos goles y muchas excusas.','Las casas de apuestas han cerrado por precaución.'])}`,
+      hero:org,m,team:R()<.5?'A':'B',pose:'point',stamp:free>0?`Faltan ${free}`:'¡Completo!',cap:org?`${nm(org)}, convocante, señala el camino. Nadie sabe hacia dónde.`:'El campo, esperando a que alguien sepa jugar.'}}
+  else{const tp=ids.filter(i=>st[i].pj).sort((a,b)=>st[b].pts-st[a].pts)[0];
+    main={pose:'up',team:'A',kick:'Opinión',title:tp?`${nm(tp)} manda en la clasificación y nadie sabe muy bien cómo`:'Semana tranquila: ni un balón tocado',lead:pick(['Sin partidos a la vista, la redacción ha tenido que inventarse las noticias. Como siempre.','La actualidad futbolística local atraviesa un momento de calma tensa. Muy tensa. Casi dormida.']),hero:tp||null,stamp:'Exclusiva',cap:tp?`${nm(tp)}, líder, en pleno análisis táctico de su próximo bocadillo.`:'Imagen de recurso.'}}
+  // Noticias secundarias
+  const items=[];const add=(k,t,x)=>items.push({k,t,x});
+  const inj=ids.filter(injOf);if(inj.length){const i=pick(inj),j=injOf(i);add('Parte médico',`${nm(i)}: ${esc(j.label)}`,pick([`Fuentes del vestuario aseguran que ${j.note?`volverá ${esc(j.note)}`:'su vuelta es cuestión de días… o de meses'}.`,`El cuerpo médico, que no existe, pide calma.`,`Su ausencia se nota. Sobre todo en el bar.`]))}
+  const aw2=ids.filter(i=>awayOn(i));if(aw2.length){const i=pick(aw2),a=awayCfg(i);add('Fuga de talentos',`${nm(i)} hace las maletas`,`${esc(a.label)} (${esc(awayText(a))}). ${pick(['El grupo lo superará. Probablemente.','Se desconoce si volverá en forma o con dos kilos de más.','Su representante no ha querido hacer declaraciones.'])}`)}
+  const sc=ids.filter(i=>st[i].g>0).sort((a,b)=>st[b].g-st[a].g);if(sc[0])add('Pichichi',`${nm(sc[0])} sigue a lo suyo: ${st[sc[0]].g} goles`,sc[1]?`Le persigue ${nm(sc[1])} con ${st[sc[1]].g}. ${pick(['Se masca la tragedia.','Hay tensión en el vestuario.','La Bota de Oro está en juego (es de plástico).'])}`:'No tiene rival. Ni ganas de tenerlo.');
+  const ls=ids.filter(i=>st[i].lS>=3).sort((a,b)=>st[b].lS-st[a].lS)[0];if(ls)add('Crisis',`${nm(ls)} encadena ${st[ls].lS} derrotas`,pick(['Ya se habla de moción de censura.','Sus compañeros empiezan a echarle a suertes.','Asegura que es cosa de la mala suerte. Las estadísticas discrepan.']));
+  const ws=ids.filter(i=>st[i].wS>=3).sort((a,b)=>st[b].wS-st[a].wS)[0];if(ws)add('En racha',`${nm(ws)}, ${st[ws].wS} victorias seguidas`,pick(['Nadie sabe cómo pararlo. Ni él.','Pide ya un aumento de sueldo (no cobra).']));
+  const dz=Object.values(S.duels).filter(x=>duelResult(x).state==='final').sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))[0];if(dz){const r=duelResult(dz);add('Duelos',`${nm(r.winner)} gana el reto a ${nm(r.loser)}`,`${pick(['Se apostó','Estaba en juego'])} ${esc((DUEL_STAKES[dz.stake]||{n:'una caña'}).n.toLowerCase())}. ${dz.settled?'Ya está pagado. Milagro.':'Seguimos esperando el pago.'}`)}
+  if(up[0]&&recent){const m=up[0],L=lineup(m),free=(m.slots||0)-L.in.length;add('Agenda',`Próximo: ${esc(DIA[mdt(m).getDay()])} a las ${esc(m.time)}`,`${esc(m.venue||'')} · ${free>0?`${free===1?'Queda 1 plaza':`Quedan ${free} plazas`}. Corre.`:'Completo. Lo sentimos por los rezagados.'}`)}
+  const nw=Object.values(S.players).filter(x=>!x.guest&&x.status!=='pending'&&(x.approvedAt||x.createdAt)&&now-(x.approvedAt||x.createdAt)<7*864e5);if(nw.length)add('Mercado',`Fichaje: ${nm(pick(nw).id)}`,pick(['Llega libre y sin cláusula. Ni falta que hace.','La afición, dividida: unos no le conocen, otros tampoco.']));
+  const rd=ids.filter(i=>bannedFor(i));if(rd.length)add('Comité de Competición',`${nm(rd[0])}, una semana en la grada`,'Por roja. Dicen que se le ha visto entrenando en el sofá.');
+  const FILL=[{k:'Tiempo',t:'Previsión: 100% de probabilidad de excusas',x:'Se esperan rachas de «el campo estaba fatal» y chubascos de «yo no he sido».'},{k:'Fe de erratas',t:'Donde ayer dijimos «jugada»',x:'Queríamos decir «patada». Pedimos disculpas a los afectados.'},{k:'Encuesta',t:'¿Quién es el peor del grupo?',x:'El 100% de los encuestados ha dicho «otro». Seguiremos investigando.'},{k:'Clasificados',t:'Se busca portero',x:'Imprescindible: ponerse. Valorable: parar algo.'}];
+  while(items.length<4){const pool=FILL.filter(x=>!items.some(y=>y&&y.t===x.t));items.push(pool.length?pick(pool):{k:'Breve',t:'Sin novedad en el frente',x:'Ni un cono fuera de su sitio.'})}
+  const gm=played.filter(m=>(m.date||'').slice(0,7)===key.slice(0,7)).reduce((a,m)=>a+(+m.scoreA||0)+(+m.scoreB||0),0);
+  const fecha=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const heroImg=main.hero?sceneSVG({indoor:isIndoor(main.m),team:main.team,name:pname(main.hero),num:dorsalOf(main.hero),pose:main.pose,seed:key+main.hero}):`<div class="emo">⚽</div>`;
+  return `<div class="paper" style="--pc:${p.pc};--pc2:${p.pc2}">
+    <div class="mast" style="background:${p.bg};color:${p.fg};margin:-14px -14px 6px;padding:14px 10px 10px;border-bottom:3px double #141414"><div class="t" style="font-family:${p.font};font-size:${p.size}px;${p.italic?'font-style:italic;':''}${p.k==='reves'?'':'text-transform:uppercase;'}">${p.k==='reves'?'Diario del <span style="display:inline-block;transform:scaleX(-1)">Revés</span>':esc(p.n)}</div><div class="s">${esc(p.s)}</div></div>
+    <div class="meta"><span>${esc(fecha)}</span><span>Nº ${num} · Precio: una caña</span></div>
+    <div class="kick">${main.kick}</div><h1>${main.title}</h1>
+    <div class="photo">${heroImg}${main.stamp?`<div class="stamp">${esc(main.stamp)}</div>`:''}<div class="cap">${main.cap}</div></div>
+    <div class="lead">${main.lead}</div>
+    ${(()=>{const iv=Object.values(S.interviews||{}).filter(x=>x.at&&now-x.at<7*864e5&&now>=x.at&&P(x.pid)).sort((a,b)=>b.at-a.at)[0];if(!iv)return '';
+      if(iv.skipped)return `<div class="it" style="border-top:2px solid #141414;padding-top:8px;margin-bottom:10px"><span class="kick">La entrevista</span><b>${nm(iv.pid)}: «Sin comentarios»</b><p>${pick(['Se negó a atender a este periódico. Algo esconde.','Nuestro reportero le esperó dos horas en la puerta. Nada.','Prefiere hablar en el campo. Esperamos sentados.'])}</p></div>`;
+      return `<div style="border-top:2px solid #141414;border-bottom:2px solid #141414;padding:8px 0 10px;margin-bottom:10px"><span class="kick">🎙️ La entrevista</span><b style="display:block;font-family:'Archivo',sans-serif;font-weight:900;font-size:17px;margin:2px 0 6px">${nm(iv.pid)}: «${esc((iv.as||[]).find(Boolean)||'').slice(0,70)}»</b>${pressHTML(iv.pid)}
+        ${(iv.qs||[]).map((q,i)=>iv.as?.[i]?`<p style="margin:6px 0 0;font-size:12.5px;line-height:1.35"><b style="font-family:'Archivo',sans-serif">${esc(q)}</b><br><i>${esc(iv.as[i])}</i></p>`:'').join('')}</div>`})()}
+    <div class="cols">${items.slice(0,6).map(i=>`<div class="it"><span class="kick">${esc(i.k)}</span><b>${i.t}</b><p>${i.x}</p></div>`).join('')}
+      <div class="cifra"><span class="n">${gm}</span><span style="font-size:13px;line-height:1.3"><b>LA CIFRA.</b> Goles marcados este mes. ${gm>40?'Las defensas, desaparecidas.':gm>15?'Ni tan mal.':'Los porteros, encantados.'}</span></div></div>
+    <div class="foot">${esc(p.n.replace(/<[^>]+>/g,''))} es una publicación de humor de FIFA07. Cualquier parecido con la realidad es pura casualidad (o no).</div></div>`}
+// 🎙️ Entrevista de la semana: entre semana (L–V) se elige un jugador al azar; al abrir la app le salen 3 preguntas
+// y sus respuestas salen en el periódico. Puede responder "Sin comentarios" (y también sale, claro).
+const weekKey=(d=new Date())=>{const t=new Date(d);t.setHours(12,0,0,0);t.setDate(t.getDate()-((t.getDay()+6)%7));return ymd(t)};
+function interviewee(wk){const st=computeStats();const c=approvedIds().filter(i=>!P(i).guest&&st[i]?.pj>0).sort();return c.length?c[hashStr('iv'+wk)%c.length]:null}
+function ivQuestions(id,wk){const R=rng(hashStr('q'+wk+id));const s=computeStats()[id]||{};const H=s.hist||[];const L=H[H.length-1];const ctx=[];
+  const nGol={3:'hat-trick',4:'póker',5:'manita'};
+  if(L&&L.g>=3)ctx.push(`Tras tu ${nGol[Math.min(L.g,5)]} del último partido, ¿ya pides la renovación?`);
+  else if(L&&L.g===2)ctx.push('Doblete en el último partido. ¿Lo tenías preparado o salió sin querer?');
+  if(L&&L.aws.includes('⭐'))ctx.push('El vestuario te eligió El Crack. ¿A quién se lo dedicas?');
+  if(L&&L.aws.includes('🤦'))ctx.push('Te llevaste el «Vaya día». ¿Qué pasó? Sé sincero.');
+  if(s.lS>=2)ctx.push(`Llevas ${s.lS} derrotas seguidas. ¿Qué está fallando?`);
+  if(s.wS>=2)ctx.push(`${s.wS} victorias seguidas. ¿Cuál es el secreto?`);
+  if(s.dry>=3)ctx.push(`Llevas ${s.dry} partidos sin marcar. ¿Problema de puntería o de vista?`);
+  if(injOf(id))ctx.push(`¿Cómo va eso de estar «${injOf(id).label}»?`);
+  const nx=Object.values(S.matches).filter(m=>m.status!=='played'&&+mdt(m)>Date.now()&&S.signups[`${m.id}__${id}`]).sort((a,b)=>mdt(a)-mdt(b))[0];
+  if(nx)ctx.push(`¿Cómo afrontas el partido del ${DIA[mdt(nx).getDay()]}?`);
+  if(s.keeper)ctx.push('¿Qué se siente cuando te la meten entre las piernas?');
+  if(s.dW>0)ctx.push('Ya has ganado algún reto. ¿Quién será tu próxima víctima?');
+  const fun=['Defínete como jugador en tres palabras.','¿Quién es el más chupón del grupo?','Si fueras el seleccionador, ¿a quién dejarías en el banquillo?','¿Qué le dirías al que siempre se baja a última hora?','¿Cuál es tu ritual antes de un partido?','¿Con quién no repetirías equipo nunca?','¿Qué jugador del grupo ficharías para tu equipo ideal?','¿Cuál ha sido tu mejor jugada en FIFA07? Y no mientas.'];
+  const sh=a=>a.map(x=>[R(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  return [...sh(ctx).slice(0,2),...sh(fun)].slice(0,3)}
+function pressHTML(id){const ph=P(id)?.photo;const tags=['FIFA07','⚽','JEREZ','⚽'];
+  const mic=(x,h,c,r)=>`<g transform="translate(${x} 0) rotate(${r} 0 ${h})"><rect x="-3" y="20" width="6" height="${h-20}" fill="#222"/><rect x="-11" y="0" width="22" height="30" rx="10" fill="#333"/><rect x="-12" y="22" width="24" height="10" rx="2" fill="${c}"/></g>`;
+  return `<div class="press"><div class="wall">${Array.from({length:28},(_,i)=>`<span>${tags[i%4]}</span>`).join('')}</div><span class="live">● RUEDA DE PRENSA</span>
+    <div class="pface">${okPhoto(ph)?`<img src="${ph}" alt="">`:esc(pemo(id))}</div>
+    <svg class="mics" viewBox="0 0 240 90">${mic(70,88,'#e30613',-14)}${mic(100,92,'#1e5ad6',-5)}${mic(130,90,'#f5c542',4)}${mic(162,86,'#22a85a',13)}</svg>
+    <div class="tbl"><b>${esc(pname(id))}</b></div></div>`}
+function interviewModal(wk){const qs=ivQuestions(me,wk);const pp=paperOf(new Date()).p;
+  modal(`<div style="text-align:center"><div style="font-size:46px">🎙️</div><div class="small" style="letter-spacing:.2em;text-transform:uppercase;color:var(--yel);font-weight:900">Exclusiva</div>
+    <h2 style="margin:6px 0">${esc(pp.n)} quiere entrevistarte</h2><p class="muted small">Esta semana te ha tocado a ti. Responde a 3 preguntas y saldrás en el periódico de la app. Con gracia, que lo lee todo el grupo 😏</p></div>
+    ${qs.map((q,i)=>`<label style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--txt);font-weight:700;margin-top:14px">${i+1}. ${esc(q)}</label><textarea id="ia${i}" rows="2" maxlength="180" style="width:100%" placeholder="Tu respuesta…"></textarea>`).join('')}
+    <button class="btn pri full" id="ivok" style="margin-top:18px">🗞️ Publicar entrevista</button><button class="btn full" id="ivno" style="margin-top:8px;background:transparent">🤐 Sin comentarios</button>`,
+  md=>{const save=async(skip)=>{const as=qs.map((_,i)=>md.querySelector('#ia'+i).value.trim());if(!skip&&as.filter(Boolean).length<2){toast('Responde al menos a 2, que el periodista se aburre');return}
+      try{await withTimeout(store.doc('interviews/iv_'+wk).set(skip?{pid:me,wk,skipped:true,at:Date.now()}:{pid:me,wk,qs,as,at:Date.now(),paper:pp.n}));close();toast(skip?'«Sin comentarios». También saldrá en el periódico 😏':'¡Entrevista enviada! Sale en el periódico 🗞️')}catch(x){err(x)}};
+    md.querySelector('#ivok').onclick=()=>save(false);md.querySelector('#ivno').onclick=()=>save(true)});
+}
+function maybeInterview(){if(S._ivDone||!me||!P(me)||!allReady()||needsGate())return;const wd=new Date().getDay();if(wd===0||wd===6)return;
+  const wk=weekKey();if(S.interviews['iv_'+wk]){S._ivDone=1;return}if(interviewee(wk)!==me){S._ivDone=1;return}
+  setTimeout(()=>{if(S._ivDone||document.querySelector('.md')||S.interviews['iv_'+wk])return;S._ivDone=1;interviewModal(wk)},4500)}
+function paperModal(day){modal(buildPaper(day)+`<button class="btn pri full" style="margin-top:14px" id="ppok">Cerrar el periódico</button>`,md=>{md.querySelector('#ppok').onclick=close})}
+function maybePaper(){if(S._paperDone||!me||!P(me)||!allReady()||needsGate())return;const k=ymd(new Date());let seen='';try{seen=localStorage.getItem('fifa07_paper')||''}catch(e){}
+  if(seen===k){S._paperDone=1;return}
+  setTimeout(()=>{if(S._paperDone||document.querySelector('.md'))return;S._paperDone=1;try{localStorage.setItem('fifa07_paper',k)}catch(e){};paperModal()},2600)}
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
   return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
 function render(){
@@ -1008,6 +1183,8 @@ function render(){
   main.innerHTML=h;
   applyTheme();
   maybePromo();
+  maybePaper();
+  maybeInterview();
   if(fbKeep&&$('#fbt')){$('#fbt').value=fbKeep;if(fbFocus)$('#fbt').focus()}
   if(S.sheet&&S.sheet.type==='match'){
     const m=S.matches[S.sheet.id];const body=document.querySelector('#sheetBody');
@@ -2531,7 +2708,7 @@ function calModal(mid){
   const g=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${f(d)}/${f(e)}&ctz=Europe/Madrid&location=${encodeURIComponent(loc)}&details=${encodeURIComponent(desc)}`;
   modal(`${mh('Añadir al calendario')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.time)}h · ${esc(m.venue||'')}</p>
     <a class="btn wht full" style="margin-top:16px;text-decoration:none" href="${icsUrl}" download="pachanga.ics">📅 Calendario del iPhone</a>
-    <a class="btn full" style="margin-top:10px;text-decoration:none" href="${g}" target="_blank" rel="noopener">Google Calendar</a>
+    <a class="btn wht full" style="margin-top:10px;text-decoration:none" href="${g}" target="_blank" rel="noopener">🗓️ Google Calendar</a>
     <p class="muted small" style="margin-top:12px">Incluye un aviso 3 horas antes.</p>`);
 }
 
@@ -3057,6 +3234,7 @@ document.addEventListener('click',e=>{
     case'arcNow':a.disabled=true;archiveOld(true).then(n=>{toast(n?`Archivados ${n} documentos 📦`:'No hay nada que archivar todavía (se archivan los meses cerrados hace más de '+ARC_DAYS+' días)');render()});break;
     case'guestAccess':{const p=P(id);confirmBox('Darle acceso a '+esc(p.name),'Le creamos un PIN para que entre en la app con su nombre. Conserva sus partidos, goles y nivel.','🔑 Crear PIN',async()=>{const np=randPin();await store.doc('players/'+id).update({pinHash:await hashPin(np),guest:false,accessAt:Date.now()});showInvite(p.name,np);S.keepModal=true},false);break}
     case'board':boardModal();break;
+    case'paper':paperModal();break;
     case'keepers':keeperForm(id);break;
     case'push':pushModal();break;
     case'pushHide':try{localStorage.setItem('fifa07_pushask',String(Date.now()))}catch(e){};render();break;
