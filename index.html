@@ -541,6 +541,8 @@ td.pts{font-family:'Anton';font-size:18px}
 .htile .hn{font-family:Anton;font-size:16px;text-transform:uppercase;line-height:1.1}.htile .ht{font-size:11px;font-weight:800;color:var(--yel);margin-top:3px}.htile .hl{font-size:11px;color:var(--mut);margin-top:4px;line-height:1.3}
 .cgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}.cgrid .btn{justify-content:center;min-width:0;width:100%;padding-left:8px;padding-right:8px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .callbtn.map{background:#3b82f6;margin-right:6px}
+.busco{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px 12px;border:1px dashed var(--line2);border-radius:14px}.busco.on{border-style:solid;border-color:rgba(245,197,66,.5);background:rgba(245,197,66,.08)}
+.leg{color:var(--yel);margin-top:3px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -590,6 +592,8 @@ const SLOGAN = 'Para los amantes del mal fútbol';
 const CREATOR = 'Daniel Lucena';
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
+  {at:'2026-11-22T22:50:00+01:00', e:'👑', t:'Leyenda del campo', d:'Cada campo tiene su Leyenda: el que más partidos ha jugado ahí en los últimos 90 días. No gana el mejor, gana el que más va. Míralo en Info → Campos, y ojo, que la corona se puede perder.'},
+  {at:'2026-11-22T22:50:00+01:00', e:'🔎', t:'Busco jugadores', d:'¿Faltan para completar? En el partido, pulsa "🔎 Busco": te prepara un mensaje con día, campo y nivel para mandarlo a otros grupos. El partido sale como "Buscando" para todos.'},
   {at:'2026-11-19T22:10:00+01:00', e:'⚖️', t:'Niveles igualados', d:'Ahora todos empezamos en 3,0 y la app ha recalculado los niveles con todos los partidos jugados: solo cuenta lo que pasa en el campo y lo que vota el vestuario.'},
   {at:'2026-11-19T21:40:00+01:00', e:'🧤', t:'Portero fijo', d:'¿Eres portero? Edita tu perfil y marca "🧤 Portero fijo": va uno a cada equipo y te puntúan por porterías a cero y tu nota bajo palos, no por goles.'},
   {at:'2026-11-19T21:40:00+01:00', e:'🧳', t:'Ausencias', d:'¿Vas a estar fuera? Toca tu nombre arriba a la derecha → "🧳 Voy a estar fuera". Puedes poner unas fechas o días fijos (por ejemplo, entre semana).'},
@@ -736,6 +740,16 @@ const promoText=(m,pid)=>`⬆️ ¡${pname(pid)}, entras en la pachanga del ${fm
 // Para apuntarse hay que haber votado el último partido jugado (si ya tiene resultado).
 const pendingVote=pid=>{if(!pid)return null;const last=Object.values(S.matches).filter(m=>m.status==='played'&&attendees(m).includes(pid)).sort((a,b)=>mdt(b)-mdt(a))[0];return last&&!hasVoted(last.id,pid)&&!voteClosed(last)?last:null};
 // Valoraciones de campos (vienen de los votos, anónimas): {nombreNormalizado:{name,n,avg,tags:{tag:n}}}
+// 👑 Leyenda del campo (idea de Strava): el que más partidos ha jugado en cada campo en los últimos 90 días.
+// No gana el mejor, sino el que más va. Empate: el que jugó ahí más recientemente.
+const LEG_DAYS=90;
+function legendsAt(t){const from=t-LEG_DAYS*864e5;const c={};
+  for(const m of Object.values(S.matches)){if(m.status!=='played'||!m.venue)continue;const d=+mdt(m);if(d<from||d>t)continue;const k=normV(m.venue);
+    for(const id of attendees(m)){if(!P(id)||P(id).guest)continue;const o=((c[k]=c[k]||{})[id]=c[k][id]||{n:0,last:0});o.n++;o.last=Math.max(o.last,d)}}
+  const out={};for(const k in c){const best=Object.entries(c[k]).sort((a,b)=>b[1].n-a[1].n||b[1].last-a[1].last)[0];if(best&&best[1].n>=2)out[k]={id:best[0],n:best[1].n}}return out}
+function legends(){return memo('legends',()=>legendsAt(Date.now()))}
+const legendOf=venue=>venue?legends()[normV(venue)]:null;
+const legendVenues=id=>Object.entries(legends()).filter(([,v])=>v.id===id).map(([k])=>{const v=VENUES.find(x=>normV(x.n)===k);if(v)return v.n;const m=Object.values(S.matches).find(m=>m.venue&&normV(m.venue)===k);return m?m.venue:k});
 function fieldStats(){const o={};Object.values(S.votes).forEach(v=>{if(!v.field?.s)return;const m=S.matches[v.mid];const name=v.field.venue||m?.venue;if(!name)return;const k=normV(name);
   const x=o[k]=o[k]||{name,n:0,sum:0,tags:{}};x.n++;x.sum+=+v.field.s;(v.field.tags||[]).forEach(t=>x.tags[t]=(x.tags[t]||0)+1)});
   Object.values(o).forEach(x=>{x.avg=x.sum/x.n;x.top=Object.entries(x.tags).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>e[0])});return o}
@@ -1070,6 +1084,10 @@ function boardItems(days){
         const H=heroesOf(mo);if(H?.imp)it.push({t:tt-1,e:'🧱',x:`El Imprescindible de ${esc(mn)}: ${nm(H.imp.id)}. ${H.imp.pj} partidos sin dar guerra. Sin él no hay pachanga`});
         if(H?.tal)it.push({t:tt-2,e:'🍀',x:`El Talismán de ${esc(mn)}: con ${nm(H.tal.id)} en el campo su equipo ganó el ${Math.round(H.tal.w*100)}%`});
         if(H?.bomb)it.push({t:tt-3,e:'🚒',x:`El Bombero de ${esc(mn)}: ${nm(H.bomb.id)} salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`})}}}
+  // 👑 Nueva Leyenda del campo (al jugarse un partido, cambia la leyenda de ese campo)
+  {for(const m of Object.values(S.matches)){if(m.status!=='played'||!m.venue)continue;const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5);if(tt<from||tt>now)continue;
+    const k=normV(m.venue);const before=legendsAt(+mdt(m)-1)[k],after=legendsAt(+mdt(m))[k];
+    if(after&&P(after.id)&&(!before||before.id!==after.id))it.push({t:tt+1,e:'👑',x:`${nm(after.id)} es la nueva Leyenda de ${esc(m.venue)}${before&&P(before.id)?`: le quita la corona a ${nm(before.id)}`:''} (${after.n} partidos ahí en ${LEG_DAYS} días)`})}}
   // 🎖️ Hitos de veteranía: 25, 50, 100… pachangas
   {const cnt={};const pl=Object.values(S.matches).filter(m=>m.status==='played').sort((a,b)=>mdt(a)-mdt(b));
     for(const m of pl)for(const id of attendees(m)){cnt[id]=(cnt[id]||0)+1;const n=cnt[id];
@@ -1418,6 +1436,7 @@ function matchCard(m,st,isNext){
   if(played)x+=`<span class="pill">Final</span>`;
   else if(h<=0)x+=`<span class="pill red">Resultado</span>`;
   else if(cnt>=n)x+=`<span class="pill wht">Completo</span>`;
+  else if(m.open)x+=`<span class="pill red">🔎 Buscando ${n-cnt}</span>`;
   x+=`</div>`;
   if(played){
     x+=`<div class="scoreline"><div class="tw"><i class="sq w"></i>Blancos</div><div class="n">${+m.scoreA||0}</div><div class="dash">–</div><div class="n">${+m.scoreB||0}</div><div class="tb">Negros<i class="sq b"></i></div></div>`;
@@ -1528,12 +1547,16 @@ function matchDetail(m,st){
   // Lista
   if(!played&&me&&P(me)&&!S.signups[`${m.id}__${me}`]){const pv=prevPlayed(m);const pu=prioUntil(m);
     if(pv&&S.signups[`${pv.id}__${me}`]&&![...(pv.teamA||[]),...(pv.teamB||[])].includes(me)&&Date.now()<pu)x+=`<div class="banner" style="margin-top:12px"><span class="e">⭐</span><span><b>Tienes prioridad</b> por quedarte de reserva la última vez<br><span class="small">Apúntate antes de ${hLeft(pu)==='0 min'?'ya':`que pasen ${hLeft(pu)}`} y entras por delante.</span></span></div>`}
+  {const lg=legendOf(m.venue);if(lg&&P(lg.id))x+=`<p class="small muted" style="margin-top:12px">👑 Leyenda de ${esc(m.venue)}: <b style="color:var(--txt)">${esc(pname(lg.id))}</b> (${lg.n} partidos en ${LEG_DAYS} días)${lg.id===me?' · eres tú 😎':''}</p>`}
   if(!played){
     x+=`<h3>Apuntados · ${cnt}/${n}</h3><div class="plist">`;
     for(let i=0;i<n;i++){const p=L.in[i];
       x+=p?`<button class="pl ${p===me?'me':''}" data-act="profile" data-id="${esc(p)}"><span class="num">${i+1}</span><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}${m.promoted?.pid===p?' <span class="pill wht">⬆️ subió</span>':''}${qTag(p,m)}</span><span class="lv">⚡${(st[p]?.level||2).toFixed(1)}</span></button>`
          :`<div class="pl empty-slot"><span class="num">${i+1}</span><span class="av" style="opacity:.3">·</span><span class="nm">Libre</span></div>`}
     x+=`</div>`;
+    if(cnt<n&&hoursTo(m)>0&&(canManage(m)||(me&&L.in.includes(me)))){const need=n-cnt;
+      x+=`<div class="busco ${m.open?'on':''}"><div class="sp"><b>🔎 ${m.open?`Buscando ${need} ${need===1?'jugador':'jugadores'} fuera del grupo`:`Faltan ${need}: ¿buscamos fuera?`}</b><div class="small muted">${m.open?`Lo lanzó ${esc(pname(m.open.by))}. Si alguien se apunta, añádelo como invitado.`:'Mensaje listo para mandar a otros grupos o amigos de amigos, con el nivel del partido.'}</div></div>
+        <button class="btn sm pri" data-act="busco" data-id="${esc(m.id)}">${m.open?'📲 Reenviar':'🔎 Busco'}</button></div>`}
     if(L.res.length){x+=`<h3>🪑 Reserva</h3>`;L.res.forEach((p,i)=>x+=`<button class="pl res ${p===me?'me':''}" data-act="profile" data-id="${esc(p)}"><span class="num">R${i+1}</span><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}${m.bumped?.pid===p?' <span class="pill">⬇️ bajó</span>':''}${qTag(p,m)}</span></button>`)}
   }
 
@@ -1634,15 +1657,26 @@ function futCard(id,st,big=false,opt={}){
     ${opt.extra?opt.extra:`<div class="st"><div class="col">${L.map(row).join('')}</div><div class="dv"></div><div class="col">${R.map(row).join('')}</div></div>`}
   </div></button>`;
 }
+// 😴 Desaparecidos: más de INACTIVE_DAYS sin entrar en la app ni jugar. Su carta se esconde (no se borra nada)
+// y vuelve sola en cuanto abre la app o se apunta a un partido.
+const INACTIVE_DAYS=30;
+function lastActive(id){const p=P(id);let t=Math.max(+S.seen?.[id]?.at||0,+(p?.approvedAt||p?.createdAt)||0);
+  for(const s of Object.values(S.signups))if(s.pid===id)t=Math.max(t,+s.at||0);
+  for(const m of Object.values(S.matches))if(m.status==='played'&&attendees(m).includes(id))t=Math.max(t,+mdt(m));return t}
+function isInactive(id){if(id===me||P(id)?.guest)return false;const t=lastActive(id);return t>1e12&&Date.now()-t>INACTIVE_DAYS*864e5}
 function viewSquad(st){
-  const all=approvedIds().sort((a,b)=>st[b].ovr-st[a].ovr||pname(a).localeCompare(pname(b)));
+  const all0=approvedIds().sort((a,b)=>st[b].ovr-st[a].ovr||pname(a).localeCompare(pname(b)));
+  const gone=all0.filter(isInactive),all=all0.filter(id=>!gone.includes(id));
   const ids=all.filter(id=>!P(id).guest),gs=all.filter(id=>P(id).guest);
-  let h=`<h2>Jugadores <span class="sub">${ids.length} en el grupo</span></h2>`;
+  let h=`<h2>Jugadores <span class="sub">${ids.length} en el grupo${gone.length?` · ${gone.length} desaparecidos`:''}</span></h2>`;
   if(isAdmin())h+=`<button class="btn pri full" data-act="newPlayer" style="margin-bottom:16px">＋ Fichar e invitar a un jugador</button>`;
   if(!ids.length)h+=`<div class="empty"><div class="big">🃏</div>Todavía no hay jugadores.</div>`;
   h+=`<div class="cards">${ids.map(id=>futCard(id,st)).join('')}</div>`;
   if(gs.length){h+=`<h3 style="margin-top:22px">👤 Invitados <span class="small muted" style="font-weight:500">· juegan sin la app</span></h3>`;
     h+=gs.map(id=>`<div class="pl" style="cursor:default"><span class="av">${face(id)}</span><span class="nm" data-act="profile" data-id="${esc(id)}">${esc(pname(id))}<br><span class="small muted">${st[id]?.pj||0} PJ · nivel ${(+(st[id]?.level??P(id).level0)||2).toFixed(1)}</span></span>${isAdmin()?`<button class="btn sm" data-act="guestAccess" data-id="${esc(id)}">🔑 Darle acceso</button>`:''}</div>`).join('')}
+  if(gone.length)h+=`<details class="box" style="margin-top:18px"><summary style="cursor:pointer">😴 <b>Desaparecidos</b> · ${gone.length} <span class="small muted">más de ${INACTIVE_DAYS} días sin aparecer</span></summary>
+    <p class="small muted" style="margin-top:8px">Su carta está guardada, no se ha borrado nada. Vuelve sola en cuanto entren en la app o se apunten a un partido.</p>
+    ${gone.map(id=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)" data-act="profile" data-id="${esc(id)}"><span class="av" style="width:30px;height:30px">${face(id)}</span><span class="sp" style="color:var(--txt)">${esc(pname(id))}</span><span class="muted small">${ago(lastActive(id))}</span></div>`).join('')}</details>`;
   h+=`<details class="box" style="margin-top:18px"><summary style="cursor:pointer">👀 <b>Última conexión</b> de cada uno</summary>${seenListHTML()}</details>`;
   h+=`<p class="muted small" style="margin-top:16px;line-height:1.5">Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65 · <b style="color:#f1d27a">negra y dorada</b> para el Crack de la jornada. La media sale del nivel ⚡ (que sube ganando y baja perdiendo) más goles, premios y victorias. CRK cracks · DAN dandys · DUR duros · GOL goles · VIC % victorias · FIA fiabilidad.</p>`;
   return h;
@@ -1676,8 +1710,8 @@ function viewInfo(){
    const extra=Object.entries(fsx).filter(([k])=>!VENUES.some(v=>normV(v.n)===k)).map(([,r])=>({n:r.name,f:'',p:'',r}));
    const all=[...list,...extra].sort((a,b)=>(b.r?.avg||0)-(a.r?.avg||0)||(b.r?.n||0)-(a.r?.n||0));
    h+=`<h2>Campos <span class="sub">📍 Jerez · ranking por votos</span></h2><div class="box" style="padding:2px 16px">`;
-   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div></div>${v.u?`<a class="callbtn map" href="${esc(v.u)}" target="_blank" rel="noopener" aria-label="Cómo llegar a ${esc(v.n)}">📍</a>`:''}${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
-   h+=`</div><p class="small muted" style="margin-top:6px">Las notas salen de lo que vota cada uno al puntuar el partido (es anónimo).</p>`}
+   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div>${(()=>{const lg=legendOf(v.n);return lg&&P(lg.id)?`<div class="small leg" data-act="profile" data-id="${esc(lg.id)}">👑 Leyenda: <b>${esc(pname(lg.id))}</b> · ${lg.n} partidos en ${LEG_DAYS} días</div>`:''})()}</div>${v.u?`<a class="callbtn map" href="${esc(v.u)}" target="_blank" rel="noopener" aria-label="Cómo llegar a ${esc(v.n)}">📍</a>`:''}${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
+   h+=`</div><p class="small muted" style="margin-top:6px">Las notas salen de lo que vota cada uno al puntuar el partido (es anónimo). 👑 La Leyenda de cada campo es el que más partidos ha jugado ahí en los últimos ${LEG_DAYS} días: no gana el mejor, gana el que más va.</p>`}
   h+=`<h2>Buzón de sugerencias</h2><div class="box"><p class="small muted">¿Algo falla, no se entiende o se te ocurre una idea? Escríbelo aquí.</p><textarea id="fbt" rows="3" maxlength="500" placeholder="Ej: al apuntarme no me sale…" style="margin-top:10px"></textarea><button class="btn pri full" style="margin-top:10px" data-act="fbSend">Enviar sugerencia</button></div>`;
   if(isAdmin()){const fl=Object.values(S.feedback).sort((a,b)=>(b.at||0)-(a.at||0));
     h+=`<h3>Sugerencias recibidas · ${fl.length}</h3>${fl.map(f=>`<div class="box" style="margin-bottom:8px;padding:12px"><div class="small muted">${esc(f.pid?pname(f.pid):'Anónimo')} · ${new Date(f.at).toLocaleDateString('es-ES')}</div><div style="margin-top:4px;white-space:pre-wrap">${esc(f.text)}</div><button class="btn sm ghost" style="margin-top:6px" data-act="fbDel" data-id="${esc(f.id)}">Hecho ✓</button></div>`).join('')||'<p class="muted small">Ninguna todavía.</p>'}`}
@@ -2234,6 +2268,7 @@ function profile(id){
       if(mine||isAdmin())x+=ij?`<button class="btn full" style="margin-top:10px" data-act="injOff" data-id="${esc(id)}">💪 ${mine?'Ya estoy bien':'Quitar la lesión'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="injOn" data-id="${esc(id)}">✚ ${mine?'Me he lesionado':'Marcar como lesionado'}</button>`;
       return x})()}
     ${(()=>{const s=st[id];if(!s||s.pj<5)return '';const w=Math.round(s.v/s.pj*100);return `<p class="small muted" style="margin-top:10px">🍀 Con ${esc(pname(id))} en el campo, su equipo gana el <b style="color:var(--txt)">${w}%</b> (${s.v} de ${s.pj})${s.bombN?` · 🚒 ${s.bombN} ${s.bombN===1?'partido salvado':'partidos salvados'}`:''}</p>`})()}
+    ${(()=>{const lv=legendVenues(id);return lv.length?`<p class="small" style="margin-top:10px;color:var(--yel)">👑 Leyenda de ${lv.map(esc).join(', ')}</p>`:''})()}
     ${!P(id).guest?`<p class="small muted" style="margin-top:10px">👀 Última conexión: <b style="color:var(--txt)">${esc(seenAgo(id))}</b></p>`:''}
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
     ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
@@ -2316,6 +2351,21 @@ function shrinkImage(file,size){
     img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('img'))};img.src=url;
   });
 }
+// 🔎 Busco jugadores (idea de los partidos abiertos de Playtomic): mensaje para fuera del grupo con día, campo, plazas y nivel.
+function buscoText(m,note){const L=lineup(m),n=m.slots||10,need=n-L.in.length;const st=computeStats();
+  const lv=L.in.map(p=>st[p]?.level||START_LV);const avg=lv.length?lv.reduce((a,b)=>a+b,0)/lv.length:START_LV;
+  const word=avg<2.5?'tranquilo (de risas)':avg<3.5?'medio':'alto (se corre)';const org=m.createdBy&&P(m.createdBy)?m.createdBy:me;const ph=P(org)?.phone;
+  return `🔎 *Buscamos ${need} ${need===1?'jugador':'jugadores'}* para una pachanga\n\n📅 ${fmtShort(m)} a las ${m.time}h\n📍 ${m.venue||'Por decidir'} (${m.format})${m.price?`\n💶 ${m.price}€ por cabeza`:''}\n⚡ Nivel ${word} · media ${avg.toFixed(1)} de 5\n${note?`📝 ${note}\n`:''}\n¿Te apuntas? Escribe a ${pname(org)}${ph?` (${ph})`:''} 🙌`}
+function buscoForm(mid){const m=S.matches[mid];if(!m)return;
+  modal(`${mh('Buscar jugadores fuera')}<p class="muted small">Mensaje para otros grupos de WhatsApp o amigos de amigos. Cuando alguien diga que sí, el organizador o un admin lo añade como invitado desde la lista.</p>
+    <label>Nota (opcional)</label><input id="bn" maxlength="80" placeholder="Ej: buen rollo, nada de entradas fuertes" value="${esc(m.open?.note||'')}">
+    <textarea id="bt" rows="9" readonly style="margin-top:12px;font-size:14px;line-height:1.45">${esc(buscoText(m,m.open?.note||''))}</textarea>
+    <button class="btn pri full" id="cp" style="margin-top:12px">📲 Copiar y marcar "Buscando"</button>
+    ${m.open?`<button class="btn sm ghost full" id="off" style="margin-top:8px">Ya no buscamos</button>`:''}`,
+  md=>{const q=x=>md.querySelector(x);q('#bn').oninput=()=>{q('#bt').value=buscoText(m,q('#bn').value.trim())};
+    q('#cp').onclick=async()=>{const note=q('#bn').value.trim();copyText(buscoText(m,note),'Copiado. Pégalo en otros grupos 📲',q('#bt'));
+      try{await store.doc('matches/'+mid).update({open:{by:me,at:Date.now(),note}})}catch(e){err(e)}};
+    q('#off')&&(q('#off').onclick=async()=>{try{await store.doc('matches/'+mid).update({open:null});close();toast('Hecho')}catch(e){err(e)}})})}
 function copyText(t,msg,fallbackEl){
   const ok=()=>toast(msg);
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok).catch(()=>manual());else manual();
@@ -2361,7 +2411,7 @@ function enrich(st){
       fromRes:H.filter(x=>x.m.promoted?.pid===id).length,
       orgN:H.filter(x=>x.m.createdBy===id).length,
       votedN:voted[id]||0,noShows:(S.players[id]?.cardLog||[]).filter(c=>c.reason==='noshow').length,
-      potm:hon.potm[id]||0,pich:hon.pich[id]||0,impN:hon.imp?.[id]||0,talN:hon.tal?.[id]||0,bombN:bomberosIn(null)[id]||0});
+      potm:hon.potm[id]||0,pich:hon.pich[id]||0,impN:hon.imp?.[id]||0,legN:Object.values(legends()).filter(v=>v.id===id).length,talN:hon.tal?.[id]||0,bombN:bomberosIn(null)[id]||0});
     // Extra para logros
     const won=x=>Math.abs((+x.m.scoreA||0)-(+x.m.scoreB||0));
     const firsts=H.filter(x=>{const sg=signupsOf(x.m.id);return sg.length>1&&sg[0].pid===id}).length;
@@ -2475,6 +2525,7 @@ const ACH=[
   {e:'🧱',n:'Imprescindible',d:'Ser El Imprescindible de un mes',t:s=>s.impN>=1},
   {e:'🏛️',n:'Pilar del vestuario',d:'Ser El Imprescindible 3 meses',t:s=>s.impN>=3},
   {e:'🍀',n:'Talismán',d:'Ser El Talismán de un mes',t:s=>s.talN>=1},
+  {e:'👑',n:'Leyenda del campo',d:'Ser el que más juega en un campo (últimos 90 días)',t:s=>s.legN>=1},
   {e:'🚒',n:'Bombero',d:'Completar la lista a última hora para salvar un partido',t:s=>s.bombN>=1},
   {e:'🧯',n:'Jefe de bomberos',d:'Salvar 5 partidos a última hora',t:s=>s.bombN>=5},
   {e:'🥇',n:'Pichichi del mes',d:'Máximo goleador de un mes',t:s=>s.pich>=1},
@@ -3607,6 +3658,7 @@ document.addEventListener('click',e=>{
     case'pollShare':copyPoll(id);break;
     case'fixGhost':ghostForm(id);break;
     case'pollWho':pollWho(id);break;
+    case'busco':buscoForm(id);break;
     case'cVenues':venuesAdmin();break;
     case'cRules':rulesForm();break;
     case'cList':listForm(a.dataset.k);break;
