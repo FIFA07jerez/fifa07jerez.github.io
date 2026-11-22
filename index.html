@@ -228,8 +228,8 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .pl.me{background:linear-gradient(90deg,var(--redbg),transparent 70%);border-radius:12px}
 .pl.res{opacity:.55}
 .pl.empty-slot .nm{color:#444;font-weight:500}
-.teams{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.team{border-radius:16px;padding:12px}
+.teams{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.team{border-radius:16px;padding:12px;min-width:0}
 .team.w{background:#fff;color:#0a0a0a}
 .team.b{background:#000;border:1.5px solid #fff}
 .team .h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
@@ -237,7 +237,9 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .team .h span{font-family:'Barlow Condensed';font-weight:700;font-size:14px;opacity:.6}
 .team .p{display:flex;align-items:center;gap:6px;padding:5px 0;font-size:14px;font-weight:600;width:100%;text-align:left;color:inherit}
 .team .p .o{margin-left:auto;font-family:'Barlow Condensed';font-weight:700;opacity:.55}
-.team .p .g{font-size:11px}
+.team .p .g{font-size:12px;white-space:nowrap;display:inline-flex;align-items:center}.team .p .g i{font-style:normal;font-family:'Barlow Condensed';font-weight:800;font-size:13px;margin-left:1px}
+.team .p .fc{flex:0 0 auto;display:inline-flex}.team .p .pm{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px}.team .p .pn{overflow:hidden;text-overflow:ellipsis;line-height:1.15;overflow-wrap:anywhere}
+.team .p .ic{display:flex;align-items:center;gap:4px;font-size:12px}.team .p .ic .vst{margin-left:0}.team .p .o{flex:0 0 auto;padding-left:4px}
 .awards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .aw{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
 .aw .ae{font-size:20px}
@@ -529,7 +531,16 @@ td.pts{font-family:'Anton';font-size:18px}
 .ov.swap,.ov.swap .md{animation:none!important}
 .team .p .o.rt{color:#f5c542;font-weight:800}.team.w .p .o.rt{color:#b8860b}
 .mrate{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.mrate>div{flex:1;min-width:76px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:9px 8px;text-align:center}
-.mrate b{display:block;font-family:Anton;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mrate span{font-size:10.5px;color:var(--mut)}
+.mrate b{display:block;font-family:Anton;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mrate span{font-size:10.5px;color:var(--mut);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pnames{display:block;font-size:11.5px;color:var(--mut);margin-top:3px;line-height:1.3}
+.whol{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.whol .vm{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 3px;border-radius:999px;background:rgba(255,255,255,.07);font-size:13px;cursor:pointer}
+.whol .vm .av,.whol .vm>span:first-child{width:22px;height:22px}
+.heroes{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px}
+.htile{background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:16px;padding:12px 8px;text-align:center;cursor:pointer}
+.htile .he{font-size:22px}.htile .hf{display:flex;justify-content:center;margin:6px 0}.htile .hf>*{width:44px;height:44px;font-size:26px}
+.htile .hn{font-family:Anton;font-size:16px;text-transform:uppercase;line-height:1.1}.htile .ht{font-size:11px;font-weight:800;color:var(--yel);margin-top:3px}.htile .hl{font-size:11px;color:var(--mut);margin-top:4px;line-height:1.3}
+.cgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}.cgrid .btn{justify-content:center;min-width:0;width:100%;padding-left:8px;padding-right:8px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.callbtn.map{background:#3b82f6;margin-right:6px}
 </style>
 </head>
 <body>
@@ -583,7 +594,7 @@ const BETA = false;
 // 🔔 Notificaciones: clave pública "Certificados push web" de Firebase (Configuración del proyecto → Cloud Messaging). Vacía = avisos apagados.
 const VAPID_KEY = 'BMPL3-C5ZeeXCr8ScXn0G7uAk000Kt9-eJhfoMZrWwDDLIeg9wieoM0dHuFEQcGNf4Y5vjBdNIfFbgU8YJMty_A';                      // quita la etiqueta BETA poniendo false
 
-const VENUES=[
+const VENUES_DEF=[
   {n:'Altillo',p:'+34 616 89 99 35',f:'Fut5 / Fut7'},
   {n:'Fun Center',p:'+34 956 32 63 20',f:'Fut5'},
   {n:'Indoor Jerez',p:'+34 956 10 10 40',f:'Fut5'},
@@ -594,10 +605,12 @@ const VENUES=[
   {n:'Pistas futsal Vallesequillo',p:'+34 669 33 24 81',f:'Futsal'},
   {n:'Polideportivo Guadalcacín',p:'+34 663 72 63 96',f:'Fut5',a:['guadalcacin']},
 ];
+let VENUES=VENUES_DEF; // ✏️ editable por los admins (Panel → Contenido): config/content.venues
 const FORMATS={Fut5:10,Fut6:12,Fut7:14,Fut8:16};
-const MAX_DAYS_AHEAD=7;
-const FIELD_TAGS=['👍 Buen césped','👎 Césped roto','🚿 Vestuarios bien','🤢 Vestuarios sucios','💡 Buena luz','💸 Caro','💰 Buen precio'];
-const GOALS_EDIT_HOURS=48; // cada uno puede apuntar o cambiar sus goles hasta 48 h después del partido // no se pueden convocar partidos (ni proponer días) a más de una semana vista
+let MAX_DAYS_AHEAD=7;
+const FIELD_TAGS_DEF=['👍 Buen césped','👎 Césped roto','🚿 Vestuarios bien','🤢 Vestuarios sucios','💡 Buena luz','💸 Caro','💰 Buen precio'];
+let FIELD_TAGS=FIELD_TAGS_DEF;
+let GOALS_EDIT_HOURS=48; // cada uno puede apuntar o cambiar sus goles hasta 48 h después del partido // no se pueden convocar partidos (ni proponer días) a más de una semana vista
 const POS={POR:'Portero',DEF:'Defensa',MED:'Medio',DEL:'Delantero',TODO:'Todocampista'};
 const EMOJIS=['😎','🤠','🥸','🧔','👨‍🦲','👱','🧑‍🦱','🦁','🐂','🐐','🦍','🐢','🦥','🐷','🥔','🍺','🔥','💩','🤡','👽','🦄','🐙','🧱','🚌'];
 const PTS={play:2,win:3,draw:1,goal:3,assist:2,kit:1,yellow:-3,red:-6};
@@ -657,9 +670,10 @@ const P=id=>S.players[id];
 const pname=id=>P(id)?.name||'¿?';
 const pemo=id=>P(id)?.emoji||'⚽';
 const okPhoto=ph=>typeof ph==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ph);
-const INJURIES=[['🚑','Lesionado'],['🏥','En la UVI'],['🛣️','En la cuneta'],['🦴','Menisco de cristal'],['🛋️','En el dique seco'],['🧊','Con hielo y paciencia'],['🧈','Isquios de mantequilla'],['🍺','Lesionado del tercer tiempo'],['⚰️','Dado por muerto'],['🧓','Baja por la edad'],['🩼','Con muletas y dignidad'],['🙏','Rezando al fisio'],['🎮','Secuestrado por el GTA'],['🛌','KO en el sofá']];
+const INJURIES_DEF=[['🚑','Lesionado'],['🏥','En la UVI'],['🛣️','En la cuneta'],['🦴','Menisco de cristal'],['🛋️','En el dique seco'],['🧊','Con hielo y paciencia'],['🧈','Isquios de mantequilla'],['🍺','Lesionado del tercer tiempo'],['⚰️','Dado por muerto'],['🧓','Baja por la edad'],['🩼','Con muletas y dignidad'],['🙏','Rezando al fisio'],['🎮','Secuestrado por el GTA'],['🛌','KO en el sofá']];
+let INJURIES=INJURIES_DEF;
 // 🟥 Sanción: con una roja no puedes apuntarte a partidos de los 7 días siguientes a la tarjeta
-const RED_BAN_DAYS=7;
+let RED_BAN_DAYS=7;
 const banUntil=id=>{const reds=(P(id)?.cardLog||[]).filter(c=>c.type==='red'&&c.at).map(c=>+c.at);return reds.length?Math.max(...reds)+RED_BAN_DAYS*864e5:0};
 const bannedFor=(id,m)=>{const u=banUntil(id);return u>Date.now()&&(!m||+mdt(m)<u)};
 const fmtBan=id=>{const d=new Date(banUntil(id));return `${DIA[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`};
@@ -698,13 +712,13 @@ const levelLocked=pid=>!!pid&&hasPlayed(pid)&&!isAdmin(); // el nivel inicial se
 const goalsLocked=m=>(Date.now()-mdt(m).getTime())>GOALS_EDIT_HOURS*36e5;
 // 🗳️ Votación: 24 h desde que se mete el resultado. Quien no vote a tiempo: amarilla y a la cola en su siguiente partido.
 // Solo para los partidos cuyo resultado se mete desde esta versión (los anteriores siguen como estaban).
-const VOTE_HOURS=24,NOVOTE_FROM=Date.parse('2026-11-21T13:00:00+01:00');
+let VOTE_HOURS=24;const NOVOTE_FROM=Date.parse('2026-11-21T13:00:00+01:00');
 const newVoteRule=m=>(+m.playedAt||0)>=NOVOTE_FROM;
 const voteEnd=m=>Math.max(+m.playedAt||0,+mdt(m)+2*36e5)+VOTE_HOURS*36e5;
 const voteClosed=m=>m.status==='played'&&newVoteRule(m)&&Date.now()>voteEnd(m);
 const voteMissing=m=>attendees(m).filter(p=>P(p)&&!P(p).guest&&!(m.noShow||[]).includes(p)&&!hasVoted(m.id,p));
 const hLeft=t=>{const h=Math.max(0,(t-Date.now())/36e5);return h>=1?`${Math.floor(h)} h`:`${Math.max(1,Math.round(h*60))} min`};
-const DUEL_HOURS=24; // los retos de nota y caño se cierran 24 h después del partido
+let DUEL_HOURS=24; // los retos de nota y caño se cierran 24 h después del partido
 const duelLocked=m=>(Date.now()-mdt(m).getTime())>DUEL_HOURS*36e5;
 // WhatsApp directo: si el jugador ha puesto su teléfono, se abre su chat con el mensaje ya escrito.
 const phoneDigits=ph=>{let d=String(ph||'').replace(/\D/g,'');if(d.length===9)d='34'+d;return d.length>=11?d:''};
@@ -812,10 +826,10 @@ function signupsOf(mid){return Object.values(S.signups).filter(s=>s.mid===mid).s
 // (solo en su siguiente partido). Dentro de cada grupo, por orden de inscripción.
 function prevPlayed(m){return memo('pv_'+m.id,()=>{const t=+mdt(m);let best=null;for(const x of Object.values(S.matches))if(x.status==='played'&&x.id!==m.id&&+mdt(x)<t&&(!best||+mdt(x)>+mdt(best)))best=x;return best})}
 // ⭐ La prioridad solo vale si te apuntas pronto: en las primeras PRIO_HOURS h desde que se abre el partido
-// (y nunca a menos de 48 h del partido). Después cuentas como uno más: así no echas a quien lleva días apuntado.
-const PRIO_HOURS=24;
+// Después cuentas como uno más: así no echas a quien lleva días apuntado.
+let PRIO_HOURS=24;
 function mOpenAt(m){if(+m.createdAt>1e12)return +m.createdAt;const ss=signupsOf(m.id);return ss.length?Math.min(...ss.map(s=>+s.at||Infinity)):Date.now()}
-const prioUntil=m=>Math.min(mOpenAt(m)+PRIO_HOURS*36e5,+mdt(m)-48*36e5);
+const prioUntil=m=>mOpenAt(m)+PRIO_HOURS*36e5;
 function qRank(pid,m){if(m.status==='played')return 1;
   const tl=P(pid)?.tail;if(tl&&+tl.at<+mdt(m)){const used=Object.values(S.matches).some(x=>x.status==='played'&&+mdt(x)>+tl.at&&+mdt(x)<+mdt(m)&&S.signups[`${x.id}__${pid}`]);if(!used)return 2}
   const pv=prevPlayed(m);if(pv&&S.signups[`${pv.id}__${pid}`]&&![...(pv.teamA||[]),...(pv.teamB||[])].includes(pid)){const su=S.signups[`${m.id}__${pid}`];if(+(su?.at??Date.now())<=prioUntil(m))return 0}
@@ -987,6 +1001,7 @@ let boardCache={};const BADGES=new Map();const boardKey=days=>S.ver+'#'+days+'#'
 if(S._lastBoard==null){try{S._lastBoard=localStorage.getItem('fifa07_board')||''}catch(e){S._lastBoard=''}}
 function fillBoard(){const sl=document.getElementById('boardSlot');if(sl&&sl._h!==S._lastBoard){sl.innerHTML=S._lastBoard;sl._h=S._lastBoard}}
 function setBoard(html){if(html!==S._lastBoard){S._lastBoard=html;try{localStorage.setItem('fifa07_board',html)}catch(e){}}fillBoard()}
+function groupStart(){return memo('gstart',()=>{const t=Object.values(S.players).filter(p=>!p.guest).map(p=>+(p.approvedAt||p.createdAt)||0).filter(x=>x>1e12);return t.length?Math.min(...t):Date.now()})}
 function boardItems(days){
   const key=boardKey(days);
   if(boardCache[days]?.k===key)return boardCache[days].v;
@@ -1031,18 +1046,25 @@ function boardItems(days){
   for(const p of Object.values(S.players)){if(isPending(p.id))continue;
     for(const c of (p.cardLog||[])){if(!c.at)continue;const m=S.matches[c.mid];const red=c.type==='red';
       it.push({t:c.at,e:red?'🟥':'🟨',x:(c.reason==='noshow'?`Roja directa para ${nm(p.id)}: se apuntó${m?` al ${esc(day(m))}`:''} y no apareció 👻`:c.reason==='novote'?`${red?'Roja':'Amarilla'} para ${nm(p.id)} por no votar${m?` el partido del ${esc(day(m))}`:''} 🗳️ · a la cola en el próximo`:`${red?'Roja':'Amarilla'} para ${nm(p.id)} por bajarse tarde${m?` del partido del ${esc(day(m))}`:''}`)+(red?` · 🚫 ${RED_BAN_DAYS} días sin jugar`:''),neg:1})}
-    if(!p.guest&&(p.approvedAt||p.createdAt)&&(p.approvedAt||p.createdAt)>=from)wel.push([p.approvedAt||p.createdAt,p.id]);
+    if(!p.guest&&(p.approvedAt||p.createdAt)&&(p.approvedAt||p.createdAt)>=from&&(p.approvedAt||p.createdAt)>groupStart()+3*864e5)wel.push([p.approvedAt||p.createdAt,p.id]);
     if(p.accessAt)it.push({t:p.accessAt,e:'🔑',x:`${nm(p.id)} deja de ser invitado: ya tiene la app`});
   }
   // Si entran muchos de golpe (al principio), se juntan en un solo anuncio
   wel.sort((a,b)=>b[0]-a[0]);
-  if(wel.length>3)it.push({t:wel[0][0],e:'🆕',x:`Bienvenidos al grupo ${wel.slice(0,3).map(w=>nm(w[1])).join(', ')} y ${wel.length-3} más 👋`});
-  else wel.forEach(([t,id])=>it.push({t,e:'🆕',x:`Bienvenido al grupo, ${nm(id)} 👋`}));
+  // Uno a uno: solo los que acaban de entrar (los fundadores de los primeros días no salen)
+  wel.forEach(([t,id])=>it.push({t,e:'🆕',x:`Bienvenido al grupo, ${nm(id)} 👋`}));
   // 🏆 Premios del mes (el día 1 del mes siguiente)
   {const d=new Date(now);const prev=new Date(d.getFullYear(),d.getMonth()-1,1);const mo=ym(prev);const tt=+new Date(d.getFullYear(),d.getMonth(),1,12);
     if(tt>=from&&tt<=now){const st=computeStatsRaw(m=>(m.date||'').startsWith(mo));const ids=Object.keys(st).filter(i=>st[i].pj>0&&P(i));
       if(ids.length){const tp=ids.slice().sort((a,b)=>st[b].pts-st[a].pts)[0],tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];const mn=prev.toLocaleDateString('es-ES',{month:'long'});
-        it.push({t:tt,e:'🐐',x:`Jugador de ${esc(mn)}: ${nm(tp)} (${st[tp].pts} pts)${st[tg].g>0?` · 🥇 Pichichi: ${nm(tg)} (${st[tg].g} goles)`:''}`})}}}
+        it.push({t:tt,e:'🐐',x:`Jugador de ${esc(mn)}: ${nm(tp)} (${st[tp].pts} pts)${st[tg].g>0?` · 🥇 Pichichi: ${nm(tg)} (${st[tg].g} goles)`:''}`});
+        const H=heroesOf(mo);if(H?.imp)it.push({t:tt-1,e:'🧱',x:`El Imprescindible de ${esc(mn)}: ${nm(H.imp.id)}. ${H.imp.pj} partidos sin dar guerra. Sin él no hay pachanga`});
+        if(H?.tal)it.push({t:tt-2,e:'🍀',x:`El Talismán de ${esc(mn)}: con ${nm(H.tal.id)} en el campo su equipo ganó el ${Math.round(H.tal.w*100)}%`});
+        if(H?.bomb)it.push({t:tt-3,e:'🚒',x:`El Bombero de ${esc(mn)}: ${nm(H.bomb.id)} salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`})}}}
+  // 🎖️ Hitos de veteranía: 25, 50, 100… pachangas
+  {const cnt={};const pl=Object.values(S.matches).filter(m=>m.status==='played').sort((a,b)=>mdt(a)-mdt(b));
+    for(const m of pl)for(const id of attendees(m)){cnt[id]=(cnt[id]||0)+1;const n=cnt[id];
+      if([25,50,100,150,200,300].includes(n)&&P(id)&&!P(id).guest){const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5);if(tt>=from&&tt<=now)it.push({t:tt,e:'🎖️',x:`${nm(id)} cumple ${n} pachangas con el grupo. ${n>=100?'Leyenda viva 🙌':'Eso es compromiso 👏'}`})}}}
   // 📈 Cambios de nivel (al cruzar medio punto)
   {const LV2=computeLevels();
     for(const m of Object.values(S.matches)){if(m.status!=='played'||+mdt(m)<from-864e5)continue;
@@ -1280,7 +1302,15 @@ const autoClose=()=>{if(document.querySelector('#modalRoot [data-auto]'))close()
 document.addEventListener('visibilitychange',()=>{if(document.hidden)autoClose()});window.addEventListener('pagehide',autoClose);
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
   return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
-function render(){
+// ✏️ Contenido editable desde la app (config/content): campos, plazos, etiquetas y lesiones. Sin tocar el HTML.
+let _cc;function applyContent(){const c=S.config?.content;if(c===_cc)return;_cc=c;
+  VENUES=Array.isArray(c?.venues)&&c.venues.length?c.venues:VENUES_DEF;
+  const r=c?.rules||{};const num=(v,d,lo,hi)=>{v=+v;return Number.isFinite(v)&&v>=lo&&v<=hi?v:d};
+  VOTE_HOURS=num(r.vote,24,6,168);PRIO_HOURS=num(r.prio,24,0,96);RED_BAN_DAYS=num(r.ban,7,0,60);DUEL_HOURS=num(r.duel,24,6,168);GOALS_EDIT_HOURS=num(r.goals,48,6,168);MAX_DAYS_AHEAD=num(r.ahead,7,1,60);
+  FIELD_TAGS=Array.isArray(c?.tags)&&c.tags.length?c.tags:FIELD_TAGS_DEF;
+  INJURIES=Array.isArray(c?.injuries)&&c.injuries.length?c.injuries.map(x=>[x.e||'🚑',x.l||'Lesionado']):INJURIES_DEF;
+  S.ver++}
+function render(){applyContent();
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
   const main=$('#main');
   if(storeErr){main.innerHTML=`<div class="empty" style="margin-top:30px"><div class="big">📡</div><b>No se puede conectar con la base de datos.</b><p style="margin-top:6px">Revisa tu conexión y vuelve a abrir la app.</p></div>`;return}
@@ -1462,12 +1492,13 @@ function matchDetail(m,st){
       x+=`<div class="team ${TEAM[k].c}"><div class="h"><b>${TEAM[k].n}</b><span>${kp.mode&&kp.mode!=='fixed'?`${KMODES[kp.mode].e} `:''}${rav||'⚡'+avg(arr)}</span></div>`;
       const showV=played&&(newVoteRule(m)||Date.now()-mdt(m)<14*864e5);const MR=played&&matchClosed(m)?matchRatings(m):null;
       arr.forEach(p=>{const g=+goalsOf(m)[p]||0;const vs=showV&&P(p)&&!P(p).guest&&!(m.noShow||[]).includes(p)?(hasVoted(m.id,p)?'<span class="vst ok" title="Ya votó">✓</span>':`<span class="vst no" title="Sin votar">${voteClosed(m)?'🟨':'⏳'}</span>`):'';
-        x+=`<button class="p ${vs.includes('vst no')?'novote':''}" ${hasTeams&&!played&&canManage(m)?`data-act="swap" data-id="${esc(m.id)}" data-p="${esc(p)}"`:''}><span>${face(p)}</span>${esc(pname(p))}${vs}${KP[k].mode==='fixed'&&KP[k].pid===p?' 🧤':''}${g?`<span class="g">${'⚽'.repeat(Math.min(g,4))}</span>`:''}${MR?(MR.avg[p]?`<span class="o rt" title="Nota del partido">★${MR.avg[p].toFixed(1)}</span>`:'<span class="o rt">—</span>'):`<span class="o">${(st[p]?.level||2).toFixed(1)}</span>`}</button>`});
+        const ico=`${vs}${KP[k].mode==='fixed'&&KP[k].pid===p?'<span class="gk">🧤</span>':''}${g?`<span class="g">⚽${g>1?`<i>×${g}</i>`:''}</span>`:''}`;
+        x+=`<button class="p ${vs.includes('vst no')?'novote':''}" ${hasTeams&&!played&&canManage(m)?`data-act="swap" data-id="${esc(m.id)}" data-p="${esc(p)}"`:''}><span class="fc">${face(p)}</span><span class="pm"><span class="pn">${esc(pname(p))}</span>${ico?`<span class="ic">${ico}</span>`:''}</span>${MR?(MR.avg[p]?`<span class="o rt" title="Nota del partido">★${MR.avg[p].toFixed(1)}</span>`:'<span class="o rt">—</span>'):`<span class="o">${(st[p]?.level||2).toFixed(1)}</span>`}</button>`});
       x+=`</div>`;
     });
     x+=`</div>`;
     if(played&&matchClosed(m)){const R=matchRatings(m);if(R.votes){const best=Object.entries(R.avg).sort((a,b)=>b[1]-a[1])[0];
-      x+=`<div class="mrate"><div><b>★${R.all.toFixed(1)}</b><span>Nota media</span></div>${best&&P(best[0])?`<div><b>${esc(pname(best[0]))}</b><span>Mejor nota · ★${best[1].toFixed(1)}</span></div>`:''}${R.field?`<div><b>🏟️ ${R.field.toFixed(1)}</b><span>El campo</span></div>`:''}<div><b>${R.votes}</b><span>${R.votes===1?'voto':'votos'}</span></div></div>`}}
+      x+=`<div class="mrate"><div><b>★${R.all.toFixed(1)}</b><span>Nota media</span></div>${best&&P(best[0])?`<div><b>${esc(pname(best[0]))}</b><span>Mejor nota ★${best[1].toFixed(1)}</span></div>`:''}${R.field?`<div><b>🏟️ ${R.field.toFixed(1)}</b><span>El campo</span></div>`:''}<div><b>${R.votes}</b><span>${R.votes===1?'voto':'votos'}</span></div></div>`}}
     else if(played&&R0(m))x+=`<p class="small muted" style="margin-top:6px">⭐ Las notas de cada uno salen cuando voten todos${newVoteRule(m)?` o se cierre la votación (en ${hLeft(voteEnd(m))})`:''}.</p>`;
     if(played&&(newVoteRule(m)||Date.now()-mdt(m)<14*864e5)){const nm=voteMissing(m).length;x+=`<p class="small muted" style="margin-top:6px">${nm?`<span class="vst ok">✓</span> ya votó · <span class="vst no">${voteClosed(m)?'🟨':'⏳'}</span> ${voteClosed(m)?'no votó a tiempo':'falta por votar'} · <b style="color:var(--txt)">${nm} sin votar</b>`:'✓ Han votado todos 👏'}</p>`}
     {const txt=['A','B'].map(k=>{const kp=KP[k];return kp.mode?`${KMODES[kp.mode].e} ${TEAM[k].n}: ${kp.mode==='fixed'?esc(pname(kp.pid)):KMODES[kp.mode].n.toLowerCase()}`:null}).filter(Boolean);
@@ -1532,6 +1563,7 @@ function monthView(st){
     <div><div style="font-family:Anton;font-size:26px;text-transform:uppercase;line-height:1">${esc(pname(top))}</div>
     <div style="font-family:Anton;font-size:30px;color:var(--red2);margin-top:6px">${t.pts} <span style="font-size:14px;font-family:Archivo;color:var(--mut)">pts</span></div>
     <div class="muted small" style="line-height:1.6">${t.pj} PJ · ${t.g} goles${astOn()?` · ${t.a} asist.`:''}<br>${AWARDS.filter(A=>t.aw[A.k]).map(A=>`${A.e}×${t.aw[A.k]}`).join('  ')}${t.avg!=null?` · ${t.avg.toFixed(1)}★`:''}</div></div></div>`;
+  h+=heroesHTML(S.month,st);
   const lines=totmLines(stM,st);
   h+=`<h2>Equipo del mes <span class="sub">Rombo</span></h2><div class="pitch rombo"><div class="area"></div>`;
   const spots=rombo(lines);
@@ -1615,7 +1647,7 @@ function viewInfo(){
     <li>Cada uno se apunta <b>a sí mismo</b>. Si te apuntas, <b>vienes</b>.</li>
     <li>🗳️ <b>Hay ${VOTE_HOURS} h para votar</b> desde que se mete el resultado. Mientras tanto, no te puedes apuntar al siguiente sin votar.</li>
     <li>🟨 <b>Si no votas a tiempo:</b> amarilla (si ya tenías una, roja) y vas <b>a la cola</b> en tu próximo partido.</li>
-    <li>⭐ <b>Si te quedaste de reserva</b> en el último partido, en el siguiente tienes prioridad para entrar <b>si te apuntas en las primeras ${PRIO_HOURS} h</b> desde que se abre (y como tarde 48 h antes del partido). Si te apuntas más tarde, vas por orden de llegada como todos.</li>
+    <li>⭐ <b>Si te quedaste de reserva</b> en el último partido, en el siguiente tienes prioridad para entrar <b>solo si te apuntas en las primeras ${PRIO_HOURS} h</b> desde que se abre el partido. Si te apuntas más tarde, vas por orden de llegada como todos.</li>
     <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y equipo se cierran al acabar el partido; los de nota y caño, a las 24 h.</li>
     <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides, 🟥).</li>
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
@@ -1634,7 +1666,7 @@ function viewInfo(){
    const extra=Object.entries(fsx).filter(([k])=>!VENUES.some(v=>normV(v.n)===k)).map(([,r])=>({n:r.name,f:'',p:'',r}));
    const all=[...list,...extra].sort((a,b)=>(b.r?.avg||0)-(a.r?.avg||0)||(b.r?.n||0)-(a.r?.n||0));
    h+=`<h2>Campos <span class="sub">📍 Jerez · ranking por votos</span></h2><div class="box" style="padding:2px 16px">`;
-   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div></div>${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
+   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div></div>${v.u?`<a class="callbtn map" href="${esc(v.u)}" target="_blank" rel="noopener" aria-label="Cómo llegar a ${esc(v.n)}">📍</a>`:''}${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
    h+=`</div><p class="small muted" style="margin-top:6px">Las notas salen de lo que vota cada uno al puntuar el partido (es anónimo).</p>`}
   h+=`<h2>Buzón de sugerencias</h2><div class="box"><p class="small muted">¿Algo falla, no se entiende o se te ocurre una idea? Escríbelo aquí.</p><textarea id="fbt" rows="3" maxlength="500" placeholder="Ej: al apuntarme no me sale…" style="margin-top:10px"></textarea><button class="btn pri full" style="margin-top:10px" data-act="fbSend">Enviar sugerencia</button></div>`;
   if(isAdmin()){const fl=Object.values(S.feedback).sort((a,b)=>(b.at||0)-(a.at||0));
@@ -1642,6 +1674,50 @@ function viewInfo(){
   h+=`<div class="credit"><div class="logo" style="font-size:22px">${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b></div><div>Un proyecto creado por <b>${esc(CREATOR)}</b></div><div class="small muted" style="margin-top:4px">${esc(SLOGAN)} · Jerez</div></div>`;
   return h;
 }
+
+/* ============ CONTENIDO EDITABLE (admins) ============ */
+async function saveContent(patch){await withTimeout(store.doc('config/content').set(patch,{merge:true}),12000)}
+function venuesAdmin(){if(!isAdmin())return;const custom=Array.isArray(S.config?.content?.venues)&&S.config.content.venues.length;
+  modal(`${mh('Campos')}<p class="muted small">Los que salen al crear partidos, en encuestas y en la lista de campos. Si cambias el nombre de uno, los partidos antiguos siguen contando para él.</p>
+    <div style="margin-top:10px">${VENUES.map((v,i)=>`<div class="venue"><div class="sp"><b>${esc(v.n)}</b><div class="muted small">${esc(v.f||'')}${v.p?` · ${esc(v.p)}`:''}${v.u?' · 📍 mapa':''}</div></div><button class="iconbtn" data-i="${i}" data-e="1" aria-label="Editar">✏️</button></div>`).join('')}</div>
+    <button class="btn pri full" id="add" style="margin-top:14px">＋ Añadir campo</button>
+    ${custom?`<button class="btn sm ghost full" id="rst" style="margin-top:8px">↩️ Volver a la lista original</button>`:''}`,
+  md=>{md.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>venueForm(+b.dataset.i));md.querySelector('#add').onclick=()=>venueForm(-1);
+    md.querySelector('#rst')&&(md.querySelector('#rst').onclick=()=>confirmBox('Lista original','Se pierden los cambios hechos en los campos.','Restaurar',async()=>{await saveContent({venues:[]});toast('Lista original ✅')},true))})}
+function venueForm(i){const list=VENUES.map(v=>({...v}));const v=i>=0?list[i]:{n:'',p:'',f:'Fut5'};
+  modal(`${mh(i>=0?'Editar campo':'Nuevo campo')}
+    <label>Nombre</label><input id="vn" maxlength="50" value="${esc(v.n)}" placeholder="Polideportivo…">
+    <label>Teléfono</label><input id="vp" type="tel" maxlength="20" value="${esc(v.p||'')}" placeholder="+34 600 00 00 00">
+    <label>Formato</label><input id="vf" maxlength="30" value="${esc(v.f||'')}" placeholder="Fut5 / Fut7">
+    <label>Enlace de Google Maps (opcional)</label><input id="vu" type="url" maxlength="300" value="${esc(v.u||'')}" placeholder="https://maps.app.goo.gl/…">
+    <label>Otros nombres con los que se le conoce (opcional)</label><input id="va" maxlength="120" value="${esc((v.a||[]).join(', '))}" placeholder="pabellón guadalcacín, guadalcacin">
+    <button class="btn pri full" id="sv" style="margin-top:18px">Guardar</button>
+    ${i>=0?`<button class="btn sm dan full" id="del" style="margin-top:8px">🗑 Quitar campo</button>`:''}`,
+  md=>{const q=x=>md.querySelector(x);
+    q('#sv').onclick=async e=>{const n=q('#vn').value.trim();if(!n){toast('Pon el nombre');return}
+      if(list.some((x,j)=>j!==i&&normV0(x.n)===normV0(n))){toast('Ya hay un campo con ese nombre');return}
+      const a=q('#va').value.split(',').map(s=>normV0(s)).filter(Boolean);if(i>=0&&normV0(v.n)!==normV0(n))a.push(normV0(v.n)); // al renombrar, el nombre viejo sigue contando
+      const u=q('#vu').value.trim();if(u&&!/^https?:\/\//i.test(u)){toast('El enlace tiene que empezar por https://');return}
+      const nv={n,p:q('#vp').value.trim(),f:q('#vf').value.trim()};if(u)nv.u=u;if(a.length)nv.a=[...new Set(a)];
+      if(i>=0)list[i]=nv;else list.push(nv);e.target.disabled=true;
+      try{await saveContent({venues:list});toast('Campo guardado ✅');venuesAdmin()}catch(x){e.target.disabled=false;err(x)}};
+    q('#del')&&(q('#del').onclick=()=>confirmBox('Quitar campo',`¿Quitar <b>${esc(v.n)}</b> de la lista? Los partidos jugados ahí no se borran.`,'Quitar',async()=>{list.splice(i,1);await saveContent({venues:list});toast('Campo quitado');setTimeout(venuesAdmin,50)},true))})}
+function rulesForm(){if(!isAdmin())return;
+  const R=[['vote','🗳️ Horas para votar tras el partido',VOTE_HOURS,6,168],['prio','⭐ Horas de prioridad para el reserva anterior',PRIO_HOURS,0,96],['ban','🟥 Días sin apuntarse tras una roja',RED_BAN_DAYS,0,60],['duel','⚔️ Horas para cerrar retos de nota y caño',DUEL_HOURS,6,168],['goals','⚽ Horas para apuntar o cambiar tus goles',GOALS_EDIT_HOURS,6,168],['ahead','📅 Días como máximo para convocar por adelantado',MAX_DAYS_AHEAD,1,60]];
+  modal(`${mh('Plazos y normas')}<p class="muted small">Afectan a toda la app y se ven en Normas. Los avisos automáticos al móvil siguen usando 24 h para votar.</p>
+    ${R.map(([k,l,v,lo,hi])=>`<label>${l}</label><input type="number" inputmode="numeric" data-k="${k}" value="${v}" min="${lo}" max="${hi}">`).join('')}
+    <button class="btn pri full" id="sv" style="margin-top:18px">Guardar</button>`,
+  md=>{md.querySelector('#sv').onclick=async e=>{const rules={};for(const [k,l,,lo,hi] of R){const v=+md.querySelector(`[data-k="${k}"]`).value;if(!Number.isFinite(v)||v<lo||v>hi){toast(`${l}: entre ${lo} y ${hi}`);return}rules[k]=v}
+    e.target.disabled=true;try{await saveContent({rules});close();toast('Normas guardadas ✅')}catch(x){e.target.disabled=false;err(x)}}})}
+function listForm(k){if(!isAdmin())return;const inj=k==='injuries';
+  const cur=inj?INJURIES.map(([e,l])=>`${e} ${l}`):FIELD_TAGS.slice();
+  modal(`${mh(inj?'Parte médico':'Etiquetas del campo')}<p class="muted small">Una por línea${inj?', empezando por el emoji (ej: 🤕 Tobillo de papel)':' (ej: 🅿️ Buen aparcamiento)'}. Como mucho 30.</p>
+    <textarea id="tx" rows="12" style="margin-top:10px;font-size:15px;line-height:1.5">${esc(cur.join('\n'))}</textarea>
+    <button class="btn pri full" id="sv" style="margin-top:14px">Guardar</button><button class="btn sm ghost full" id="rst" style="margin-top:8px">↩️ Volver a la lista original</button>`,
+  md=>{const save=async val=>{try{await saveContent({[k]:val});close();toast('Guardado ✅')}catch(x){err(x)}};
+    md.querySelector('#sv').onclick=()=>{const lines=md.querySelector('#tx').value.split('\n').map(s=>s.trim()).filter(Boolean).slice(0,30).map(s=>s.slice(0,40));if(lines.length<2){toast('Pon al menos 2');return}
+      save(inj?lines.map(s=>{const m=s.match(/^(\S+)\s+(.+)$/);return m&&!/^[\p{L}\p{N}]/u.test(m[1])?{e:m[1],l:m[2]}:{e:'🚑',l:s}}):lines)};
+    md.querySelector('#rst').onclick=()=>save([])})}
 
 /* ============ MODALES ============ */
 function modal(html,onMount,sheet=null){
@@ -1683,7 +1759,7 @@ function awayForm(id){const mine=id===me;let sel=1,mode='dates',days=[1,2,3,4,5]
       else{if(!days.length){toast('Marca al menos un día');return}a.days=days}
       e.target.disabled=true;try{await withTimeout(store.doc('players/'+id).update({away:a}));close();toast(`${em} ${label}. ¡Que vaya bien!`)}catch(x){e.target.disabled=false;err(x)}}});
 }
-function injForm(id){const mine=id===me;let sel=viceOn()?INJURIES.findIndex(x=>x[1]==='Secuestrado por el GTA'):Math.floor(Math.random()*INJURIES.length);
+function injForm(id){const mine=id===me;let sel=viceOn()?INJURIES.findIndex(x=>x[1]==='Secuestrado por el GTA'):Math.floor(Math.random()*INJURIES.length);if(sel<0)sel=0;
   modal(`${mh('✚ Parte médico')}<p class="muted small">${mine?'Elige cómo quieres que te vean los demás':'¿Cómo lo ponemos?'}. Te sale una cruz roja en la foto y en la carta hasta que ${mine?'digas':'diga'} que ya está bien.</p>
     <div class="injpick" id="ip">${INJURIES.map(([e,n],i)=>`<button class="${i===sel?'on':''}" data-v="${i}"><span style="font-size:20px">${e}</span><span>${esc(n)}</span></button>`).join('')}</div>
     <label>¿Para cuándo vuelve? <span style="text-transform:none;letter-spacing:0;font-weight:500">(opcional)</span></label><input id="inote" maxlength="40" placeholder="2 semanas, cuando me deje el fisio…">
@@ -2147,6 +2223,7 @@ function profile(id){
       if(mine||isAdmin())x+=aw?`<button class="btn full" style="margin-top:10px" data-act="awayOff" data-id="${esc(id)}">🏠 ${mine?'Ya estoy disponible':'Quitar ausencia'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="awayOn" data-id="${esc(id)}">🧳 ${mine?'Voy a estar fuera':'Marcar ausencia'}</button>`;
       if(mine||isAdmin())x+=ij?`<button class="btn full" style="margin-top:10px" data-act="injOff" data-id="${esc(id)}">💪 ${mine?'Ya estoy bien':'Quitar la lesión'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="injOn" data-id="${esc(id)}">✚ ${mine?'Me he lesionado':'Marcar como lesionado'}</button>`;
       return x})()}
+    ${(()=>{const s=st[id];if(!s||s.pj<5)return '';const w=Math.round(s.v/s.pj*100);return `<p class="small muted" style="margin-top:10px">🍀 Con ${esc(pname(id))} en el campo, su equipo gana el <b style="color:var(--txt)">${w}%</b> (${s.v} de ${s.pj})${s.bombN?` · 🚒 ${s.bombN} ${s.bombN===1?'partido salvado':'partidos salvados'}`:''}</p>`})()}
     ${!P(id).guest?`<p class="small muted" style="margin-top:10px">👀 Última conexión: <b style="color:var(--txt)">${esc(seenAgo(id))}</b></p>`:''}
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
     ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
@@ -2274,7 +2351,7 @@ function enrich(st){
       fromRes:H.filter(x=>x.m.promoted?.pid===id).length,
       orgN:H.filter(x=>x.m.createdBy===id).length,
       votedN:voted[id]||0,noShows:(S.players[id]?.cardLog||[]).filter(c=>c.reason==='noshow').length,
-      potm:hon.potm[id]||0,pich:hon.pich[id]||0});
+      potm:hon.potm[id]||0,pich:hon.pich[id]||0,impN:hon.imp?.[id]||0,talN:hon.tal?.[id]||0,bombN:bomberosIn(null)[id]||0});
     // Extra para logros
     const won=x=>Math.abs((+x.m.scoreA||0)-(+x.m.scoreB||0));
     const firsts=H.filter(x=>{const sg=signupsOf(x.m.id);return sg.length>1&&sg[0].pid===id}).length;
@@ -2300,11 +2377,37 @@ function duelStats(pid){return memo('ds:'+pid,()=>{const o={w:0,l:0,n:0,nutW:0,n
     const r=duelResult(d);if(r.state!=='final'&&r.state!=='draw')continue;o.n++;if(r.state!=='final')continue;
     if(r.winner===pid){o.w++;if(d.kind==='nutmeg'&&d.from===pid)o.nutW++}else{o.l++;if(d.kind==='nutmeg'&&d.to===pid&&d.nut==='yes')o.nutL++}}
   return o})}
+// 🧱🍀🚒 Los de siempre: premios para los que no ganan el Crack ni el pichichi pero sostienen el grupo.
+// 🧱 Imprescindible: el que más juega sin dar guerra (sin tarjetas, votando y pagando). 🍀 Talismán: con quién gana más su equipo (mín. 3 PJ).
+// 🚒 Bombero: el que completa la lista en las últimas 48 h para que el partido no se caiga. Los dos primeros excluyen al jugador del mes y al pichichi.
+function bomberosIn(flt){return memo('bomb_'+(flt?flt.k:'all'),()=>{const c={};
+  for(const m of Object.values(S.matches)){if(m.status!=='played'||(flt&&!flt(m)))continue;const n=m.slots||10;
+    const ss=signupsOf(m.id).slice().sort((a,b)=>(+a.at||0)-(+b.at||0));const s=ss[n-1];if(!s||!P(s.pid)||P(s.pid).guest)continue;
+    if(+s.at>+mdt(m)-48*36e5&&[...(m.teamA||[]),...(m.teamB||[])].includes(s.pid))c[s.pid]=(c[s.pid]||0)+1}return c})}
+function heroesOf(mo){return memo('hero_'+mo,()=>{const inMo=m=>(m.date||'').startsWith(mo);inMo.k=mo;
+  const st=computeStatsRaw(inMo);const ids=Object.keys(st).filter(i=>st[i].pj>0&&P(i)&&!P(i).guest);if(!ids.length)return null;
+  const tp=ids.slice().sort((a,b)=>st[b].pts-st[a].pts)[0],tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];const stars=new Set([tp]);if(st[tg].g>0)stars.add(tg);
+  const ms=Object.values(S.matches).filter(m=>m.status==='played'&&inMo(m));const mids=new Set(ms.map(m=>m.id));
+  const att=id=>ms.filter(m=>attendees(m).includes(id));
+  const cards=id=>(P(id).cardLog||[]).filter(c=>mids.has(c.mid)).length;
+  const vp=id=>{const a=att(id);return a.length?a.filter(m=>hasVoted(m.id,id)).length/a.length:0};
+  const pp=id=>{const a=att(id).filter(m=>m.paid&&Object.keys(m.paid).length);return a.length?a.filter(m=>m.paid[id]).length/a.length:1};
+  const bomb=bomberosIn(inMo);
+  const imp=ids.filter(i=>!stars.has(i)&&!cards(i)&&st[i].pj>=2).map(i=>({i,sc:st[i].pj*10+vp(i)*3+pp(i)*2+(bomb[i]||0)*2})).sort((a,b)=>b.sc-a.sc)[0];
+  const tal=ids.filter(i=>st[i].pj>=3&&!stars.has(i)&&(!imp||i!==imp.i)).map(i=>({i,w:st[i].v/st[i].pj})).sort((a,b)=>b.w-a.w||st[b.i].pj-st[a.i].pj)[0];
+  const bo=Object.entries(bomb).sort((a,b)=>b[1]-a[1])[0];
+  return{imp:imp?{id:imp.i,pj:st[imp.i].pj,vp:vp(imp.i)}:null,tal:tal&&tal.w>=.5?{id:tal.i,w:tal.w,pj:st[tal.i].pj,v:st[tal.i].v}:null,bomb:bo?{id:bo[0],n:bo[1]}:null,nM:ms.length}})}
+function heroesHTML(mo,st){const H=heroesOf(mo);if(!H||(!H.imp&&!H.tal&&!H.bomb))return '';
+  const tile=(e,t,id,line)=>`<div class="htile" data-act="profile" data-id="${esc(id)}"><div class="he">${e}</div><div class="hf">${face(id)}</div><div class="hn">${esc(pname(id))}</div><div class="ht">${t}</div><div class="hl">${line}</div></div>`;
+  return `<h2>Los de siempre <span class="sub">sin ellos no hay pachanga</span></h2><div class="heroes">
+    ${H.imp?tile('🧱','El Imprescindible',H.imp.id,`${H.imp.pj} de ${H.nM} partidos, sin tarjetas`):''}
+    ${H.tal?tile('🍀','El Talismán',H.tal.id,`Su equipo ganó el ${Math.round(H.tal.w*100)}% (${H.tal.v} de ${H.tal.pj})`):''}
+    ${H.bomb?tile('🚒','El Bombero',H.bomb.id,`Salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`):''}</div>`}
 // Jugador del mes y pichichi de cada mes ya terminado (se calcula una vez por cambio de datos).
 let _honKey='',_hon={potm:{},pich:{}};
 function monthHonors(){
   const key=Object.keys(S.matches).length+'|'+Object.keys(S.votes).length+'|'+Object.keys(S.stats||{}).length+'|'+Object.values(S.matches).filter(m=>m.status==='played').length;
-  if(key===_honKey)return _hon;_honKey=key;const out={potm:{},pich:{}};
+  if(key===_honKey)return _hon;_honKey=key;const out={potm:{},pich:{},imp:{},tal:{}};
   const cur=ym(new Date());const months=[...new Set(Object.values(S.matches).filter(m=>m.status==='played').map(m=>(m.date||'').slice(0,7)))].filter(x=>x&&x<cur);
   _hon=out; // evita recursión
   for(const mo of months){
@@ -2312,6 +2415,7 @@ function monthHonors(){
     if(!ids.length)continue;
     const tp=ids.sort((a,b)=>st[b].pts-st[a].pts)[0];out.potm[tp]=(out.potm[tp]||0)+1;
     const tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];if(st[tg].g>0)out.pich[tg]=(out.pich[tg]||0)+1;
+    const H=heroesOf(mo);if(H?.imp)out.imp[H.imp.id]=(out.imp[H.imp.id]||0)+1;if(H?.tal)out.tal[H.tal.id]=(out.tal[H.tal.id]||0)+1;
   }
   return _hon=out;
 }
@@ -2358,6 +2462,11 @@ const ACH=[
   {e:'🪨',n:'Muro',d:'Ser El Duro 3 veces',t:s=>s.aw.duro>=3},
   {e:'🎭',n:'Doble cara',d:'Haber sido Crack y Vaya día',t:s=>s.aw.crack>=1&&s.aw.vaya>=1},
   {e:'🐐',n:'Jugador del mes',d:'Ganar un jugador del mes',t:s=>s.potm>=1},
+  {e:'🧱',n:'Imprescindible',d:'Ser El Imprescindible de un mes',t:s=>s.impN>=1},
+  {e:'🏛️',n:'Pilar del vestuario',d:'Ser El Imprescindible 3 meses',t:s=>s.impN>=3},
+  {e:'🍀',n:'Talismán',d:'Ser El Talismán de un mes',t:s=>s.talN>=1},
+  {e:'🚒',n:'Bombero',d:'Completar la lista a última hora para salvar un partido',t:s=>s.bombN>=1},
+  {e:'🧯',n:'Jefe de bomberos',d:'Salvar 5 partidos a última hora',t:s=>s.bombN>=5},
   {e:'🥇',n:'Pichichi del mes',d:'Máximo goleador de un mes',t:s=>s.pich>=1},
   {e:'🤠',n:'Pistolero',d:'Ganar 3 duelos',t:s=>duelRecord(s.id).w>=3},
   // Rachas
@@ -2899,12 +3008,20 @@ function pollCard(p){
       <span class="pchk">${on?'✓':''}</span>
       <span class="sp">${optLabel(p,o)}
       <span class="pbar"><i style="width:${c[i].length/max*100}%"></i></span>
-      <span class="pfaces">${c[i].slice(0,7).map(q=>`<span class="f">${face(q)}</span>`).join('')}${c[i].length>7?`<span class="more">+${c[i].length-7}</span>`:''}</span></span>
+      <span class="pfaces">${c[i].slice(0,7).map(q=>`<span class="f">${face(q)}</span>`).join('')}${c[i].length>7?`<span class="more">+${c[i].length-7}</span>`:''}</span>
+      ${c[i].length?`<span class="pnames">${c[i].slice(0,6).map(q=>esc(q===me?'Tú':pname(q))).join(', ')}${c[i].length>6?` y ${c[i].length-6} más`:''}</span>`:''}</span>
       <span class="pn">${c[i].length}</span></button>`});
+  if(n)x+=`<button class="btn sm ghost" style="margin-top:8px" data-act="pollWho" data-id="${esc(p.id)}">👀 Ver quién ha votado</button>`;
   x+=`<p class="small muted" style="margin-top:8px">${free?(p.multi?'Marca todas las que quieras.':'Marca una. Puedes cambiarla cuando quieras.'):'Marca todas las opciones que te vengan bien.'}</p>`;
   if(isAdmin()||p.createdBy===me)x+=`<div class="pacts">${free?'':`<button class="btn pri sm" data-act="pollConvoke" data-id="${esc(p.id)}">✅ Convocar el más votado</button>`}<button class="btn sm ghost" data-act="pollShare" data-id="${esc(p.id)}">📲 WhatsApp</button><button class="btn sm ghost" data-act="pollClose" data-id="${esc(p.id)}">Cerrar</button></div>`;
   return x+`</div>`;
 }
+function pollWho(id){const p=S.polls[id];if(!p)return;const{c}=pollCounts(p);const voters=new Set(c.flat());
+  const pend=approvedIds().filter(q=>!P(q).guest&&!voters.has(q));
+  modal(`${mh('Votos')}<p class="muted small" style="margin-bottom:6px">${esc(p.title||'')}</p>
+    ${(p.options||[]).map((o,i)=>`<div class="box" style="margin-top:10px;padding:12px"><div class="row"><span class="sp">${optLabel(p,o)}</span><b>${c[i].length}</b></div>
+      ${c[i].length?`<div class="whol">${c[i].map(q=>`<span class="vm" data-act="profile" data-id="${esc(q)}">${face(q)} ${esc(pname(q))}</span>`).join('')}</div>`:'<div class="small muted" style="margin-top:6px">Nadie</div>'}</div>`).join('')}
+    ${pend.length?`<details class="box" style="margin-top:10px;padding:12px"><summary class="small" style="cursor:pointer">🤐 Sin votar · ${pend.length}</summary><div class="whol">${pend.map(q=>`<span class="vm">${face(q)} ${esc(pname(q))}</span>`).join('')}</div></details>`:''}`)}
 function ago2(t){const d=Math.round((t-Date.now())/864e5);if(d<=0){const h=Math.max(1,Math.round((t-Date.now())/36e5));return `en ${h} h`}return d===1?'mañana':`en ${d} días`}
 async function pollVote(pid,i){
   if(!me){pickMe();return}
@@ -3301,6 +3418,8 @@ function adminSection(){
   const nfb=Object.keys(S.feedback).length;const admins=Object.values(S.players).filter(p=>p.admin&&p.status!=='pending').map(p=>p.name);
   const pend=Object.values(S.players).filter(p=>p.status==='pending').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   return `<h2 id="admin" style="scroll-margin-top:90px">Panel de admin</h2>
+    <div class="box" style="margin-bottom:10px"><b>✏️ Contenido de la app</b><div class="small muted" style="margin-top:2px">Cámbialo aquí y se actualiza para todos al momento, sin tocar el HTML.</div>
+      <div class="cgrid"><button class="btn sm" data-act="cVenues">🏟️ Campos · ${VENUES.length}</button><button class="btn sm" data-act="cRules">⏱️ Plazos y normas</button><button class="btn sm" data-act="cList" data-k="tags">🏷️ Etiquetas del campo</button><button class="btn sm" data-act="cList" data-k="injuries">🤕 Parte médico</button></div></div>
     <div class="box" style="margin-bottom:10px"><b>🙋 Solicitudes para entrar · ${pend.length}</b>
     ${pend.map(p=>`<div class="pay"><span class="av">${face(p.id)}</span><span class="nm">${esc(p.name)}<br><span class="small muted" style="font-weight:500">${esc(POS[p.pos]||'')}</span></span><button class="tog on" data-act="approve" data-id="${esc(p.id)}">Aprobar</button><button class="tog" data-act="reject" data-id="${esc(p.id)}">✕</button></div>`).join('')||'<p class="small muted" style="margin-top:6px">Ninguna pendiente. Para meter a alguien directamente: Jugadores → "Fichar e invitar".</p>'}</div>
     <div class="box" style="margin-bottom:10px"><div class="row"><span class="sp"><b>💾 Copia de seguridad</b><br><span class="small muted">${S.config.app?.lastBackup?`Última: ${new Date(S.config.app.lastBackup).toLocaleDateString('es-ES')}${(Date.now()-S.config.app.lastBackup)>30*864e5?' · ⚠️ hace más de un mes':''}`:'Nunca se ha hecho'}</span></span><button class="btn sm wht" data-act="backup">Descargar</button></div></div>
@@ -3477,6 +3596,10 @@ document.addEventListener('click',e=>{
     case'pollConvoke':pollConvoke(id);break;
     case'pollShare':copyPoll(id);break;
     case'fixGhost':ghostForm(id);break;
+    case'pollWho':pollWho(id);break;
+    case'cVenues':venuesAdmin();break;
+    case'cRules':rulesForm();break;
+    case'cList':listForm(a.dataset.k);break;
     case'pollClose':confirmBox('Cerrar encuesta','Desaparecerá de la portada.','Cerrar',async()=>{await store.doc('polls/'+id).update({closed:true})});break;
     case'cal':calModal(id);break;
     case'wrapped':if(!wrapOn()&&!isAdmin())break;openWrapped(id,a.closest('.md')?seasonOfDate(new Date()):S.season);break;
