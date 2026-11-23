@@ -1083,6 +1083,7 @@ function boardItems(days){
         it.push({t:tt,e:'🐐',x:`Jugador de ${esc(mn)}: ${nm(tp)} (${st[tp].pts} pts)${st[tg].g>0?` · 🥇 Pichichi: ${nm(tg)} (${st[tg].g} goles)`:''}`});
         const H=heroesOf(mo);if(H?.imp)it.push({t:tt-1,e:'🧱',x:`El Imprescindible de ${esc(mn)}: ${nm(H.imp.id)}. ${H.imp.pj} partidos sin dar guerra. Sin él no hay pachanga`});
         if(H?.tal)it.push({t:tt-2,e:'🍀',x:`El Talismán de ${esc(mn)}: con ${nm(H.tal.id)} en el campo su equipo ganó el ${Math.round(H.tal.w*100)}%`});
+        if(H?.presi)it.push({t:tt-4,e:'🎙️',x:`El Presi de ${esc(mn)}: ${nm(H.presi.id)}, ${H.presi.n} ${H.presi.n===1?'partido montado':'partidos montados'}. Sin él no se juega`});
         if(H?.bomb)it.push({t:tt-3,e:'🚒',x:`El Bombero de ${esc(mn)}: ${nm(H.bomb.id)} salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`})}}}
   // 👑 Nueva Leyenda del campo (al jugarse un partido, cambia la leyenda de ese campo)
   {for(const m of Object.values(S.matches)){if(m.status!=='played'||!m.venue)continue;const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5);if(tt<from||tt>now)continue;
@@ -1240,17 +1241,34 @@ function buildPaper(day){
   const up=Object.values(S.matches).filter(m=>m.status!=='played'&&+mdt(m)>now).sort((a,b)=>mdt(a)-mdt(b));
   const st=computeStats();const ids=Object.keys(st).filter(i=>P(i)&&!P(i).guest);
   const last=played[0],recent=last&&now-+mdt(last)<4*864e5;
-  let main={};
-  if(recent){const ch=chronicle(last);const aw=matchAwards(last);const g=goalsOf(last);const top=Object.entries(g).filter(([q,x])=>x>0&&P(q)).sort((a,b)=>b[1]-a[1])[0];
+  // 📰 Titular: el día después del partido va la crónica. El resto de días se va rotando entre varias noticias,
+  // así no se repite el mismo titular cada mañana.
+  const lastM=id=>played.find(m=>attendees(m).includes(id))||up[0]||last;
+  const mk=(k,kick,title,lead,hero,o={})=>{const mm=o.m||(hero?lastM(hero):last);return{k,kick,title,lead,hero,m:mm,team:o.team||(hero&&mm&&(mm.teamB||[]).includes(hero)?'B':'A'),pose:o.pose||pick(['wide','up','fist','point']),stamp:o.stamp||'',cap:o.cap||(hero?pick([`${nm(hero)}, en plena faena. Recreación de nuestro dibujante.`,`${nm(hero)}, de espaldas: no quiso salir de frente.`,`Imagen de archivo de ${nm(hero)}. El archivo es un cajón.`]):'Imagen de recurso. Muy de recurso.')}};
+  let main=null;const cands=[];
+  if(last&&now-+mdt(last)<36*36e5){const ch=chronicle(last);const aw=matchAwards(last);const g=goalsOf(last);const top=Object.entries(g).filter(([q,x])=>x>0&&P(q)).sort((a,b)=>b[1]-a[1])[0];
     const hero=(top&&top[1]>=2?top[0]:null)||aw.win.crack[0]||(top&&top[0])||null;
-    main={kick:`Crónica · ${esc(DIA[mdt(last).getDay()])} en ${esc(last.venue||'el campo')}`,title:esc(ch.title),lead:esc(ch.body.slice(0,2).join(' ')),hero,m:last,team:hero&&(last.teamB||[]).includes(hero)?'B':'A',pose:pick(['wide','up','fist']),
-      stamp:`${TEAM.A.n} ${+last.scoreA||0}-${+last.scoreB||0} ${TEAM.B.n}`,cap:hero?pick([`${nm(hero)} celebra a lo grande. Recreación de nuestro dibujante, que tampoco estaba allí.`,`Así lo celebró ${nm(hero)}, según testigos poco fiables.`,`${nm(hero)}, de espaldas para que no se le vea la cara de sorpresa.`]):'Recreación artística. Nadie quiso posar.'}}
-  else if(up[0]){const m=up[0],L=lineup(m),free=(m.slots||0)-L.in.length;const org=m.createdBy&&P(m.createdBy)?m.createdBy:null;
-    main={kick:'Previa',title:free>0?pick([`Se buscan ${free} valientes para el ${esc(DIA[mdt(m).getDay()])}`,`${free} plazas libres y mucho miedo escénico`,`El ${esc(DIA[mdt(m).getDay()])} hay pachanga y faltan ${free}`]):pick(['Lleno absoluto: no cabe ni un cono más','Cartel de «no hay billetes» para el próximo partido']),
-      lead:`${esc(m.format||'Partido')} el ${esc(DIA[mdt(m).getDay()])} a las ${esc(m.time)} en ${esc(m.venue||'el campo')}. ${L.in.length} apuntados${L.res.length?` y ${L.res.length} en la reserva rezando`:''}. ${pick(['Los expertos no se mojan.','Se esperan pocos goles y muchas excusas.','Las casas de apuestas han cerrado por precaución.'])}`,
-      hero:org,m,team:R()<.5?'A':'B',pose:'point',stamp:free>0?`Faltan ${free}`:'¡Completo!',cap:org?`${nm(org)}, convocante, señala el camino. Nadie sabe hacia dónde.`:'El campo, esperando a que alguien sepa jugar.'}}
-  else{const tp=ids.filter(i=>st[i].pj).sort((a,b)=>st[b].pts-st[a].pts)[0];
-    main={pose:'up',team:'A',kick:'Opinión',title:tp?`${nm(tp)} manda en la clasificación y nadie sabe muy bien cómo`:'Semana tranquila: ni un balón tocado',lead:pick(['Sin partidos a la vista, la redacción ha tenido que inventarse las noticias. Como siempre.','La actualidad futbolística local atraviesa un momento de calma tensa. Muy tensa. Casi dormida.']),hero:tp||null,stamp:'Exclusiva',cap:tp?`${nm(tp)}, líder, en pleno análisis táctico de su próximo bocadillo.`:'Imagen de recurso.'}}
+    main=mk('cronica',`Crónica · ${esc(DIA[mdt(last).getDay()])} en ${esc(last.venue||'el campo')}`,esc(ch.title),esc(ch.body.slice(0,2).join(' ')),hero,{m:last,team:hero&&(last.teamB||[]).includes(hero)?'B':'A',pose:pick(['wide','up','fist']),
+      stamp:`${TEAM.A.n} ${+last.scoreA||0}-${+last.scoreB||0} ${TEAM.B.n}`,cap:hero?pick([`${nm(hero)} celebra a lo grande. Recreación de nuestro dibujante, que tampoco estaba allí.`,`Así lo celebró ${nm(hero)}, según testigos poco fiables.`,`${nm(hero)}, de espaldas para que no se le vea la cara de sorpresa.`]):''})}
+  else{
+    if(recent){const aw=matchAwards(last);const cr=aw.win.crack[0],va=aw.win.vaya[0];const g=goalsOf(last);const top=Object.entries(g).filter(([q,x])=>x>0&&P(q)).sort((a,b)=>b[1]-a[1])[0];
+      if(cr&&P(cr))cands.push(mk('crack','El análisis',pick([`${nm(cr)}, el Crack que nadie vio venir`,`Todos hablan de ${nm(cr)}`,`${nm(cr)} se gana el respeto del vestuario`]),pick([`El vestuario le votó como El Crack del ${esc(DIA[mdt(last).getDay()])}. Él dice que fue suerte; nosotros, también.`,`Sus compañeros le eligieron el mejor. Algunos ya piden que lo analice la ciencia.`]),cr,{m:last,pose:'up',stamp:'⭐ El Crack'}));
+      if(va&&P(va))cands.push(mk('vaya','Polémica',pick([`${nm(va)} y el día que todos quieren olvidar`,`¿Qué le pasó a ${nm(va)}?`,`${nm(va)}, protagonista por lo que no hizo`]),pick(['Se llevó el «Vaya día». Su entorno pide respeto y una semana de vacaciones.','El vestuario fue claro en las votaciones. Él, menos claro en el campo.']),va,{m:last,pose:'point',stamp:'🤦 Vaya día'}));
+      if(top&&P(top[0])&&top[1]>=1)cands.push(mk('gol','Goleadores',top[1]>=3?`${nm(top[0])} se lleva el balón a casa: ${top[1]} goles`:pick([`${nm(top[0])} no perdona`,`El olfato de ${nm(top[0])}`]),`${top[1]} ${top[1]===1?'gol':'goles'} el ${esc(DIA[mdt(last).getDay()])}. ${pick(['Ya pide dorsal nuevo.','Los porteros rivales siguen buscando el balón.','Lo celebra como si fuera la Champions.'])}`,top[0],{m:last,pose:'fist',stamp:`⚽ ${top[1]}`}))}
+    if(up[0]&&+mdt(up[0])-now<4*864e5){const m=up[0],L=lineup(m),free=(m.slots||0)-L.in.length;const org=m.createdBy&&P(m.createdBy)?m.createdBy:null;
+      cands.push(mk('previa','Previa',free>0?pick([`Se buscan ${free} valientes para el ${esc(DIA[mdt(m).getDay()])}`,`${free} plazas libres y mucho miedo escénico`,`El ${esc(DIA[mdt(m).getDay()])} hay pachanga y faltan ${free}`]):pick(['Lleno absoluto: no cabe ni un cono más','Cartel de «no hay billetes» para el próximo partido']),
+        `${esc(m.format||'Partido')} el ${esc(DIA[mdt(m).getDay()])} a las ${esc(m.time)} en ${esc(m.venue||'el campo')}. ${L.in.length} apuntados${L.res.length?` y ${L.res.length} en la reserva rezando`:''}. ${pick(['Los expertos no se mojan.','Se esperan pocos goles y muchas excusas.','Las casas de apuestas han cerrado por si acaso.'])}`,org,{m,pose:'point',stamp:free>0?`Faltan ${free}`:'¡Completo!',cap:org?`${nm(org)}, convocante, señala el camino. Nadie sabe hacia dónde.`:'El campo, esperando a que alguien sepa jugar.'}))}
+    const sc=ids.filter(i=>st[i].g>0).sort((a,b)=>st[b].g-st[a].g);if(sc[0])cands.push(mk('pichichi','La carrera del gol',pick([`${nm(sc[0])} y la Bota de Oro (de plástico)`,`Nadie frena a ${nm(sc[0])}: ${st[sc[0]].g} goles`]),sc[1]?`Le persigue ${nm(sc[1])} con ${st[sc[1]].g}. ${pick(['Se masca la tragedia.','Hay tensión en el vestuario.'])}`:'De momento, sin rival a la vista.',sc[0],{pose:'up',stamp:`⚽ ${st[sc[0]].g}`}));
+    const ws=ids.filter(i=>st[i].wS>=3).sort((a,b)=>st[b].wS-st[a].wS)[0];if(ws)cands.push(mk('racha','En racha',`${nm(ws)} no sabe lo que es perder: ${st[ws].wS} seguidas`,pick(['Sus rivales ya le piden el DNI.','Dice que el secreto es la siesta.']),ws,{pose:'fist'}));
+    const ls=ids.filter(i=>st[i].lS>=3).sort((a,b)=>st[b].lS-st[a].lS)[0];if(ls)cands.push(mk('crisis','Crisis',`${nm(ls)} y la maldición de las ${st[ls].lS} derrotas`,pick(['Se plantea cambiar de botas, de campo o de deporte.','Pide que le toque con los buenos. Los buenos no contestan.']),ls,{pose:'point'}));
+    const lg=Object.entries(legends()).filter(([,v])=>P(v.id));if(lg.length){const [k,v]=lg[Math.floor(R()*lg.length)];const vn=(VENUES.find(x=>normV(x.n)===k)||{}).n||k;
+      cands.push(mk('leyenda','Reportaje',`${nm(v.id)}, el rey de ${esc(vn)}`,`${v.n} partidos ahí en ${LEG_DAYS} días. ${pick(['Ya tiene llaves del vestuario.','El conserje le saluda por su nombre.','Se rumorea que duerme allí.'])}`,v.id,{pose:'up',stamp:'👑 Leyenda'}))}
+    const inj=ids.filter(injOf);if(inj.length){const i=inj[Math.floor(R()*inj.length)],j=injOf(i);cands.push(mk('lesion','Parte médico',`${nm(i)}: «${esc(j.label)}»`,pick(['El cuerpo médico, que no existe, pide calma.','Su vuelta es cuestión de días… o de meses.']),i,{pose:'point'}))}
+    const tp=ids.filter(i=>st[i].pj).sort((a,b)=>st[b].pts-st[a].pts)[0];
+    if(tp)cands.push(mk('lider','Opinión',pick([`${nm(tp)} manda en la clasificación y nadie sabe muy bien cómo`,`El líder ${nm(tp)} no quiere hablar de títulos`]),pick(['La redacción, en pleno, sigue sin explicárselo.','Su secreto: aparecer siempre. Y alguna vez, tocar el balón.']),tp,{pose:'up',stamp:`${st[tp].pts} pts`}));
+    if(cands.length){const di=Math.floor((now+36e5)/864e5);main=cands[di%cands.length]}
+  }
+  if(!main)main=mk('nada','Opinión','Semana tranquila: ni un balón tocado',pick(['Sin partidos a la vista, la redacción ha tenido que inventarse las noticias. Como siempre.','La actualidad futbolística local atraviesa un momento de calma.']),null,{pose:'up'});
   // Noticias secundarias
   const items=[];const add=(k,t,x)=>items.push({k,t,x});
   const inj=ids.filter(injOf);if(inj.length){const i=pick(inj),j=injOf(i);add('Parte médico',`${nm(i)}: ${esc(j.label)}`,pick([`Fuentes del vestuario aseguran que ${j.note?`volverá ${esc(j.note)}`:'su vuelta es cuestión de días… o de meses'}.`,`El cuerpo médico, que no existe, pide calma.`,`Su ausencia se nota. Sobre todo en el bar.`]))}
@@ -1263,10 +1281,12 @@ function buildPaper(day){
   const nw=Object.values(S.players).filter(x=>!x.guest&&x.status!=='pending'&&(x.approvedAt||x.createdAt)&&now-(x.approvedAt||x.createdAt)<7*864e5);if(nw.length)add('Mercado',`Fichaje: ${nm(pick(nw).id)}`,pick(['Llega libre y sin cláusula. Ni falta que hace.','La afición, dividida: unos no le conocen, otros tampoco.']));
   const rd=ids.filter(i=>bannedFor(i));if(rd.length)add('Comité de Competición',`${nm(rd[0])}, una semana en la grada`,'Por roja. Dicen que se le ha visto entrenando en el sofá.');
   const FILL=[{k:'Tiempo',t:'Previsión: 100% de probabilidad de excusas',x:'Se esperan rachas de «el campo estaba fatal» y chubascos de «yo no he sido».'},{k:'Fe de erratas',t:'Donde ayer dijimos «jugada»',x:'Queríamos decir «patada». Pedimos disculpas a los afectados.'},{k:'Encuesta',t:'¿Quién es el peor del grupo?',x:'El 100% de los encuestados ha dicho «otro». Seguiremos investigando.'},{k:'Clasificados',t:'Se busca portero',x:'Imprescindible: ponerse. Valorable: parar algo.'}];
+  // Se barajan por día para que las breves también cambien, y no se repite la noticia del titular
+  {const dup={lesion:'Parte médico',pichichi:'Pichichi',crisis:'Crisis',racha:'En racha',previa:'Agenda'}[main.k];const sh=items.filter(x=>x.k!==dup).map(x=>[R(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);items.length=0;items.push(...sh)}
   while(items.length<4){const pool=FILL.filter(x=>!items.some(y=>y&&y.t===x.t));items.push(pool.length?pick(pool):{k:'Breve',t:'Sin novedad en el frente',x:'Ni un cono fuera de su sitio.'})}
   const gm=played.filter(m=>(m.date||'').slice(0,7)===key.slice(0,7)).reduce((a,m)=>a+(+m.scoreA||0)+(+m.scoreB||0),0);
   const fecha=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const heroImg=main.hero?sceneSVG({indoor:isIndoor(main.m),team:main.team,name:pname(main.hero),num:dorsalOf(main.hero),pose:main.pose,seed:key+main.hero}):`<div class="emo">⚽</div>`;
+  const heroImg=main.hero?sceneSVG({indoor:main.m?isIndoor(main.m):false,team:main.team,name:pname(main.hero),num:dorsalOf(main.hero),pose:main.pose,seed:key+main.hero}):`<div class="emo">⚽</div>`;
   return `<div class="paper" style="--pc:${p.pc};--pc2:${p.pc2}">
     <div class="mast" style="background:${p.bg};color:${p.fg};margin:-14px -14px 6px;padding:14px 10px 10px;border-bottom:3px double #141414"><div class="t" style="font-family:${p.font};font-size:${p.size}px;${p.italic?'font-style:italic;':''}${p.k==='reves'?'':'text-transform:uppercase;'}">${p.k==='reves'?'Diario del <span style="display:inline-block;transform:scaleX(-1)">Revés</span>':esc(p.n)}</div><div class="s">${esc(p.s)}</div></div>
     <div class="meta"><span>${esc(fecha)}</span><span>Nº ${num} · Precio: una caña</span></div>
@@ -1320,9 +1340,8 @@ function maybeInterview(){if(S._ivDone||!me||!P(me)||!allReady()||needsGate())re
   const wk=weekKey();if(S.interviews['iv_'+wk]){S._ivDone=1;return}if(interviewee(wk)!==me){S._ivDone=1;return}
   setTimeout(()=>{if(S._ivDone||document.querySelector('.md')||S.interviews['iv_'+wk])return;S._ivDone=1;interviewModal(wk)},4500)}
 function paperModal(day){modal(`<i data-auto hidden></i>`+buildPaper(day)+`<button class="btn pri full" style="margin-top:14px" id="ppok">Cerrar el periódico</button>`,md=>{md.querySelector('#ppok').onclick=close})}
-function maybePaper(){if(S._paperDone||!me||!P(me)||!allReady()||needsGate())return;const k=ymd(new Date());let seen='';try{seen=localStorage.getItem('fifa07_paper')||''}catch(e){}
-  if(seen===k){S._paperDone=1;return}
-  setTimeout(()=>{if(S._paperDone||document.querySelector('.md')||document.hidden||!me||!P(me)||needsGate())return;S._paperDone=1;try{localStorage.setItem('fifa07_paper',k)}catch(e){};paperModal()},1200)}
+// El periódico ya no salta solo al abrir: está en su botón "📰 El periódico de hoy".
+function maybePaper(){}
 // iPhone guarda una "foto" de la pantalla al salir de la app y la enseña al volver a abrirla. Si el periódico
 // estaba abierto, se veía un amago de periódico que desaparecía al recargar. Al salir se cierra (se puede reabrir con el botón).
 const autoClose=()=>{if(document.querySelector('#modalRoot [data-auto]'))close()};
@@ -2267,7 +2286,7 @@ function profile(id){
       if(mine||isAdmin())x+=aw?`<button class="btn full" style="margin-top:10px" data-act="awayOff" data-id="${esc(id)}">🏠 ${mine?'Ya estoy disponible':'Quitar ausencia'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="awayOn" data-id="${esc(id)}">🧳 ${mine?'Voy a estar fuera':'Marcar ausencia'}</button>`;
       if(mine||isAdmin())x+=ij?`<button class="btn full" style="margin-top:10px" data-act="injOff" data-id="${esc(id)}">💪 ${mine?'Ya estoy bien':'Quitar la lesión'}</button>`:`<button class="btn full" style="margin-top:10px" data-act="injOn" data-id="${esc(id)}">✚ ${mine?'Me he lesionado':'Marcar como lesionado'}</button>`;
       return x})()}
-    ${(()=>{const s=st[id];if(!s||s.pj<5)return '';const w=Math.round(s.v/s.pj*100);return `<p class="small muted" style="margin-top:10px">🍀 Con ${esc(pname(id))} en el campo, su equipo gana el <b style="color:var(--txt)">${w}%</b> (${s.v} de ${s.pj})${s.bombN?` · 🚒 ${s.bombN} ${s.bombN===1?'partido salvado':'partidos salvados'}`:''}</p>`})()}
+    ${(()=>{const s=st[id];if(!s)return '';const w=s.pj?Math.round(s.v/s.pj*100):0;return `${s.orgN?`<p class="small muted" style="margin-top:10px">🎙️ Ha organizado <b style="color:var(--txt)">${s.orgN}</b> ${s.orgN===1?'partido':'partidos'}</p>`:''}${s.pj>=5?`<p class="small muted" style="margin-top:10px">🍀 Con ${esc(pname(id))} en el campo, su equipo gana el <b style="color:var(--txt)">${w}%</b> (${s.v} de ${s.pj})${s.bombN?` · 🚒 ${s.bombN} ${s.bombN===1?'partido salvado':'partidos salvados'}`:''}</p>`:''}`})()}
     ${(()=>{const lv=legendVenues(id);return lv.length?`<p class="small" style="margin-top:10px;color:var(--yel)">👑 Leyenda de ${lv.map(esc).join(', ')}</p>`:''})()}
     ${!P(id).guest?`<p class="small muted" style="margin-top:10px">👀 Última conexión: <b style="color:var(--txt)">${esc(seenAgo(id))}</b></p>`:''}
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
@@ -2411,7 +2430,7 @@ function enrich(st){
       fromRes:H.filter(x=>x.m.promoted?.pid===id).length,
       orgN:H.filter(x=>x.m.createdBy===id).length,
       votedN:voted[id]||0,noShows:(S.players[id]?.cardLog||[]).filter(c=>c.reason==='noshow').length,
-      potm:hon.potm[id]||0,pich:hon.pich[id]||0,impN:hon.imp?.[id]||0,legN:Object.values(legends()).filter(v=>v.id===id).length,talN:hon.tal?.[id]||0,bombN:bomberosIn(null)[id]||0});
+      potm:hon.potm[id]||0,pich:hon.pich[id]||0,impN:hon.imp?.[id]||0,legN:Object.values(legends()).filter(v=>v.id===id).length,talN:hon.tal?.[id]||0,bombN:bomberosIn(null)[id]||0,orgN:presiIn(null)[id]||0,presiM:hon.presi?.[id]||0});
     // Extra para logros
     const won=x=>Math.abs((+x.m.scoreA||0)-(+x.m.scoreB||0));
     const firsts=H.filter(x=>{const sg=signupsOf(x.m.id);return sg.length>1&&sg[0].pid===id}).length;
@@ -2444,6 +2463,8 @@ function bomberosIn(flt){return memo('bomb_'+(flt?flt.k:'all'),()=>{const c={};
   for(const m of Object.values(S.matches)){if(m.status!=='played'||(flt&&!flt(m)))continue;const n=m.slots||10;
     const ss=signupsOf(m.id).slice().sort((a,b)=>(+a.at||0)-(+b.at||0));const s=ss[n-1];if(!s||!P(s.pid)||P(s.pid).guest)continue;
     if(+s.at>+mdt(m)-48*36e5&&[...(m.teamA||[]),...(m.teamB||[])].includes(s.pid))c[s.pid]=(c[s.pid]||0)+1}return c})}
+// 🎙️ El Presi: el que organiza (convoca o lleva el partido fijo y reserva la pista). Solo cuentan los partidos jugados.
+function presiIn(flt){return memo('presi_'+(flt?flt.k:'all'),()=>{const c={};for(const m of Object.values(S.matches)){if(m.status!=='played'||(flt&&!flt(m)))continue;const o=m.createdBy;if(o&&P(o)&&!P(o).guest)c[o]=(c[o]||0)+1}return c})}
 function heroesOf(mo){return memo('hero_'+mo,()=>{const inMo=m=>(m.date||'').startsWith(mo);inMo.k=mo;
   const st=computeStatsRaw(inMo);const ids=Object.keys(st).filter(i=>st[i].pj>0&&P(i)&&!P(i).guest);if(!ids.length)return null;
   const tp=ids.slice().sort((a,b)=>st[b].pts-st[a].pts)[0],tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];const stars=new Set([tp]);if(st[tg].g>0)stars.add(tg);
@@ -2456,18 +2477,20 @@ function heroesOf(mo){return memo('hero_'+mo,()=>{const inMo=m=>(m.date||'').sta
   const imp=ids.filter(i=>!stars.has(i)&&!cards(i)&&st[i].pj>=2).map(i=>({i,sc:st[i].pj*10+vp(i)*3+pp(i)*2+(bomb[i]||0)*2})).sort((a,b)=>b.sc-a.sc)[0];
   const tal=ids.filter(i=>st[i].pj>=3&&!stars.has(i)&&(!imp||i!==imp.i)).map(i=>({i,w:st[i].v/st[i].pj})).sort((a,b)=>b.w-a.w||st[b.i].pj-st[a.i].pj)[0];
   const bo=Object.entries(bomb).sort((a,b)=>b[1]-a[1])[0];
-  return{imp:imp?{id:imp.i,pj:st[imp.i].pj,vp:vp(imp.i)}:null,tal:tal&&tal.w>=.5?{id:tal.i,w:tal.w,pj:st[tal.i].pj,v:st[tal.i].v}:null,bomb:bo?{id:bo[0],n:bo[1]}:null,nM:ms.length}})}
-function heroesHTML(mo,st){const H=heroesOf(mo);if(!H||(!H.imp&&!H.tal&&!H.bomb))return '';
+  const pr=Object.entries(presiIn(inMo)).sort((a,b)=>b[1]-a[1])[0];
+  return{presi:pr?{id:pr[0],n:pr[1]}:null,imp:imp?{id:imp.i,pj:st[imp.i].pj,vp:vp(imp.i)}:null,tal:tal&&tal.w>=.5?{id:tal.i,w:tal.w,pj:st[tal.i].pj,v:st[tal.i].v}:null,bomb:bo?{id:bo[0],n:bo[1]}:null,nM:ms.length}})}
+function heroesHTML(mo,st){const H=heroesOf(mo);if(!H||(!H.imp&&!H.tal&&!H.bomb&&!H.presi))return '';
   const tile=(e,t,id,line)=>`<div class="htile" data-act="profile" data-id="${esc(id)}"><div class="he">${e}</div><div class="hf">${face(id)}</div><div class="hn">${esc(pname(id))}</div><div class="ht">${t}</div><div class="hl">${line}</div></div>`;
   return `<h2>Los de siempre <span class="sub">sin ellos no hay pachanga</span></h2><div class="heroes">
     ${H.imp?tile('🧱','El Imprescindible',H.imp.id,`${H.imp.pj} de ${H.nM} partidos, sin tarjetas`):''}
     ${H.tal?tile('🍀','El Talismán',H.tal.id,`Su equipo ganó el ${Math.round(H.tal.w*100)}% (${H.tal.v} de ${H.tal.pj})`):''}
-    ${H.bomb?tile('🚒','El Bombero',H.bomb.id,`Salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`):''}</div>`}
+    ${H.bomb?tile('🚒','El Bombero',H.bomb.id,`Salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`):''}
+    ${H.presi?tile('🎙️','El Presi',H.presi.id,`Organizó ${H.presi.n} ${H.presi.n===1?'partido':'partidos'}`):''}</div>`}
 // Jugador del mes y pichichi de cada mes ya terminado (se calcula una vez por cambio de datos).
 let _honKey='',_hon={potm:{},pich:{}};
 function monthHonors(){
   const key=Object.keys(S.matches).length+'|'+Object.keys(S.votes).length+'|'+Object.keys(S.stats||{}).length+'|'+Object.values(S.matches).filter(m=>m.status==='played').length;
-  if(key===_honKey)return _hon;_honKey=key;const out={potm:{},pich:{},imp:{},tal:{}};
+  if(key===_honKey)return _hon;_honKey=key;const out={potm:{},pich:{},imp:{},tal:{},presi:{}};
   const cur=ym(new Date());const months=[...new Set(Object.values(S.matches).filter(m=>m.status==='played').map(m=>(m.date||'').slice(0,7)))].filter(x=>x&&x<cur);
   _hon=out; // evita recursión
   for(const mo of months){
@@ -2475,7 +2498,7 @@ function monthHonors(){
     if(!ids.length)continue;
     const tp=ids.sort((a,b)=>st[b].pts-st[a].pts)[0];out.potm[tp]=(out.potm[tp]||0)+1;
     const tg=ids.slice().sort((a,b)=>st[b].g-st[a].g)[0];if(st[tg].g>0)out.pich[tg]=(out.pich[tg]||0)+1;
-    const H=heroesOf(mo);if(H?.imp)out.imp[H.imp.id]=(out.imp[H.imp.id]||0)+1;if(H?.tal)out.tal[H.tal.id]=(out.tal[H.tal.id]||0)+1;
+    const H=heroesOf(mo);if(H?.imp)out.imp[H.imp.id]=(out.imp[H.imp.id]||0)+1;if(H?.tal)out.tal[H.tal.id]=(out.tal[H.tal.id]||0)+1;if(H?.presi)out.presi[H.presi.id]=(out.presi[H.presi.id]||0)+1;
   }
   return _hon=out;
 }
@@ -2526,6 +2549,10 @@ const ACH=[
   {e:'🏛️',n:'Pilar del vestuario',d:'Ser El Imprescindible 3 meses',t:s=>s.impN>=3},
   {e:'🍀',n:'Talismán',d:'Ser El Talismán de un mes',t:s=>s.talN>=1},
   {e:'👑',n:'Leyenda del campo',d:'Ser el que más juega en un campo (últimos 90 días)',t:s=>s.legN>=1},
+  {e:'🎙️',n:'Presi',d:'Organizar un partido que se juegue',t:s=>s.orgN>=1},
+  {e:'📋',n:'Directiva',d:'Organizar 10 partidos',t:s=>s.orgN>=10},
+  {e:'🏛️',n:'Presidente de honor',d:'Organizar 50 partidos',t:s=>s.orgN>=50},
+  {e:'🎖️',n:'Presi del mes',d:'Ser el que más partidos organiza en un mes',t:s=>s.presiM>=1},
   {e:'🚒',n:'Bombero',d:'Completar la lista a última hora para salvar un partido',t:s=>s.bombN>=1},
   {e:'🧯',n:'Jefe de bomberos',d:'Salvar 5 partidos a última hora',t:s=>s.bombN>=5},
   {e:'🥇',n:'Pichichi del mes',d:'Máximo goleador de un mes',t:s=>s.pich>=1},
