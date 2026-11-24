@@ -1632,9 +1632,9 @@ function monthView(st){
     <div style="font-family:Anton;font-size:30px;color:var(--red2);margin-top:6px">${t.pts} <span style="font-size:14px;font-family:Archivo;color:var(--mut)">pts</span></div>
     <div class="muted small" style="line-height:1.6">${t.pj} PJ · ${t.g} goles${astOn()?` · ${t.a} asist.`:''}<br>${AWARDS.filter(A=>t.aw[A.k]).map(A=>`${A.e}×${t.aw[A.k]}`).join('  ')}${t.avg!=null?` · ${t.avg.toFixed(1)}★`:''}</div></div></div>`;
   const lines=totmLines(stM,st);
-  h+=`<h2>Equipo del mes <span class="sub">Rombo</span></h2><div class="pitch rombo"><div class="area"></div>`;
+  h+=`<h2>Equipo del mes <span class="sub">4 de campo + portero</span></h2><div class="pitch rombo"><div class="area"></div>`;
   const spots=rombo(lines);
-  spots.forEach(([id,x,y,lab])=>{h+=`<div class="spot" style="left:${x}%;top:${y}%">${futCard(id,st,false,{noVaya:true,noInform:true,extra:`<div class="mp">${stM[id].pts} pts</div>`})}<div class="slab">${lab}</div></div>`});
+  spots.forEach(([id,x,y,lab])=>{h+=`<div class="spot" style="left:${x}%;top:${y}%">${futCard(id,st,false,{noVaya:true,noInform:true,pos:lab==='Portero'?'POR':'JUG',extra:`<div class="mp">${stM[id].pts} pts</div>`})}<div class="slab">${lab}</div></div>`});
   h+=`</div><button class="btn wht full" style="margin-top:12px" data-act="share" data-kind="month">📸 Compartir equipo del mes</button>`;
   const sc=ranked.filter(id=>stM[id].g>0).sort((a,b)=>stM[b].g-stM[a].g||stM[a].pj-stM[b].pj);
   h+=`<h2>Goleadores del mes</h2>`;
@@ -1686,7 +1686,7 @@ function futCard(id,st,big=false,opt={}){
   return `<button class="fut ${t} ${big?'big':''} ${ij?'injd':''} ${aw?'awyd':''}" ${big?'':`data-act="profile" data-id="${esc(id)}"`}><div class="fi">
     ${ij?`<div class="injb">✚ ${esc(ij.label)}</div>`:aw?`<div class="awyb">${esc(aw.e)} ${esc(aw.label)}</div>`:''}
     ${badge?`<div class="badge">${badge}</div>`:''}
-    <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(p.pos||'TODO')}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i><div class="lvl">★${s.level.toFixed(1)}</div>${sk&&!opt.extra?`<div class="strk">${sk.e}${sk.n}</div>`:''}</div>
+    <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(opt.pos??(p.pos||'TODO'))}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i><div class="lvl">★${s.level.toFixed(1)}</div>${sk&&!opt.extra?`<div class="strk">${sk.e}${sk.n}</div>`:''}</div>
     <div class="face ${okPhoto(p.photo)?'hasph':''}">${face(id)}</div>
     <div class="nm">${esc(p.name)}</div>${opt.extra?'':'<div class="sep"></div>'}
     ${opt.extra?opt.extra:`<div class="st"><div class="col">${L.map(row).join('')}</div><div class="dv"></div><div class="col">${R.map(row).join('')}</div></div>`}
@@ -2819,7 +2819,7 @@ async function drawFut(g,x,y,w,id,st,opt={}){
   if(opt.badge){g.font=`800 ${w*.044}px Archivo`;g.fillText(opt.badge.toUpperCase(),x+w/2,y+h*.065)}
   const lx=x+w*.07+w*.125;
   g.font=`${w*.22}px Anton`;g.fillText(String(s.ovr),lx,y+h*.12+w*.2);
-  g.font=`700 ${w*.095}px "Barlow Condensed"`;g.fillText(p.pos||'TODO',lx,y+h*.12+w*.31);
+  g.font=`700 ${w*.095}px "Barlow Condensed"`;g.fillText(opt.pos??(p.pos||'TODO'),lx,y+h*.12+w*.31);
   g.globalAlpha=.35;g.fillRect(lx-w*.065,y+h*.12+w*.345,w*.13,Math.max(1.5,w*.006));g.globalAlpha=1;
   g.font=`700 ${w*.08}px "Barlow Condensed"`;g.fillText('★'+s.level.toFixed(1),lx,y+h*.12+w*.44);
   const cx=x+w*.64,cy=y+h*.09+w*.285,r=w*.285;
@@ -2876,29 +2876,31 @@ async function imgMonth(){
   rr(g,40,300,1000,1010,40);g.fillStyle='#0f0f0f';g.fill();g.strokeStyle='#fff';g.lineWidth=3;g.stroke();
   g.strokeStyle='rgba(255,255,255,.3)';g.beginPath();g.arc(540,640,110,0,Math.PI*2);g.stroke();
   g.beginPath();g.moveTo(230,1310);g.lineTo(230,1170);g.arcTo(230,1080,330,1080,90);g.lineTo(750,1080);g.arcTo(850,1080,850,1170,90);g.lineTo(850,1310);g.stroke();
-  const cw=186;const pos=rombo(lines);const YS={'Pívot':0,'Ala':225,'Cierre':445,'Portero':690};
-  for(const[id,xp,yp,lab]of pos){const x=40+1000*xp/100-cw/2,y=315+YS[lab];
-    await drawFut(g,x,y,cw,id,st,{small:true,extra:`${stM[id].pts} PTS`});
+  const cw=186;const pos=rombo(lines);const YS={0:0,24:225,46:445,71:690};
+  for(const[id,xp,yp,lab]of pos){const x=40+1000*xp/100-cw/2,y=315+YS[yp];
+    await drawFut(g,x,y,cw,id,st,{small:true,pos:lab==='Portero'?'POR':'JUG',extra:`${stM[id].pts} PTS`});
     g.font='800 18px Archivo';g.fillStyle='#8f8f8f';g.textAlign='center';g.fillText(lab.toUpperCase(),x+cw/2,y+cw*1.416+24);g.textAlign='left'}
   return c;
 }
 // Rombo de fútbol sala: pívot arriba, dos alas, cierre y portero. Devuelve [id, x%, y%, etiqueta].
 function rombo(lines){
   const[del,med,def,por]=lines;const out=[];
-  if(del[0])out.push([del[0],50,0,'Pívot']);
-  if(med[0])out.push([med[0],med[1]?18:50,24,'Ala']);
-  if(med[1])out.push([med[1],82,24,'Ala']);
-  if(def[0])out.push([def[0],50,46,'Cierre']);
+  // Sin posiciones (de momento): 4 jugadores de campo + portero
+  if(del[0])out.push([del[0],50,0,'1º de campo']);
+  if(med[0])out.push([med[0],med[1]?18:50,24,'2º de campo']);
+  if(med[1])out.push([med[1],82,24,'3º de campo']);
+  if(def[0])out.push([def[0],50,46,'4º de campo']);
   if(por[0])out.push([por[0],50,71,'Portero']);
   return out;
 }
 function totmLines(stM,st){
   const ranked=Object.keys(stM).filter(id=>stM[id].pj>0).sort((a,b)=>stM[b].pts-stM[a].pts||st[b].level-st[a].level);
-  const slots=[['DEL',1],['MED',2],['DEF',1],['POR',1]];const used=new Set();const lines=slots.map(()=>[]);
-  slots.forEach(([pos,n],i)=>{for(const id of ranked){if(lines[i].length>=n)break;if(!used.has(id)&&(pos==='POR'?(isGK(id)||P(id)?.pos==='POR'):(P(id)?.pos===pos&&!isGK(id)))){lines[i].push(id);used.add(id)}}});
-  const rest=ranked.filter(id=>!used.has(id));
-  slots.forEach(([,n],i)=>{while(lines[i].length<n&&rest.length){const id=rest.shift();lines[i].push(id);used.add(id)}});
-  return lines;
+  // Solo dos tipos: portero (el mejor de los marcados como portero) y 4 de campo (los 4 mejores del resto, por puntos)
+  const gk=ranked.find(id=>isGK(id)||P(id)?.pos==='POR');
+  const field=ranked.filter(id=>id!==gk&&!isGK(id)).slice(0,4);
+  const left=ranked.filter(id=>id!==gk&&!field.includes(id));while(field.length<4&&left.length)field.push(left.shift());
+  const por=gk?[gk]:left.length?[left.shift()]:[];
+  return [[field[0]].filter(Boolean),field.slice(1,3),[field[3]].filter(Boolean),por];
 }
 async function shareImage(kind,arg){
   modal(`${mh('Compartir')}<div class="loading" style="padding:40px 0"><div class="ball">⚽</div><p>Preparando la imagen…</p></div>`);
