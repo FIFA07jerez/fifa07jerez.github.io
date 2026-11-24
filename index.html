@@ -387,6 +387,8 @@ td.pts{font-family:'Anton';font-size:18px}
 .farr{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;margin-left:5px;vertical-align:-3px;flex:none;color:#fff}.farr svg{width:12px;height:12px;display:block}
 .farr.up{background:#16a34a}.farr.up2{background:#65c466}.farr.eq{background:#8a8a8a}.farr.dn2{background:#f08a24}.farr.dn{background:#dc2626}
 .team .p .farr{margin-left:6px}.flegend{margin-top:8px;display:flex;align-items:center;gap:2px;flex-wrap:wrap}.flegend .farr{margin:0 2px 0 0;width:15px;height:15px}.flegend .farr svg{width:10px;height:10px}
+.pill.live{background:#16a34a;color:#fff;border-color:#16a34a;display:inline-flex;align-items:center;gap:6px;letter-spacing:.08em}.pill.live i{width:7px;height:7px;border-radius:50%;background:#fff;animation:livep 1.2s ease-in-out infinite}
+@keyframes livep{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
 .tstars{display:inline-flex;gap:1px;line-height:1;vertical-align:middle}.tstars i{position:relative;font-style:normal;color:currentColor;opacity:1}.tstars i:not(.f){color:rgba(127,127,127,.45)}.tstars i.f{color:#f5c542;text-shadow:0 1px 0 rgba(0,0,0,.25)}
 .tstars i.h::before{content:'★';position:absolute;left:0;top:0;width:50%;overflow:hidden;color:#f5c542}
 .pv-crest{display:flex;justify-content:center;margin:2px 0 4px}.pv-col .tstars{font-size:20px;margin:4px 0 2px}.pv-col{text-align:center}.pv-col .pv-p{justify-content:center}
@@ -1036,11 +1038,26 @@ function computeStatsRaw(flt){
   }
   return st;
 }
-function attrs(s){
-  const c=v=>Math.max(1,Math.min(99,Math.round(v)));
-  if(s.keeper){const imb=s.gkPJ?(s.cs+s.low)/s.gkPJ:0,enc=s.gkPJ?s.conc/s.gkPJ:0;
-    return[['IMB',c(imb*100)],['ENC',c(99-enc*9)],['PAR',s.gkAvg!=null?c(s.gkAvg*19.8):'—'],['VIC',s.pj?c(s.v/s.pj*100):'—'],['MUR',c(30+s.aw.muro*12)],['FIA',c(99-s.y*15-s.r*35)]]}
-  return[['CRK',c(30+s.aw.crack*12)],['GOL',c(35+(s.pj?s.g/s.pj:0)*22)],['DAN',c(30+s.aw.dandy*12)],['VIC',s.pj?c(s.v/s.pj*100):'—'],['DUR',c(30+s.aw.duro*12)],['FIA',c(99-s.y*15-s.r*35)]];
+// 📊 Estadísticas de la carta. Todas son POR PARTIDO y "suavizadas": con pocos partidos sales cerca de la media
+// del grupo y te vas separando según juegas (ATTR_K partidos "imaginarios" en la media). Escala 40–95.
+const ATTR_K=5,FIA_DAYS=90;
+function attrG(){return memo('attrG',()=>{const st=computeStats();let pj=0,gk=0;const t={crack:0,dandy:0,duro:0,g:0,muro:0,imb:0,conc:0};
+  for(const id in st){const s=st[id];if(!s||!s.pj)continue;pj+=s.pj;t.crack+=s.aw.crack;t.dandy+=s.aw.dandy;t.duro+=s.aw.duro;t.g+=s.g;
+    if(s.gkPJ){gk+=s.gkPJ;t.muro+=s.aw.muro;t.imb+=s.cs+s.low;t.conc+=s.conc}}
+  const r=(x,n,d)=>n?Math.max(x/n,d):d;
+  return{crack:r(t.crack,pj,.08),dandy:r(t.dandy,pj,.08),duro:r(t.duro,pj,.08),g:r(t.g,pj,.8),muro:r(t.muro,gk,.15),imb:r(t.imb,gk,.4),conc:r(t.conc,gk,4)}})}
+const sm=(cnt,n,mean)=>(cnt+ATTR_K*mean)/(n+ATTR_K);                       // media suavizada
+const sc=v=>Math.max(40,Math.min(95,Math.round(v)));
+// más es mejor, con curva que se frena: la media del grupo ≈ 65, el doble ≈ 79, el triple ≈ 86, cinco veces ≈ 92
+const up=(cnt,n,mean,k=ATTR_K)=>sc(40+55*(1-Math.exp(-((cnt+k*mean)/(n+k))/(1.65*mean))));
+function fia(id){const from=Date.now()-FIA_DAYS*864e5;const log=(P(id)?.cardLog||[]).filter(c=>!c.forgiven&&+c.at>=from);
+  const y=log.filter(c=>c.type!=='red').length,r=log.filter(c=>c.type==='red').length;return sc(95-y*12-r*30)}
+function attrs(s,id){
+  const G=attrG(),vic=sc(40+55*sm(s.v+s.e*.5,s.pj,.5));
+  if(s.keeper){const n=s.gkPJ;const enc=sm(s.conc,n,G.conc);
+    const par=s.gkRs.length?sc(40+55*((s.gkRs.reduce((x,y)=>x+y,0)+ATTR_K*3)/(s.gkRs.length+ATTR_K)-1)/4):'—';
+    return[['IMB',up(s.cs+s.low,n,G.imb)],['ENC',sc(40+55*Math.max(0,Math.min(1,1-enc/(2*G.conc))))],['PAR',par],['VIC',vic],['MUR',up(s.aw.muro,n,G.muro)],['FIA',fia(id)]]}
+  return[['CRK',up(s.aw.crack,s.pj,G.crack)],['GOL',up(s.g,s.pj,G.g)],['DAN',up(s.aw.dandy,s.pj,G.dandy)],['VIC',vic],['DUR',up(s.aw.duro,s.pj,G.duro)],['FIA',fia(id)]];
 }
 const tier=o=>o>=75?'gold':o>=65?'silver':'bronze'; // como en FIFA: oro 75+, plata 65-74, bronce <65
 function balance(ids,st){
@@ -1186,10 +1203,10 @@ function boardItems(days){
       const up=[],dn=[];const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5)-60000;
       for(const id of attendees(m)){const x=LV2[id];if(!x||x.pre[m.id]==null||x.d[m.id]==null||!P(id))continue;const a=x.pre[m.id],b=a+x.d[m.id];
         const fa=Math.floor(a*2),fb=Math.floor(b*2);if(fa===fb)continue;(fb>fa?up:dn).push([id,fa,fb])}
-      if(up.length===1)it.push({t:tt,e:'📈',x:`${nm(up[0][0])} sube y pasa del nivel <b>${(up[0][2]/2).toFixed(1)}</b>`});
-      else if(up.length)it.push({t:tt,e:'📈',x:`Suben de nivel ${names(up.map(u=>u[0]))}`});
-      if(dn.length===1)it.push({t:tt,e:'📉',x:`${nm(dn[0][0])} baja del nivel <b>${(dn[0][1]/2).toFixed(1)}</b>`,neg:1});
-      else if(dn.length)it.push({t:tt,e:'📉',x:`Bajan de nivel ${names(dn.map(u=>u[0]))}`,neg:1})}}
+      if(up.length===1)it.push({t:tt,e:'📈',x:`${nm(up[0][0])} sube de media: ya roza el <b>${lvOvr(up[0][2]/2)}</b>`});
+      else if(up.length)it.push({t:tt,e:'📈',x:`Suben de media ${names(up.map(u=>u[0]))}`});
+      if(dn.length===1)it.push({t:tt,e:'📉',x:`${nm(dn[0][0])} baja de media: por debajo del <b>${lvOvr(dn[0][1]/2)}</b>`,neg:1});
+      else if(dn.length)it.push({t:tt,e:'📉',x:`Bajan de media ${names(dn.map(u=>u[0]))}`,neg:1})}}
   // 🏅 Insignias nuevas: comparo los logros antes y después de cada partido reciente
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&mdt(m)>=from-864e5&&mdt(m)<=now).sort((a,b)=>mdt(a)-mdt(b));
   if(played.length){const list=achList().filter(a=>!/duelRecord|S\.duels/.test(String(a.t)));
@@ -1533,6 +1550,9 @@ function viewMatches(st){
   }
   return h;
 }
+// 🟢 Partido en juego: desde la hora de inicio hasta que se apunta el resultado
+const isLive=m=>!!m&&m.status!=='played'&&!isCanc(m)&&hoursTo(m)<=0;
+const LIVE_PILL='<span class="pill live"><i></i>EN JUEGO</span>';
 function dateBlock(m){const d=mdt(m);return `<div class="date"><div class="m">${MES[d.getMonth()]}</div><div class="d">${d.getDate()}</div><div class="w">${DIA[d.getDay()].slice(0,3)}</div></div>`}
 function matchCard(m,st,isNext){
   const L=lineup(m),n=m.slots||10,cnt=L.in.length,h=hoursTo(m),played=m.status==='played';
@@ -1544,7 +1564,7 @@ function matchCard(m,st,isNext){
   if(isCanc(m)){x+=`<span class="pill">${esc((m.cancel?.why||'🌧️ Cancelado').split(' ')[0])} Cancelado</span></div></div>`;return x}
   if(m.recurring&&!played)x+=`<span class="pill out">🔁 Fijo</span>`;
   if(played)x+=`<span class="pill">Final</span>`;
-  else if(h<=0)x+=`<span class="pill red">Resultado</span>`;
+  else if(h<=0)x+=LIVE_PILL;
   else if(cnt>=n)x+=`<span class="pill wht">Completo</span>`;
   else if(m.open)x+=`<span class="pill red">🔎 Buscando ${n-cnt}</span>`;
   x+=`</div>`;
@@ -1652,9 +1672,9 @@ function matchDetail(m,st){
     if(!played){
       const unassigned=manual?L.in.filter(p=>!(m.teamA||[]).includes(p)&&!(m.teamB||[]).includes(p)):[];
       if(unassigned.length)x+=`<p class="small" style="margin-top:8px;color:var(--yel)">⚠️ Sin equipo: ${unassigned.map(pname).map(esc).join(', ')}</p>`;
-      if(suggest)x+=`<p class="small muted" style="margin-top:8px">La app equilibra los equipos por nivel ★ y se ajusta sola según se apunta gente. Queda cerrado cuando se llena la lista.</p>`;
+      if(suggest)x+=`<p class="small muted" style="margin-top:8px">La app equilibra los equipos por la media y se ajusta sola según se apunta gente. Queda cerrado cuando se llena la lista.</p>`;
       else if(manual)x+=`<p class="small muted" style="margin-top:8px">La app no los toca: los cambios solo los hace quien convocó el partido o un admin.</p>`;
-      else x+=`<p class="small muted" style="margin-top:8px">Hecho por la app según el nivel ★.${canManage(m)?' Toca a un jugador para pasarlo al otro equipo.':''}</p>`;
+      else x+=`<p class="small muted" style="margin-top:8px">Hecho por la app según la media de cada uno.${canManage(m)?' Toca a un jugador para pasarlo al otro equipo.':''}</p>`;
       if(canManage(m))x+=`<div class="row" style="margin-top:10px"><button class="btn sm wht" data-act="teamEdit" data-id="${esc(m.id)}">✋ ${manual?'Editar equipos':'Hacer equipos a mano'}</button>${manual?`<button class="btn sm ghost" data-act="teamAuto" data-id="${esc(m.id)}">🤖 Volver a automático</button>`:''}</div>`;
     }
   }
@@ -1762,7 +1782,7 @@ function futCard(id,st,big=false,opt={}){
   const vayaKing=!opt.noVaya&&s.aw.vaya>0&&s.aw.vaya===Math.max(...Object.values(st).map(x=>x.aw.vaya));
   const inf=!opt.noInform&&S._inf&&S._inf.has(id);
   const t=inf?'inform':vayaKing?'vaya':tier(s.ovr);const sk=streak(s);
-  const at=attrs(s),L=at.slice(0,3),R=at.slice(3);
+  const at=attrs(s,id),L=at.slice(0,3),R=at.slice(3);
   const row=([k,v])=>`<div class="r"><b>${v}</b><span>${k}</span></div>`;
   const badge=opt.badge||(inf?'⭐ Crack de la jornada':vayaKing?'🤦 Rey del Vaya día':s.aw.crack>=3?'⭐ Leyenda':'');
   const ij=injOf(id),aw=!ij&&awayOn(id)?awayCfg(id):null;
@@ -1797,7 +1817,7 @@ function viewSquad(st){
     <p class="small muted" style="margin-top:8px">Su carta está guardada, no se ha borrado nada. Vuelve sola en cuanto entren en la app o se apunten a un partido.</p>
     ${gone.map(id=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)" data-act="profile" data-id="${esc(id)}"><span class="av" style="width:30px;height:30px">${face(id)}</span><span class="sp" style="color:var(--txt)">${esc(pname(id))}</span><span class="muted small">${ago(lastActive(id))}</span></div>`).join('')}</details>`;
   h+=`<details class="box" style="margin-top:18px"><summary style="cursor:pointer">👀 <b>Última conexión</b> de cada uno</summary>${seenListHTML()}</details>`;
-  h+=`<p class="muted small" style="margin-top:16px;line-height:1.5">Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65 · <b style="color:#f1d27a">negra y dorada</b> para el Crack de la jornada. La media sale del nivel ★ (que sube ganando y baja perdiendo) más goles, premios y victorias. CRK cracks · DAN dandys · DUR duros · GOL goles · VIC % victorias · FIA fiabilidad.</p>`;
+  h+=`<p class="muted small" style="margin-top:16px;line-height:1.5">Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65 · <b style="color:#f1d27a">negra y dorada</b> para el Crack de la jornada. La media sale de los resultados y las estrellas del vestuario. Las estadísticas son por partido: CRK cracks · GOL goles · DAN dandys · VIC victorias · DUR duros · FIA fiabilidad. Más en Info.</p>`;
   return h;
 }
 
@@ -1817,14 +1837,16 @@ function viewInfo(){
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
     <li>🟥 <b>Roja = una semana sin poder apuntarte</b> (a los partidos de los 7 días siguientes a la tarjeta).</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
-    <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ★ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
-    <li>⚖️ <b>Todos empezamos con el mismo nivel</b> (3,0; los que llegan después, con la media del grupo). A partir de ahí solo cuentan los resultados y las estrellas del vestuario. Tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
-    <li>Tu nivel ★ sube si ganas y baja si pierdes (y las estrellas de tus compañeros empujan un poco).</li>
+    <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según la media de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
+    <li>⚖️ <b>Todos empezamos igual</b> (los que llegan después, con la media del grupo). A partir de ahí tu media la deciden los resultados y las estrellas del vestuario. Tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
     <li>Después del partido, <b>el organizador apunta el resultado</b> y <b>cada uno sus goles</b> al votar (la app avisa si no cuadran y el organizador corrige).</li>
     <li>Y cada uno vota de forma <b>anónima</b> 1–5 ★ a sus compañeros más ⭐ El Crack, 🎩 El Dandy, 🪨 El Duro y 🤦 Vaya día.</li>
     <li>El buen fútbol no es bienvenido. 😄</li></ul></div>`;
-  h+=`<h2>Puntos fantasy</h2><div class="box small" style="line-height:1.8">Jugar <b>+${PTS.play}</b> · Ganar <b>+${PTS.win}</b> · Empatar <b>+${PTS.draw}</b> · Gol <b>+${PTS.goal}</b> ${astOn()?`· Asistencia <b>+${PTS.assist}</b> `:''}· ${AWARDS.map(A=>`${A.e} <b>${A.pts>0?'+':''}${A.pts}</b>`).join(' · ')} · Estrellas: <b>(media − 3) × 2</b> · 🟨 <b>${PTS.yellow}</b> · 🟥 <b>${PTS.red}</b><br>🧤 <b>Porteros fijos:</b> portería a cero <b>+${GK_PTS.cs}</b> · encajar 2 o menos <b>+${GK_PTS.low}</b> · nota de portero <b>(media − 3) × 2</b> · ${GK_AWARD.e} ${GK_AWARD.n} <b>+${GK_AWARD.pts}</b>. Su carta mide IMB (partidos encajando 2 o menos), ENC (pocos goles encajados), PAR (nota bajo palos) y MUR (premios).</div>`;
-  h+=`<h2>La media</h2><div class="box small" style="line-height:1.6">El número grande de tu carta, como en el FIFA. Tú votas a los demás con estrellas de 1 a 5 y la app lo convierte todo en la media. Cómo se mueve:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo de más nivel sube más, y perder contra uno peor baja más.</li><li>Las goleadas cuentan un poco más.</li><li>Las estrellas que te ponen tus compañeros también empujan un poco.</li><li>Los goles, los premios del vestuario y las rachas también suman (o restan).</li><li>En tus primeros ${LV.NEW_MATCHES} partidos la media se mueve más rápido, hasta que encuentra la tuya.</li></ul>La fiabilidad llega al 100% a los ${LV.FULL} partidos. Los equipos se hacen equilibrados con esta valoración.</div>`;
+  h+=`<h2>Puntos fantasy</h2><div class="box small" style="line-height:1.8">Jugar <b>+${PTS.play}</b> · Ganar <b>+${PTS.win}</b> · Empatar <b>+${PTS.draw}</b> · Gol <b>+${PTS.goal}</b> ${astOn()?`· Asistencia <b>+${PTS.assist}</b> `:''}· ${AWARDS.map(A=>`${A.e} <b>${A.pts>0?'+':''}${A.pts}</b>`).join(' · ')} · Estrellas: <b>(media − 3) × 2</b> · 🟨 <b>${PTS.yellow}</b> · 🟥 <b>${PTS.red}</b><br>🧤 <b>Porteros fijos:</b> portería a cero <b>+${GK_PTS.cs}</b> · encajar 2 o menos <b>+${GK_PTS.low}</b> · nota de portero <b>(media − 3) × 2</b> · ${GK_AWARD.e} ${GK_AWARD.n} <b>+${GK_AWARD.pts}</b>. </div>`;
+  h+=`<h2>Tu carta</h2><div class="box small" style="line-height:1.6"><b>La media</b> es el número grande, como en el FIFA:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo más fuerte sube más; perder contra uno más flojo baja más.</li><li>Las goleadas cuentan un poco más.</li><li>Las estrellas que te ponen tus compañeros (de 1 a 5) empujan hacia arriba o hacia abajo.</li><li>Un pequeño extra por goles por partido, veces Crack y % de victorias; y resta ser Vaya día a menudo.</li><li>En tus primeros ${LV.NEW_MATCHES} partidos se mueve más rápido, hasta que encuentra tu sitio. A los ${LV.FULL} partidos tu media es 100% precisa.</li></ul>
+  <b>Las 6 estadísticas</b> describen tu estilo y <b>no cambian la media</b>. Van de 40 a 95 y son <b>por partido</b>: no se inflan por jugar más. Con pocos partidos estás cerca de la media del grupo, y te vas separando según juegas.<ul class="rules" style="margin-top:6px"><li><b>CRK</b> · veces Crack por partido</li><li><b>GOL</b> · goles por partido</li><li><b>DAN</b> · veces Dandy por partido</li><li><b>VIC</b> · % de victorias (el empate cuenta medio)</li><li><b>DUR</b> · veces Duro por partido</li><li><b>FIA</b> · fiabilidad: baja con las tarjetas de los últimos ${FIA_DAYS} días</li></ul>
+  🧤 <b>Porteros:</b> IMB (partidos encajando 2 o menos) · ENC (pocos goles encajados) · PAR (nota bajo palos) · VIC · MUR (veces Muro) · FIA.<br>
+  Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65. Los equipos se hacen equilibrados con esta valoración.</div>`;
   if(isAdmin())h+=adminSection();
   {const fsx=fieldStats();const list=VENUES.map(v=>({...v,r:fsx[normV(v.n)]}));
    const extra=Object.entries(fsx).filter(([k])=>!VENUES.some(v=>normV(v.n)===k)).map(([,r])=>({n:r.name,f:'',p:'',r}));
@@ -1936,7 +1958,7 @@ function confirmBox(title,text,okLabel,onOk,danger){
   modal(`${mh(title)}<p class="muted" style="margin:8px 0 20px">${text}</p><div class="row"><button class="btn full x" style="width:auto;flex:1;height:auto;font-size:14px;color:var(--txt);background:var(--s2)">Cancelar</button><button class="btn full ${danger?'dan':'pri'}" id="ok" style="flex:1">${okLabel}</button></div>`,
   md=>md.querySelector('#ok').onclick=async()=>{md.querySelector('#ok').disabled=true;try{await onOk()}catch(e){err(e)}if(!S.keepModal)close();S.keepModal=false});
 }
-function openMatch(id){modal(`<div class="mh"><span class="pill out">Partido</span><button class="x">✕</button></div><div id="sheetBody">${matchDetail(S.matches[id],computeStats())}</div>`,null,{type:'match',id})}
+function openMatch(id){modal(`<div class="mh">${isLive(S.matches[id])?LIVE_PILL:'<span class="pill out">Partido</span>'}<button class="x">✕</button></div><div id="sheetBody">${matchDetail(S.matches[id],computeStats())}</div>`,null,{type:'match',id})}
 
 function pinPrompt(title,sub,cb){
   modal(`${mh(title)}<p class="muted">${sub}</p><div class="pin">${[0,1,2,3].map(i=>`<input inputmode="numeric" maxlength="1" pattern="[0-9]*" data-i="${i}">`).join('')}</div><p class="small muted" id="perr" style="text-align:center;min-height:18px"></p>`,
@@ -2383,7 +2405,7 @@ function profile(id){
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px">
       ${[['Media',s.ovr],['Puntos',s.pts],['PJ',s.pj],['V-E-D',`${s.v}-${s.e}-${s.d}`],['Goles',s.g],...(astOn()?[['Asist',s.a]]:[]),...AWARDS.map(A=>[A.e,s.aw[A.k]]),...(s.gkPJ?[['🧤 Bajo palos',s.gkPJ],['Encajados/p.',(s.conc/s.gkPJ).toFixed(1)],['A cero',s.cs],['Nota portero',s.gkAvg!=null?s.gkAvg.toFixed(1):'—'],[GK_AWARD.e+' Muro',s.aw.muro]]:[])].map(([k,v])=>`<div class="fact" style="padding:8px 4px"><b style="font-size:18px">${v}</b><span>${k}</span></div>`).join('')}
     </div>
-    <p class="small muted" style="margin-top:12px">Fiabilidad de la media <b style="color:var(--txt)">${s.rel}%</b> · empezó en ${lvOvr(s.lv0)} · ahora ${s.ovr}</p>
+    <p class="small muted" style="margin-top:12px">Precisión de la media <b style="color:var(--txt)">${s.rel}%</b> · empezó en ${lvOvr(s.lv0)} · ahora ${s.ovr}</p>
     <p class="small muted" style="margin-top:4px">${flagHTML(natOf(id))} ${esc(natName(natOf(id)))} · ${esc(POS[p.pos]||'Sin posición')} · Tarjetas: ${s.y?`🟨×${s.y} `:''}${s.r?`🟥×${s.r}`:''}${!s.y&&!s.r?'limpio 😇':''}${p.admin?' · <span class="pill red">Admin</span>':''}</p>
     ${(()=>{const ij=injOf(id);const mine=id===me;let x='';
       if(ij){const d=Math.floor((Date.now()-(ij.at||Date.now()))/864e5);x+=`<div class="banner" style="margin-top:12px;border-color:#e10600;background:rgba(225,6,0,.12)"><span class="e" style="color:#e10600;font-weight:900">✚</span><span class="sp"><b>${esc(ij.e||'🚑')} ${esc(ij.label)}</b><br><span class="small">${d<1?'Desde hoy':d===1?'Desde ayer':`Desde hace ${d} días`}${ij.note?` · Vuelve: ${esc(ij.note)}`:''}</span></span></div>`}
@@ -2489,7 +2511,7 @@ function cancelForm(mid){const m=S.matches[mid];if(!m)return;let why=CANCEL_WHY[
 function buscoText(m,note){const L=lineup(m),n=m.slots||10,need=n-L.in.length;const st=computeStats();
   const lv=L.in.map(p=>st[p]?.level||START_LV);const avg=lv.length?lv.reduce((a,b)=>a+b,0)/lv.length:START_LV;
   const word=avg<2.5?'tranquilo (de risas)':avg<3.5?'medio':'alto (se corre)';const org=m.createdBy&&P(m.createdBy)?m.createdBy:me;const ph=P(org)?.phone;
-  return `🔎 *Buscamos ${need} ${need===1?'jugador':'jugadores'}* para una pachanga\n\n📅 ${fmtShort(m)} a las ${m.time}h\n📍 ${m.venue||'Por decidir'} (${m.format})${m.price?`\n💶 ${m.price}€ por cabeza`:''}\n★ Nivel ${word} · media ${avg.toFixed(1)} de 5\n${note?`📝 ${note}\n`:''}\n¿Te apuntas? Escribe a ${pname(org)}${ph?` (${ph})`:''} 🙌`}
+  return `🔎 *Buscamos ${need} ${need===1?'jugador':'jugadores'}* para una pachanga\n\n📅 ${fmtShort(m)} a las ${m.time}h\n📍 ${m.venue||'Por decidir'} (${m.format})${m.price?`\n💶 ${m.price}€ por cabeza`:''}\n⚽ Nivel ${word}\n${note?`📝 ${note}\n`:''}\n¿Te apuntas? Escribe a ${pname(org)}${ph?` (${ph})`:''} 🙌`}
 function buscoForm(mid){const m=S.matches[mid];if(!m)return;
   modal(`${mh('Buscar jugadores fuera')}<p class="muted small">Mensaje para otros grupos de WhatsApp o amigos de amigos. Cuando alguien diga que sí, el organizador o un admin lo añade como invitado desde la lista.</p>
     <label>Nota (opcional)</label><input id="bn" maxlength="80" placeholder="Ej: buen rollo, nada de entradas fuertes" value="${esc(m.open?.note||'')}">
@@ -2915,7 +2937,7 @@ async function drawFut(g,x,y,w,id,st,opt={}){
   g.fillText(nmT,x+w/2,y+h*.54+w*.11);
   if(!opt.small){
     g.globalAlpha=.35;g.fillRect(x+w*.18,y+h*.65,w*.64,Math.max(1.5,w*.005));g.fillRect(x+w/2-w*.0025,y+h*.68,Math.max(1,w*.005),h*.175);g.globalAlpha=1;
-    const at=attrs(s);at.forEach(([k,v],i)=>{const col=i<3?0:1,row=i%3;const cxx=x+w*(col?.7:.3),cyy=y+h*(.725+row*.06);
+    const at=attrs(s,id);at.forEach(([k,v],i)=>{const col=i<3?0:1,row=i%3;const cxx=x+w*(col?.7:.3),cyy=y+h*(.725+row*.06);
       g.textAlign='right';g.font=`700 ${w*.095}px "Barlow Condensed"`;g.fillText(String(v),cxx-w*.01,cyy);
       g.textAlign='left';g.font=`600 ${w*.08}px "Barlow Condensed"`;g.globalAlpha=.85;g.fillText(k,cxx+w*.02,cyy);g.globalAlpha=1});
     const nc=natOf(id),sk=streak(s);let fx=x+w/2;
@@ -3175,7 +3197,7 @@ function galaView(st){
     P2('🪨','El Duro del año',id=>stS[id].aw.duro,v=>`${v} ${v===1?'vez':'veces'}`),
     P2('🤦','Vaya temporada',id=>stS[id].aw.vaya,v=>`${v} ${v===1?'vez':'veces'}`),
     P2('📅','El más fiel',id=>stS[id].pj,v=>`${v} PJ`),
-    P2('📈','Revelación',growth,v=>`+${v.toFixed(2)} ★ de nivel`),
+    P2('📈','Revelación',growth,v=>`+${Math.round(v*11)} de media`),
     P2('🟨','Tarjetero',cards,v=>`${v} ${v===1?'tarjeta':'tarjetas'}`),
   ];
   h+=`<h2>Premios por números</h2><div class="prizes">`;
@@ -3941,7 +3963,7 @@ document.addEventListener('click',e=>{
     case'recEdit':recForm(+a.dataset.i);break;
     case'myStats':myStatsForm(id);break;
     case'orgChange':orgChange(id);break;
-    case'teamAuto':confirmBox('Volver a automático','La app volverá a repartir los equipos según el nivel y se perderán los cambios hechos a mano.','🤖 Automático',async()=>{await store.doc('matches/'+id).update({teamMode:'auto',teamA:[],teamB:[],teamsBy:null});await autoTeams(id)});break;
+    case'teamAuto':confirmBox('Volver a automático','La app volverá a repartir los equipos según la media y se perderán los cambios hechos a mano.','🤖 Automático',async()=>{await store.doc('matches/'+id).update({teamMode:'auto',teamA:[],teamB:[],teamsBy:null});await autoTeams(id)});break;
     case'result':resultForm(id);break;
     case'vote':voteForm(id);break;
     case'pay':payForm(id);break;
