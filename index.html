@@ -529,7 +529,7 @@ td.pts{font-family:'Anton';font-size:18px}
 .vst.ok{width:16px;height:16px;border-radius:50%;background:#22c55e;color:#fff;font-size:10px}
 .team .p.novote{opacity:.62}
 .ov.swap,.ov.swap .md{animation:none!important}
-.team .p .o.rt{color:#f5c542;font-weight:800}.team.w .p .o.rt{color:#b8860b}
+.team .p .o.rt{font-weight:800;background:#f5c542;color:#141414;border-radius:7px;padding:1px 5px;font-size:12px;margin-left:4px}.team.w .p .o.rt{background:#141414;color:#f5c542}
 .mrate{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.mrate>div{flex:1;min-width:76px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:9px 8px;text-align:center}
 .mrate b{display:block;font-family:Anton;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mrate span{font-size:10.5px;color:var(--mut);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pnames{display:block;font-size:11.5px;color:var(--mut);margin-top:3px;line-height:1.3}
@@ -543,6 +543,8 @@ td.pts{font-family:'Anton';font-size:18px}
 .callbtn.map{background:#3b82f6;margin-right:6px}
 .busco{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px 12px;border:1px dashed var(--line2);border-radius:14px}.busco.on{border-style:solid;border-color:rgba(245,197,66,.5);background:rgba(245,197,66,.08)}
 .leg{color:var(--yel);margin-top:3px;cursor:pointer}
+.tog.cash{background:#16a34a;border-color:#16a34a;color:#fff}
+.mc.canc{opacity:.6}.canc-b{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid rgba(96,165,250,.5);background:rgba(96,165,250,.12)}
 </style>
 </head>
 <body>
@@ -619,7 +621,7 @@ const VENUES_DEF=[
   {n:'Polideportivo Guadalcacín',p:'+34 663 72 63 96',f:'Fut5',a:['guadalcacin']},
 ];
 let VENUES=VENUES_DEF; // ✏️ editable por los admins (Panel → Contenido): config/content.venues
-const FORMATS={Fut5:10,Fut6:12,Fut7:14,Fut8:16};
+const FORMATS={Fut5:10,Futsal:10,Fut6:12,Fut7:14,Fut8:16}; // Futsal: fútbol sala de pabellón (balón de bote bajo), distinto de Fut5
 let MAX_DAYS_AHEAD=7;
 const FIELD_TAGS_DEF=['👍 Buen césped','👎 Césped roto','🚿 Vestuarios bien','🤢 Vestuarios sucios','💡 Buena luz','💸 Caro','💰 Buen precio'];
 let FIELD_TAGS=FIELD_TAGS_DEF;
@@ -687,6 +689,10 @@ const INJURIES_DEF=[['🚑','Lesionado'],['🏥','En la UVI'],['🛣️','En la 
 let INJURIES=INJURIES_DEF;
 // 🟥 Sanción: con una roja no puedes apuntarte a partidos de los 7 días siguientes a la tarjeta
 let RED_BAN_DAYS=7;
+// 🟨 Las amarillas caducan a los 30 días: para la roja solo cuenta una amarilla de los últimos 30 días.
+// En puntos y rankings cuentan todas igual.
+const YELLOW_DAYS=30;
+function yellowsThisMonth(id){const from=Date.now()-YELLOW_DAYS*864e5;return (P(id)?.cardLog||[]).filter(c=>c.type==='yellow'&&!c.forgiven&&+c.at>=from).length}
 const banUntil=id=>{const reds=(P(id)?.cardLog||[]).filter(c=>c.type==='red'&&c.at).map(c=>+c.at);return reds.length?Math.max(...reds)+RED_BAN_DAYS*864e5:0};
 const bannedFor=(id,m)=>{const u=banUntil(id);return u>Date.now()&&(!m||+mdt(m)<u)};
 const fmtBan=id=>{const d=new Date(banUntil(id));return `${DIA[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`};
@@ -1058,7 +1064,7 @@ function boardItems(days){
       it.push({t:Math.max(+m.playedAt||0,+mdt(m)+2*36e5),e:'⚽',x:`<b>${TEAM.A.n} ${+m.scoreA||0}–${+m.scoreB||0} ${TEAM.B.n}</b> · ${esc(day(m))} en ${esc(m.venue||'el campo')}${cr&&P(cr)?` · ⭐ El Crack: ${nm(cr)}`:''}${(()=>{const K=keepersOf(m);const t=['A','B'].filter(k=>K[k].mode==='broom').map(k=>TEAM[k].n);const cs=['A','B'].filter(k=>K[k].mode==='fixed'&&(k==='A'?+m.scoreB:+m.scoreA)===0).map(k=>K[k].pid);
         return (t.length?` · 🧹 ${t.join(' y ')} con portero escoba`:'')+(cs.length?` · 🧤 Portería a cero de ${cs.map(nm).join(' y ')}`:'')})()}`})}
     if(m.promoted&&m.promoted.pid&&P(m.promoted.pid)&&m.promoted.at)it.push({t:m.promoted.at,e:'⬆️',x:`${nm(m.promoted.pid)} sube de la reserva y entra en el partido del ${esc(day(m))}`});
-    if(m.createdAt&&m.status!=='played'&&hoursTo(m)>-3){
+    if(m.createdAt&&m.status!=='played'&&!isCanc(m)&&hoursTo(m)>-3){
       it.push({t:m.createdAt,e:m.recurring?'🔁':'📅',x:m.recurring?`Abierto el partido fijo del <b>${esc(day(m))}</b> a las ${esc(m.time)} en ${esc(m.venue||'el campo')}. ¡A apuntarse!`
         :`${m.createdBy&&P(m.createdBy)?nm(m.createdBy)+' convoca':'Nuevo partido:'} un ${esc(m.format||'partido')} el <b>${esc(day(m))}</b> a las ${esc(m.time)} en ${esc(m.venue||'el campo')}`});
       const L=lineup(m),free=(m.slots||0)-L.in.length;
@@ -1085,6 +1091,7 @@ function boardItems(days){
         if(H?.tal)it.push({t:tt-2,e:'🍀',x:`El Talismán de ${esc(mn)}: con ${nm(H.tal.id)} en el campo su equipo ganó el ${Math.round(H.tal.w*100)}%`});
         if(H?.presi)it.push({t:tt-4,e:'🎙️',x:`El Presi de ${esc(mn)}: ${nm(H.presi.id)}, ${H.presi.n} ${H.presi.n===1?'partido montado':'partidos montados'}. Sin él no se juega`});
         if(H?.bomb)it.push({t:tt-3,e:'🚒',x:`El Bombero de ${esc(mn)}: ${nm(H.bomb.id)} salvó ${H.bomb.n} ${H.bomb.n===1?'partido':'partidos'} a última hora`})}}}
+  for(const m of Object.values(S.matches))if(isCanc(m)&&m.cancel?.at>=from&&m.cancel.at<=now)it.push({t:m.cancel.at,e:(m.cancel.why||'🌧️').split(' ')[0],x:`Cancelado el partido del ${esc(day(m))} en ${esc(m.venue||'el campo')}: ${esc((m.cancel.why||'').replace(/^\S+\s/,'')||'sin motivo')}`});
   // 👑 Nueva Leyenda del campo (al jugarse un partido, cambia la leyenda de ese campo)
   {for(const m of Object.values(S.matches)){if(m.status!=='played'||!m.venue)continue;const tt=Math.max(+m.playedAt||0,+mdt(m)+2*36e5);if(tt<from||tt>now)continue;
     const k=normV(m.venue);const before=legendsAt(+mdt(m)-1)[k],after=legendsAt(+mdt(m))[k];
@@ -1196,6 +1203,8 @@ const PAPERS=[
 const PAPER_START=Date.parse('2026-11-01T00:00:00+01:00');
 // 🎨 Ilustración de partido (SVG): jugador de espaldas celebrando, con su nombre y dorsal en la camiseta.
 // Pabellón de futsal si el partido es Fut5/Futsal; césped si es Fut6/Fut7 o más.
+const isCanc=m=>m?.status==='cancelled';
+const CANCEL_WHY=['🌧️ Lluvia','🚫 Pista no disponible','👥 Faltaba gente','🤕 Lesiones','🤷 Otro motivo'];
 const isIndoor=m=>{const f=String(m?.format||'')+' '+String(m?.venue||'');return /5|sala|futsal|pabell|indoor/i.test(f)};
 const dorsalOf=id=>+P(id)?.dorsal||((hashStr(id)%22)+2);
 function sceneSVG(o){const R=rng(hashStr(o.seed||'x'));const W=400,H=280,A=o.team!=='B';
@@ -1238,7 +1247,7 @@ function buildPaper(day){
   const d=day||new Date(),key=ymd(d);const R=rng(hashStr('paper'+key));const pick=a=>a[Math.floor(R()*a.length)];
   const {p,num}=paperOf(d);const nm=id=>esc(pname(id));const now=+d;
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&(m.teamA||[]).length&&+mdt(m)<=now).sort((a,b)=>mdt(b)-mdt(a));
-  const up=Object.values(S.matches).filter(m=>m.status!=='played'&&+mdt(m)>now).sort((a,b)=>mdt(a)-mdt(b));
+  const up=Object.values(S.matches).filter(m=>m.status!=='played'&&!isCanc(m)&&+mdt(m)>now).sort((a,b)=>mdt(a)-mdt(b));
   const st=computeStats();const ids=Object.keys(st).filter(i=>P(i)&&!P(i).guest);
   const last=played[0],recent=last&&now-+mdt(last)<4*864e5;
   // 📰 Titular: el día después del partido va la crónica. El resto de días se va rotando entre varias noticias,
@@ -1314,7 +1323,7 @@ function ivQuestions(id,wk){const R=rng(hashStr('q'+wk+id));const s=computeStats
   if(s.wS>=2)ctx.push(`${s.wS} victorias seguidas. ¿Cuál es el secreto?`);
   if(s.dry>=3)ctx.push(`Llevas ${s.dry} partidos sin marcar. ¿Problema de puntería o de vista?`);
   if(injOf(id))ctx.push(`¿Cómo va eso de estar «${injOf(id).label}»?`);
-  const nx=Object.values(S.matches).filter(m=>m.status!=='played'&&+mdt(m)>Date.now()&&S.signups[`${m.id}__${id}`]).sort((a,b)=>mdt(a)-mdt(b))[0];
+  const nx=Object.values(S.matches).filter(m=>m.status!=='played'&&!isCanc(m)&&+mdt(m)>Date.now()&&S.signups[`${m.id}__${id}`]).sort((a,b)=>mdt(a)-mdt(b))[0];
   if(nx)ctx.push(`¿Cómo afrontas el partido del ${DIA[mdt(nx).getDay()]}?`);
   if(s.keeper)ctx.push('¿Qué se siente cuando te la meten entre las piernas?');
   if(s.dW>0)ctx.push('Ya has ganado algún reto. ¿Quién será tu próxima víctima?');
@@ -1393,8 +1402,8 @@ function _render(){applyContent();
 function viewMatches(st){
   const all=Object.values(S.matches);
   const up=all.filter(m=>m.status!=='played'&&hoursTo(m)>-3).sort((a,b)=>mdt(a)-mdt(b));
-  const pend=all.filter(m=>m.status!=='played'&&hoursTo(m)<=-3).sort((a,b)=>mdt(b)-mdt(a));
-  const played=all.filter(m=>m.status==='played').sort((a,b)=>mdt(b)-mdt(a));
+  const pend=all.filter(m=>m.status!=='played'&&!isCanc(m)&&hoursTo(m)<=-3).sort((a,b)=>mdt(b)-mdt(a));
+  const played=all.filter(m=>m.status==='played'||(isCanc(m)&&hoursTo(m)<=-3)).sort((a,b)=>mdt(b)-mdt(a));
   let h='';
   if(S.conn&&!S.conn.ok)h+=`<div class="banner" style="border-color:#ffd400;background:rgba(255,212,0,.1)"><span class="e">⚠️</span><span><b>Sin conexión con la base de datos</b><br><span class="small">${S.conn.code==='reglas'?'Las reglas de Firebase no dejan leer ni escribir. Revisa la pestaña Seguridad.':`Lo que hagas no se guardará (${esc(S.conn.code)}). Recarga en un rato.`}</span></span></div>`;
   if(pushReady()&&me&&P(me)&&['ask','install'].includes(pushState())){let hid=0;try{hid=+localStorage.getItem('fifa07_pushask')||0}catch(e){}
@@ -1434,7 +1443,7 @@ function viewMatches(st){
   if(pls.length){h+=`<h2>¿Qué día? <span class="sub">${pls.length} ${pls.length===1?'encuesta':'encuestas'}</span></h2>`;pls.forEach(p=>h+=pollCard(p))}
   h+=`<h2>Próximos <span class="row"><button class="btn sm" data-act="newPoll">📊 Encuesta</button><button class="btn pri sm" data-act="newMatch">＋ Convocar</button></span></h2>`;
   if(!up.length)h+=`<div class="empty"><div class="big">🥅</div>No hay pachangas convocadas.<br>¡Convoca una y que se apunte la gente!</div>`;
-  up.forEach((m,i)=>h+=matchCard(m,st,i===0));
+  {const nx=up.find(x=>!isCanc(x));up.forEach(m=>h+=matchCard(m,st,m===nx))}
   if(pend.length){h+=`<h2>Falta resultado</h2>`;pend.forEach(m=>h+=matchCard(m,st))}
   if(played.length){
     h+=`<h2>Jugados</h2>`;
@@ -1448,9 +1457,10 @@ function matchCard(m,st,isNext){
   const L=lineup(m),n=m.slots||10,cnt=L.in.length,h=hoursTo(m),played=m.status==='played';
   const mine=me&&signupsOf(m.id).some(s=>s.pid===me);
   const inList=me&&L.in.includes(me);
-  let x=`<div class="mc ${isNext?'next':''}" data-act="open" data-id="${esc(m.id)}"><div class="top">${dateBlock(m)}
+  let x=`<div class="mc ${isNext?'next':''} ${isCanc(m)?'canc':''}" data-act="open" data-id="${esc(m.id)}"><div class="top">${dateBlock(m)}
     <div class="sp"><div class="t1">${esc(m.venue||'Campo por decidir')}</div>
     <div class="t2">${esc(m.time||'')}h · ${esc(m.format||'')}${m.price?` · ${esc(m.price)}€`:''}${!played&&h>0?` · ${whenTxt(m)}`:''}</div></div>`;
+  if(isCanc(m)){x+=`<span class="pill">${esc((m.cancel?.why||'🌧️ Cancelado').split(' ')[0])} Cancelado</span></div></div>`;return x}
   if(m.recurring&&!played)x+=`<span class="pill out">🔁 Fijo</span>`;
   if(played)x+=`<span class="pill">Final</span>`;
   else if(h<=0)x+=`<span class="pill red">Resultado</span>`;
@@ -1489,6 +1499,11 @@ function matchDetail(m,st){
   if(m.createdBy&&P(m.createdBy))x+=`<div class="org"><span class="av">${face(m.createdBy)}</span><span class="sp">👑 Organiza <b>${esc(pname(m.createdBy))}</b><br><span class="small muted">Hace los equipos y apunta el resultado</span></span>${canManage(m)&&!played?`<button class="btn sm ghost" data-act="orgChange" data-id="${esc(m.id)}">Cambiar</button>`:''}</div>`;
   x+=`<div class="facts"><div class="fact"><b>${esc(m.format||'—')}</b><span>Formato</span></div><div class="fact"><b>${played?att.length:cnt}/${n}</b><span>Jugadores</span></div><div class="fact"><b>${m.price?esc(m.price)+'€':'—'}</b><span>Por cabeza</span></div></div>`;
   if(m.notes)x+=`<p class="muted small" style="margin-top:8px">📝 ${esc(m.notes)}</p>`;
+  if(isCanc(m)){const c=m.cancel||{};
+    x+=`<div class="canc-b"><b>${esc(c.why||'🌧️ Cancelado')} · partido cancelado</b><div class="small muted" style="margin-top:3px">${c.by&&P(c.by)?`Lo canceló ${esc(pname(c.by))}. `:''}No cuenta para nada: ni puntos, ni votos, ni tarjetas. Los retos quedan nulos.</div></div>`;
+    if(signupsOf(m.id).length)x+=`<p class="small muted" style="margin-top:10px">Estaban apuntados: ${signupsOf(m.id).map(s=>s.pid).filter(P).map(pname).map(esc).join(', ')}</p>`;
+    if(canManage(m))x+=`<div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="uncancel" data-id="${esc(m.id)}">↩️ Reactivar partido</button><button class="btn sm dan" data-act="delMatch" data-id="${esc(m.id)}">🗑 Borrar</button></div>`;
+    return x}
 
   if(played){
     x+=`<div class="box" style="margin-top:14px"><div class="scoreline" style="margin:0"><div class="tw"><i class="sq w"></i>Blancos</div><div class="n">${+m.scoreA||0}</div><div class="dash">–</div><div class="n">${+m.scoreB||0}</div><div class="tb">Negros<i class="sq b"></i></div></div>`;
@@ -1536,17 +1551,17 @@ function matchDetail(m,st){
     const KP=keepersOf({...m,teamA:T.A||[],teamB:T.B||[]});
     ['A','B'].forEach(k=>{
       const arr=T[k];const kp=KP[k];
-      const MRh=played&&matchClosed(m)?matchRatings(m):null;const rav=MRh?(()=>{const v=arr.map(p=>MRh.avg[p]).filter(Boolean);return v.length?'★'+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):'★—'})():null;
-      x+=`<div class="team ${TEAM[k].c}"><div class="h"><b>${TEAM[k].n}</b><span>${kp.mode&&kp.mode!=='fixed'?`${KMODES[kp.mode].e} `:''}${rav||'⚡'+avg(arr)}</span></div>`;
+      const MRh=played&&matchClosed(m)?matchRatings(m):null;const rav=MRh?(()=>{const v=arr.map(p=>MRh.avg[p]).filter(Boolean);return v.length?'Nota '+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):'Nota —'})():null;
+      x+=`<div class="team ${TEAM[k].c}"><div class="h"><b>${TEAM[k].n}</b><span>${kp.mode&&kp.mode!=='fixed'?`${KMODES[kp.mode].e} `:''}${rav||'★'+avg(arr)}</span></div>`;
       const showV=played&&(newVoteRule(m)||Date.now()-mdt(m)<14*864e5);const MR=played&&matchClosed(m)?matchRatings(m):null;
       arr.forEach(p=>{const g=+goalsOf(m)[p]||0;const vs=showV&&P(p)&&!P(p).guest&&!(m.noShow||[]).includes(p)?(hasVoted(m.id,p)?'<span class="vst ok" title="Ya votó">✓</span>':`<span class="vst no" title="Sin votar">${voteClosed(m)?'🟨':'⏳'}</span>`):'';
         const ico=`${vs}${KP[k].mode==='fixed'&&KP[k].pid===p?'<span class="gk">🧤</span>':''}${g?`<span class="g">⚽${g>1?`<i>×${g}</i>`:''}</span>`:''}`;
-        x+=`<button class="p ${vs.includes('vst no')?'novote':''}" ${hasTeams&&!played&&canManage(m)?`data-act="swap" data-id="${esc(m.id)}" data-p="${esc(p)}"`:''}><span class="fc">${face(p)}</span><span class="pm"><span class="pn">${esc(pname(p))}</span>${ico?`<span class="ic">${ico}</span>`:''}</span>${MR?(MR.avg[p]?`<span class="o rt" title="Nota del partido">★${MR.avg[p].toFixed(1)}</span>`:'<span class="o rt">—</span>'):`<span class="o">${(st[p]?.level||2).toFixed(1)}</span>`}</button>`});
+        x+=`<button class="p ${vs.includes('vst no')?'novote':''}" ${hasTeams&&!played&&canManage(m)?`data-act="swap" data-id="${esc(m.id)}" data-p="${esc(p)}"`:''}><span class="fc">${face(p)}</span><span class="pm"><span class="pn">${esc(pname(p))}</span>${ico?`<span class="ic">${ico}</span>`:''}</span>${MR?(MR.avg[p]?`<span class="o rt" title="Nota del partido">${MR.avg[p].toFixed(1)}</span>`:'<span class="o rt">—</span>'):`<span class="o">${(st[p]?.level||2).toFixed(1)}</span>`}</button>`});
       x+=`</div>`;
     });
     x+=`</div>`;
     if(played&&matchClosed(m)){const R=matchRatings(m);if(R.votes){const best=Object.entries(R.avg).sort((a,b)=>b[1]-a[1])[0];
-      x+=`<div class="mrate"><div><b>★${R.all.toFixed(1)}</b><span>Nota media</span></div>${best&&P(best[0])?`<div><b>${esc(pname(best[0]))}</b><span>Mejor nota ★${best[1].toFixed(1)}</span></div>`:''}${R.field?`<div><b>🏟️ ${R.field.toFixed(1)}</b><span>El campo</span></div>`:''}<div><b>${R.votes}</b><span>${R.votes===1?'voto':'votos'}</span></div></div>`}}
+      x+=`<div class="mrate"><div><b>${R.all.toFixed(1)}</b><span>Nota media</span></div>${best&&P(best[0])?`<div><b>${esc(pname(best[0]))}</b><span>Mejor nota · ${best[1].toFixed(1)}</span></div>`:''}${R.field?`<div><b>🏟️ ${R.field.toFixed(1)}</b><span>El campo</span></div>`:''}<div><b>${R.votes}</b><span>${R.votes===1?'voto':'votos'}</span></div></div>`}}
     else if(played&&R0(m))x+=`<p class="small muted" style="margin-top:6px">⭐ Las notas de cada uno salen cuando voten todos${newVoteRule(m)?` o se cierre la votación (en ${hLeft(voteEnd(m))})`:''}.</p>`;
     if(played&&(newVoteRule(m)||Date.now()-mdt(m)<14*864e5)){const nm=voteMissing(m).length;x+=`<p class="small muted" style="margin-top:6px">${nm?`<span class="vst ok">✓</span> ya votó · <span class="vst no">${voteClosed(m)?'🟨':'⏳'}</span> ${voteClosed(m)?'no votó a tiempo':'falta por votar'} · <b style="color:var(--txt)">${nm} sin votar</b>`:'✓ Han votado todos 👏'}</p>`}
     {const txt=['A','B'].map(k=>{const kp=KP[k];return kp.mode?`${KMODES[kp.mode].e} ${TEAM[k].n}: ${kp.mode==='fixed'?esc(pname(kp.pid)):KMODES[kp.mode].n.toLowerCase()}`:null}).filter(Boolean);
@@ -1554,9 +1569,9 @@ function matchDetail(m,st){
     if(!played){
       const unassigned=manual?L.in.filter(p=>!(m.teamA||[]).includes(p)&&!(m.teamB||[]).includes(p)):[];
       if(unassigned.length)x+=`<p class="small" style="margin-top:8px;color:var(--yel)">⚠️ Sin equipo: ${unassigned.map(pname).map(esc).join(', ')}</p>`;
-      if(suggest)x+=`<p class="small muted" style="margin-top:8px">La app equilibra los equipos por nivel ⚡ y se ajusta sola según se apunta gente. Queda cerrado cuando se llena la lista.</p>`;
+      if(suggest)x+=`<p class="small muted" style="margin-top:8px">La app equilibra los equipos por nivel ★ y se ajusta sola según se apunta gente. Queda cerrado cuando se llena la lista.</p>`;
       else if(manual)x+=`<p class="small muted" style="margin-top:8px">La app no los toca: los cambios solo los hace quien convocó el partido o un admin.</p>`;
-      else x+=`<p class="small muted" style="margin-top:8px">Hecho por la app según el nivel ⚡.${canManage(m)?' Toca a un jugador para pasarlo al otro equipo.':''}</p>`;
+      else x+=`<p class="small muted" style="margin-top:8px">Hecho por la app según el nivel ★.${canManage(m)?' Toca a un jugador para pasarlo al otro equipo.':''}</p>`;
       if(canManage(m))x+=`<div class="row" style="margin-top:10px"><button class="btn sm wht" data-act="teamEdit" data-id="${esc(m.id)}">✋ ${manual?'Editar equipos':'Hacer equipos a mano'}</button>${manual?`<button class="btn sm ghost" data-act="teamAuto" data-id="${esc(m.id)}">🤖 Volver a automático</button>`:''}</div>`;
     }
   }
@@ -1570,7 +1585,7 @@ function matchDetail(m,st){
   if(!played){
     x+=`<h3>Apuntados · ${cnt}/${n}</h3><div class="plist">`;
     for(let i=0;i<n;i++){const p=L.in[i];
-      x+=p?`<button class="pl ${p===me?'me':''}" data-act="profile" data-id="${esc(p)}"><span class="num">${i+1}</span><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}${m.promoted?.pid===p?' <span class="pill wht">⬆️ subió</span>':''}${qTag(p,m)}</span><span class="lv">⚡${(st[p]?.level||2).toFixed(1)}</span></button>`
+      x+=p?`<button class="pl ${p===me?'me':''}" data-act="profile" data-id="${esc(p)}"><span class="num">${i+1}</span><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}${m.promoted?.pid===p?' <span class="pill wht">⬆️ subió</span>':''}${qTag(p,m)}</span><span class="lv">★${(st[p]?.level||2).toFixed(1)}</span></button>`
          :`<div class="pl empty-slot"><span class="num">${i+1}</span><span class="av" style="opacity:.3">·</span><span class="nm">Libre</span></div>`}
     x+=`</div>`;
     if(cnt<n&&hoursTo(m)>0&&(canManage(m)||(me&&L.in.includes(me)))){const need=n-cnt;
@@ -1595,6 +1610,7 @@ function matchDetail(m,st){
   if(played&&canManage(m))x+=`<button class="btn sm" data-act="result" data-id="${esc(m.id)}">✏️ Editar resultado</button>`;
   if(!played&&h>0)x+=`<button class="btn sm" data-act="cal" data-id="${esc(m.id)}">📅 Calendario</button>`;
   if(!played)x+=`<button class="btn sm" data-act="editMatch" data-id="${esc(m.id)}">✏️ Editar</button>`;
+  if(canManage(m)&&!played)x+=`<button class="btn sm" data-act="cancelMatch" data-id="${esc(m.id)}">🌧️ Cancelar</button>`;
   if(isAdmin()||m.createdBy===me)x+=`<button class="btn sm dan" data-act="delMatch" data-id="${esc(m.id)}">🗑 Borrar</button>`;
   x+=`</div>`;
   return x;
@@ -1615,7 +1631,6 @@ function monthView(st){
     <div><div style="font-family:Anton;font-size:26px;text-transform:uppercase;line-height:1">${esc(pname(top))}</div>
     <div style="font-family:Anton;font-size:30px;color:var(--red2);margin-top:6px">${t.pts} <span style="font-size:14px;font-family:Archivo;color:var(--mut)">pts</span></div>
     <div class="muted small" style="line-height:1.6">${t.pj} PJ · ${t.g} goles${astOn()?` · ${t.a} asist.`:''}<br>${AWARDS.filter(A=>t.aw[A.k]).map(A=>`${A.e}×${t.aw[A.k]}`).join('  ')}${t.avg!=null?` · ${t.avg.toFixed(1)}★`:''}</div></div></div>`;
-  h+=heroesHTML(S.month,st);
   const lines=totmLines(stM,st);
   h+=`<h2>Equipo del mes <span class="sub">Rombo</span></h2><div class="pitch rombo"><div class="area"></div>`;
   const spots=rombo(lines);
@@ -1627,6 +1642,7 @@ function monthView(st){
   else{h+=`<div class="box" style="padding:4px 10px"><table><thead><tr><th>#</th><th>Jugador</th><th>PJ</th><th>G/P</th><th>Goles</th></tr></thead><tbody>`;
     sc.forEach((id,i)=>{const s=stM[id];h+=`<tr class="${id===me?'mine':''}" data-act="profile" data-id="${esc(id)}"><td>${i+1}</td><td>${face(id)} ${esc(pname(id))}</td><td>${s.pj}</td><td>${(s.g/s.pj).toFixed(1)}</td><td class="pts">${s.g}</td></tr>`});
     h+=`</tbody></table></div>`}
+  h+=heroesHTML(S.month,st); // Los de siempre: al final del mes
   return h;
 }
 function seasonView(stAll){
@@ -1645,7 +1661,7 @@ function seasonView(stAll){
     ${AWARDS.map(A=>`<div class="lbc"><div class="tt">${A.e} ${A.n}</div>${top(r=>r.aw[A.k])}</div>`).join('')}
     <div class="lbc"><div class="tt">⚽ Pichichi</div>${top(r=>r.g)}</div>
     ${astOn()?`<div class="lbc"><div class="tt">🎯 Asistencias</div>${top(r=>r.a)}</div>`:''}
-    <div class="lbc"><div class="tt">⚡ Mejor nivel</div>${top(r=>r.level,v=>v.toFixed(2),r=>r.rs.length>=5)}</div>
+    <div class="lbc"><div class="tt">★ Mejor nivel</div>${top(r=>r.level,v=>v.toFixed(2),r=>r.rs.length>=5)}</div>
     <div class="lbc"><div class="tt">🏃 Más partidos</div>${top(r=>r.pj)}</div>
     <div class="lbc"><div class="tt">🏅 % victorias</div>${top(r=>r.pj?r.v/r.pj*100:0,v=>Math.round(v)+'%',r=>r.pj>=3)}</div>
     <div class="lbc"><div class="tt">🟨 Tarjeteros</div>${top(r=>r.y+r.r*2)}</div>
@@ -1670,7 +1686,7 @@ function futCard(id,st,big=false,opt={}){
   return `<button class="fut ${t} ${big?'big':''} ${ij?'injd':''} ${aw?'awyd':''}" ${big?'':`data-act="profile" data-id="${esc(id)}"`}><div class="fi">
     ${ij?`<div class="injb">✚ ${esc(ij.label)}</div>`:aw?`<div class="awyb">${esc(aw.e)} ${esc(aw.label)}</div>`:''}
     ${badge?`<div class="badge">${badge}</div>`:''}
-    <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(p.pos||'TODO')}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i><div class="lvl">⚡${s.level.toFixed(1)}</div>${sk&&!opt.extra?`<div class="strk">${sk.e}${sk.n}</div>`:''}</div>
+    <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(p.pos||'TODO')}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i><div class="lvl">★${s.level.toFixed(1)}</div>${sk&&!opt.extra?`<div class="strk">${sk.e}${sk.n}</div>`:''}</div>
     <div class="face ${okPhoto(p.photo)?'hasph':''}">${face(id)}</div>
     <div class="nm">${esc(p.name)}</div>${opt.extra?'':'<div class="sep"></div>'}
     ${opt.extra?opt.extra:`<div class="st"><div class="col">${L.map(row).join('')}</div><div class="dv"></div><div class="col">${R.map(row).join('')}</div></div>`}
@@ -1697,7 +1713,7 @@ function viewSquad(st){
     <p class="small muted" style="margin-top:8px">Su carta está guardada, no se ha borrado nada. Vuelve sola en cuanto entren en la app o se apunten a un partido.</p>
     ${gone.map(id=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)" data-act="profile" data-id="${esc(id)}"><span class="av" style="width:30px;height:30px">${face(id)}</span><span class="sp" style="color:var(--txt)">${esc(pname(id))}</span><span class="muted small">${ago(lastActive(id))}</span></div>`).join('')}</details>`;
   h+=`<details class="box" style="margin-top:18px"><summary style="cursor:pointer">👀 <b>Última conexión</b> de cada uno</summary>${seenListHTML()}</details>`;
-  h+=`<p class="muted small" style="margin-top:16px;line-height:1.5">Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65 · <b style="color:#f1d27a">negra y dorada</b> para el Crack de la jornada. La media sale del nivel ⚡ (que sube ganando y baja perdiendo) más goles, premios y victorias. CRK cracks · DAN dandys · DUR duros · GOL goles · VIC % victorias · FIA fiabilidad.</p>`;
+  h+=`<p class="muted small" style="margin-top:16px;line-height:1.5">Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65 · <b style="color:#f1d27a">negra y dorada</b> para el Crack de la jornada. La media sale del nivel ★ (que sube ganando y baja perdiendo) más goles, premios y victorias. CRK cracks · DAN dandys · DUR duros · GOL goles · VIC % victorias · FIA fiabilidad.</p>`;
   return h;
 }
 
@@ -1709,27 +1725,28 @@ function viewInfo(){
     <li><b>Grupo privado:</b> se entra con aprobación del admin o con invitación. No pases el enlace sin hablarlo.</li>
     <li>Cada uno se apunta <b>a sí mismo</b>. Si te apuntas, <b>vienes</b>.</li>
     <li>🗳️ <b>Hay ${VOTE_HOURS} h para votar</b> desde que se mete el resultado. Mientras tanto, no te puedes apuntar al siguiente sin votar.</li>
-    <li>🟨 <b>Si no votas a tiempo:</b> amarilla (si ya tenías una, roja) y vas <b>a la cola</b> en tu próximo partido.</li>
+    <li>🟨 <b>Si no votas a tiempo:</b> amarilla (si ya tenías una en los últimos 30 días, roja) y vas <b>a la cola</b> en tu próximo partido.</li>
     <li>⭐ <b>Si te quedaste de reserva</b> en el último partido, en el siguiente tienes prioridad para entrar <b>solo si te apuntas en las primeras ${PRIO_HOURS} h</b> desde que se abre el partido. Si te apuntas más tarde, vas por orden de llegada como todos.</li>
     <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y equipo se cierran al acabar el partido; los de nota y caño, a las 24 h.</li>
-    <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides, 🟥).</li>
+    <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides en menos de 30 días, 🟥). Si eres reserva y te bajas, no pasa nada.</li>
+    <li>🧽 <b>Las amarillas caducan a los 30 días:</b> para la roja solo cuenta otra amarilla de los últimos 30 días. En puntos y rankings cuentan todas.</li>
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
     <li>🟥 <b>Roja = una semana sin poder apuntarte</b> (a los partidos de los 7 días siguientes a la tarjeta).</li>
     <li>Los primeros en apuntarse juegan; el resto va a <b>reserva</b> y sube solo si alguien se baja.</li>
-    <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ⚡ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
+    <li>La app reparte sola a los apuntados en <b>Blancos</b> y <b>Negros</b> según el nivel ★ de cada uno. El reparto queda cerrado cuando se llena la lista. Quien convoca el partido (o un admin) puede hacerlos o retocarlos a mano.</li>
     <li>⚖️ <b>Todos empezamos con el mismo nivel</b> (3,0; los que llegan después, con la media del grupo). A partir de ahí solo cuentan los resultados y las estrellas del vestuario. Tus goles se pueden apuntar hasta <b>48 h</b> después de cada partido.</li>
-    <li>Tu nivel ⚡ sube si ganas y baja si pierdes (y las estrellas de tus compañeros empujan un poco).</li>
+    <li>Tu nivel ★ sube si ganas y baja si pierdes (y las estrellas de tus compañeros empujan un poco).</li>
     <li>Después del partido, <b>el organizador apunta el resultado</b> y <b>cada uno sus goles</b> al votar (la app avisa si no cuadran y el organizador corrige).</li>
     <li>Y cada uno vota de forma <b>anónima</b> 1–5 ★ a sus compañeros más ⭐ El Crack, 🎩 El Dandy, 🪨 El Duro y 🤦 Vaya día.</li>
     <li>El buen fútbol no es bienvenido. 😄</li></ul></div>`;
   h+=`<h2>Puntos fantasy</h2><div class="box small" style="line-height:1.8">Jugar <b>+${PTS.play}</b> · Ganar <b>+${PTS.win}</b> · Empatar <b>+${PTS.draw}</b> · Gol <b>+${PTS.goal}</b> ${astOn()?`· Asistencia <b>+${PTS.assist}</b> `:''}· ${AWARDS.map(A=>`${A.e} <b>${A.pts>0?'+':''}${A.pts}</b>`).join(' · ')} · Estrellas: <b>(media − 3) × 2</b> · 🟨 <b>${PTS.yellow}</b> · 🟥 <b>${PTS.red}</b><br>🧤 <b>Porteros fijos:</b> portería a cero <b>+${GK_PTS.cs}</b> · encajar 2 o menos <b>+${GK_PTS.low}</b> · nota de portero <b>(media − 3) × 2</b> · ${GK_AWARD.e} ${GK_AWARD.n} <b>+${GK_AWARD.pts}</b>. Su carta mide IMB (partidos encajando 2 o menos), ENC (pocos goles encajados), PAR (nota bajo palos) y MUR (premios).</div>`;
-  h+=`<h2>Nivel ⚡</h2><div class="box small" style="line-height:1.6">Como en Playtomic. Al registrarte te pones de 1 a 5 ★ según el nivel que crees que tienes. Después:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo de más nivel sube más, y perder contra uno peor baja más.</li><li>Las goleadas cuentan un poco más.</li><li>Las estrellas que te ponen tus compañeros también empujan un poco.</li><li>En tus primeros ${LV.NEW_MATCHES} partidos el nivel se mueve más rápido, hasta que encuentra el tuyo.</li></ul>La fiabilidad llega al 100% a los ${LV.FULL} partidos.</div>`;
+  h+=`<h2>Nivel ★</h2><div class="box small" style="line-height:1.6">Como en Playtomic. Al registrarte te pones de 1 a 5 ★ según el nivel que crees que tienes. Después:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo de más nivel sube más, y perder contra uno peor baja más.</li><li>Las goleadas cuentan un poco más.</li><li>Las estrellas que te ponen tus compañeros también empujan un poco.</li><li>En tus primeros ${LV.NEW_MATCHES} partidos el nivel se mueve más rápido, hasta que encuentra el tuyo.</li></ul>La fiabilidad llega al 100% a los ${LV.FULL} partidos.</div>`;
   if(isAdmin())h+=adminSection();
   {const fsx=fieldStats();const list=VENUES.map(v=>({...v,r:fsx[normV(v.n)]}));
    const extra=Object.entries(fsx).filter(([k])=>!VENUES.some(v=>normV(v.n)===k)).map(([,r])=>({n:r.name,f:'',p:'',r}));
    const all=[...list,...extra].sort((a,b)=>(b.r?.avg||0)-(a.r?.avg||0)||(b.r?.n||0)-(a.r?.n||0));
    h+=`<h2>Campos <span class="sub">📍 Jerez · ranking por votos</span></h2><div class="box" style="padding:2px 16px">`;
-   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div>${(()=>{const lg=legendOf(v.n);return lg&&P(lg.id)?`<div class="small leg" data-act="profile" data-id="${esc(lg.id)}">👑 Leyenda: <b>${esc(pname(lg.id))}</b> · ${lg.n} partidos en ${LEG_DAYS} días</div>`:''})()}</div>${v.u?`<a class="callbtn map" href="${esc(v.u)}" target="_blank" rel="noopener" aria-label="Cómo llegar a ${esc(v.n)}">📍</a>`:''}${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
+   all.forEach((v,i)=>{h+=`<div class="venue"><div class="sp"><b>${v.r&&i<3&&v.r.n>=3?['🥇','🥈','🥉'][i]+' ':''}${esc(v.n)}</b>${v.r?` <span style="color:var(--yel);font-weight:800;white-space:nowrap">★ ${v.r.avg.toFixed(1)}</span> <span class="muted small">(${v.r.n})</span>`:''}<div class="muted small">${esc(v.f||'')}${v.r?(v.r.top.length?`${v.f?' · ':''}${v.r.top.map(esc).join(' ')}`:''):`${v.f?' · ':''}sin valorar`}</div>${(()=>{const lg=legendOf(v.n);return lg&&P(lg.id)?`<div class="small leg" data-act="profile" data-id="${esc(lg.id)}">👑 Leyenda: <b>${esc(pname(lg.id))}</b> · ${lg.n} partidos en ${LEG_DAYS} días</div>`:''})()}</div><a class="callbtn map" href="${esc(v.u||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.n+' Jerez de la Frontera')}`)}" target="_blank" rel="noopener" aria-label="Cómo llegar a ${esc(v.n)}">📍</a>${v.p?`<a class="callbtn" href="tel:${v.p.replace(/\s/g,'')}" aria-label="Llamar a ${esc(v.n)}">📞</a>`:''}</div>`});
    h+=`</div><p class="small muted" style="margin-top:6px">Las notas salen de lo que vota cada uno al puntuar el partido (es anónimo). 👑 La Leyenda de cada campo es el que más partidos ha jugado ahí en los últimos ${LEG_DAYS} días: no gana el mejor, gana el que más va.</p>`}
   h+=`<h2>Buzón de sugerencias</h2><div class="box"><p class="small muted">¿Algo falla, no se entiende o se te ocurre una idea? Escríbelo aquí.</p><textarea id="fbt" rows="3" maxlength="500" placeholder="Ej: al apuntarme no me sale…" style="margin-top:10px"></textarea><button class="btn pri full" style="margin-top:10px" data-act="fbSend">Enviar sugerencia</button></div>`;
   if(isAdmin()){const fl=Object.values(S.feedback).sort((a,b)=>(b.at||0)-(a.at||0));
@@ -1970,6 +1987,7 @@ function matchForm(id,pre){
 /* ============ ACCIONES ============ */
 async function join(mid,pid){
   if(!pid){toast('Primero dinos quién eres');pickMe();return}
+  if(isCanc(S.matches[mid])){toast('Este partido está cancelado 🌧️');return}
   if(S.signups[`${mid}__${pid}`])return;
   if(bannedFor(pid,S.matches[mid])&&!(isAdmin()&&pid!==me)){modal(`${mh('🟥 Sancionado')}<p>${pid===me?'Tienes':esc(pname(pid))+' tiene'} una <b>roja</b>: una semana sin poder apuntarse, hasta el <b>${esc(fmtBan(pid))}</b>.</p><p class="small muted" style="margin-top:8px">Así funciona: roja = ${RED_BAN_DAYS} días sin jugar. Si crees que es un error, habla con un admin (puede perdonar la tarjeta).</p>`);return}
   if(pid===me){const pv=pendingVote(me);if(pv){modal(`${mh('Primero, a votar 🗳️')}<p class="muted">Para apuntarte tienes que puntuar tu último partido: <b style="color:var(--txt)">${esc(fmtShort(pv))} en ${esc(pv.venue||'')}</b>. Es un minuto y es anónimo.</p><button class="btn pri full" style="margin-top:16px" data-act="vote" data-id="${esc(pv.id)}">⭐ Puntuar ahora</button>`);return}}
@@ -1987,7 +2005,7 @@ function leave(mid){
   const m=S.matches[mid];const h=hoursTo(m);const L=lineup(m);
   const starter=L.in.includes(me),late=h<24&&h>0&&starter;
   const up=starter&&L.res.length?L.res[0]:null;
-  const p=P(me);const isRed=(p?.yellow||0)>=1;const card=isRed?'🟥 roja':'🟨 amarilla';
+  const p=P(me);const isRed=yellowsThisMonth(me)>=1;const card=isRed?'🟥 roja':'🟨 amarilla';
   confirmBox('¿Te bajas?',late?`Quedan menos de 24h. Según las normas te llevas <b>${card}</b>.`:`Te quitamos de la lista.${up?` Sube <b>${esc(pname(up))}</b> desde la reserva.`:''}`,late?`Sí, me la como`:'Desapuntarme',async()=>{
     await store.doc(`signups/${mid}__${me}`).delete();autoTeams(mid);
     if(up)await store.doc('matches/'+mid).update({promoted:{pid:up,at:Date.now(),by:me}});
@@ -2045,7 +2063,7 @@ async function makeTeams(mid,shuffle){
     const opts=[];for(const a of T.A)for(const b of T.B){if(isGK(a)||isGK(b))continue;const nd=Math.abs((T.sa-T.sb)-2*(lv(a)-lv(b)));if(nd<=Math.abs(T.sa-T.sb)+0.5)opts.push([a,b])}
     if(opts.length){const[a,b]=opts[Math.floor(Math.random()*opts.length)];T.A=T.A.map(x=>x===a?b:x);T.B=T.B.map(x=>x===b?a:x);T.sa+=lv(b)-lv(a);T.sb+=lv(a)-lv(b)}
   }
-  try{await store.doc('matches/'+mid).update({teamA:T.A,teamB:T.B});toast(`Reparto hecho ⚖️ ⚡${(T.sa/(T.A.length||1)).toFixed(2)} vs ${(T.sb/(T.B.length||1)).toFixed(2)}`)}catch(e){err(e)}
+  try{await store.doc('matches/'+mid).update({teamA:T.A,teamB:T.B});toast(`Reparto hecho ⚖️ ★${(T.sa/(T.A.length||1)).toFixed(2)} vs ${(T.sb/(T.B.length||1)).toFixed(2)}`)}catch(e){err(e)}
 }
 // Reparto automático: con la lista completa queda fijado; si se libera una plaza, vuelve a ser provisional.
 async function autoTeams(mid){
@@ -2082,9 +2100,9 @@ function teamEditor(mid){
     const A=L.in.filter(p=>team[p]==='A'),B=L.in.filter(p=>team[p]==='B'),N=L.in.filter(p=>!team[p]);
     const av=t=>t.length?(t.reduce((s,p)=>s+lv(p),0)/t.length).toFixed(2):'—';
     const eA=A.length&&B.length?Math.round(100/(1+Math.pow(10,(av(B)-av(A))/LV.SCALE))):50;
-    md.querySelector('#tsum').innerHTML=`<div class="team w" style="text-align:center"><b style="font-family:Anton;font-size:18px">BLANCOS</b><div class="small">${A.length} · ⚡${av(A)}</div></div><div class="team b" style="text-align:center"><b style="font-family:Anton;font-size:18px">NEGROS</b><div class="small">${B.length} · ⚡${av(B)}</div></div>`;
+    md.querySelector('#tsum').innerHTML=`<div class="team w" style="text-align:center"><b style="font-family:Anton;font-size:18px">BLANCOS</b><div class="small">${A.length} · ★${av(A)}</div></div><div class="team b" style="text-align:center"><b style="font-family:Anton;font-size:18px">NEGROS</b><div class="small">${B.length} · ★${av(B)}</div></div>`;
     md.querySelector('#tbal').textContent=A.length&&B.length?`Pronóstico: Blancos ${eA}% – ${100-eA}% Negros${Math.abs(A.length-B.length)>1?' · ⚠️ distinto número de jugadores':''}`:'Reparte a todos los jugadores';
-    md.querySelector('#trows').innerHTML=L.in.slice().sort((a,b)=>lv(b)-lv(a)).map(p=>`<div class="prow"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))} <span class="muted small">⚡${lv(p).toFixed(1)}</span></span>
+    md.querySelector('#trows').innerHTML=L.in.slice().sort((a,b)=>lv(b)-lv(a)).map(p=>`<div class="prow"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))} <span class="muted small">★${lv(p).toFixed(1)}</span></span>
       <div class="tsel"><button class="${team[p]==='A'?'onw':''}" data-p="${esc(p)}" data-t="A">Blanco</button><button class="${team[p]==='B'?'onb':''}" data-p="${esc(p)}" data-t="B">Negro</button></div></div>`).join('')+(N.length?`<p class="small" style="color:var(--yel);margin-top:8px">⚠️ Sin equipo: ${N.map(pname).map(esc).join(', ')}</p>`:'');
     md.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{team[b.dataset.p]=b.dataset.t;draw(md)});
   };
@@ -2257,15 +2275,17 @@ function voteForm(mid){
 
 function payForm(mid){
   const m=S.matches[mid];const att=attendees(m);
-  const draw=md=>{const paid=m.paid||{};const n=att.filter(p=>paid[p]).length;
-    md.querySelector('#sum').innerHTML=`<b style="font-family:Anton;font-size:26px">${n}/${att.length}</b> <span class="muted">han pagado · ${(n*(+m.price||0)).toFixed(2).replace('.00','')}€ de ${(att.length*(+m.price||0)).toFixed(2).replace('.00','')}€</span>`;
-    md.querySelector('#pl').innerHTML=att.map(p=>`<div class="pay"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}${p===me?' (tú)':''}</span><button class="tog ${paid[p]?'on':''}" data-p="${esc(p)}">${paid[p]?'✓ Pagado':'Debe'}</button></div>`).join('');
-    md.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{const np={...(S.matches[mid].paid||{})};np[b.dataset.p]=!np[b.dataset.p];
-      if(!np[b.dataset.p])delete np[b.dataset.p];m.paid=np;draw(md);try{await store.doc('matches/'+mid).update({paid:np})}catch(e){err(e)}});
+  // Cada toque cambia: Debe → 📲 Bizum → 💵 Efectivo → Debe ("true" de antes = Bizum)
+  const how=v=>v==='cash'?'cash':v?'bizum':null;
+  const draw=md=>{const paid=m.paid||{};const n=att.filter(p=>paid[p]).length;const nc=att.filter(p=>how(paid[p])==='cash').length;
+    md.querySelector('#sum').innerHTML=`<b style="font-family:Anton;font-size:26px">${n}/${att.length}</b> <span class="muted">han pagado · ${(n*(+m.price||0)).toFixed(2).replace('.00','')}€ de ${(att.length*(+m.price||0)).toFixed(2).replace('.00','')}€</span>${n?`<div class="small muted" style="margin-top:2px">📲 ${n-nc} por Bizum · 💵 ${nc} en efectivo</div>`:''}`;
+    md.querySelector('#pl').innerHTML=att.map(p=>{const w=how(paid[p]);return `<div class="pay"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}${p===me?' (tú)':''}</span><button class="tog ${w?'on':''} ${w==='cash'?'cash':''}" data-p="${esc(p)}">${w==='cash'?'💵 Efectivo':w?'📲 Bizum':'Debe'}</button></div>`}).join('');
+    md.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{const np={...(S.matches[mid].paid||{})};const w=how(np[b.dataset.p]);
+      if(!w)np[b.dataset.p]=true;else if(w==='bizum')np[b.dataset.p]='cash';else delete np[b.dataset.p];m.paid=np;draw(md);try{await store.doc('matches/'+mid).update({paid:np})}catch(e){err(e)}});
   };
   modal(`${mh('Pagos')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')} · ${esc(m.price)}€ por cabeza</p>
     ${m.bizum?`<div class="box row" style="margin-top:12px"><span class="sp"><span class="small muted">Bizum a</span><br><b style="font-size:18px;letter-spacing:.02em">${esc(m.bizum)}</b></span><button class="btn sm" id="cpb">Copiar</button></div>`:''}
-    <div id="sum" style="margin:16px 0 4px"></div><div id="pl"></div>`,
+    <div id="sum" style="margin:16px 0 4px"></div><p class="small muted" style="margin:0 0 6px">Toca para cambiar: Debe → 📲 Bizum → 💵 Efectivo.</p><div id="pl"></div>`,
   md=>{draw(md);const c=md.querySelector('#cpb');if(c)c.onclick=()=>copyText(m.bizum.replace(/\s/g,''),'Número copiado')});
 }
 const withoutId=o=>{const{id,...r}=o;return r};
@@ -2290,7 +2310,7 @@ function profile(id){
     ${(()=>{const lv=legendVenues(id);return lv.length?`<p class="small" style="margin-top:10px;color:var(--yel)">👑 Leyenda de ${lv.map(esc).join(', ')}</p>`:''})()}
     ${!P(id).guest?`<p class="small muted" style="margin-top:10px">👀 Última conexión: <b style="color:var(--txt)">${esc(seenAgo(id))}</b></p>`:''}
     ${(()=>{const dr=duelRecord(id);return (dr.w+dr.l)?`<p class="small muted" style="margin-top:6px">⚔️ Duelos: <b style="color:var(--txt)">${dr.w} ganados · ${dr.l} perdidos</b>${dr.owe?` · debe ${dr.owe} 🍺💶`:''}${dr.owed?` · le deben ${dr.owed}`:''}</p>`:''})()}
-    ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
+    ${(()=>{const up=me&&id!==me?Object.values(S.matches).filter(mm=>mm.status!=='played'&&!isCanc(mm)&&hoursTo(mm)>0&&lineup(mm).in.includes(me)&&lineup(mm).in.includes(id)).sort((a,b)=>mdt(a)-mdt(b))[0]:null;return up?`<button class="btn full" style="margin-top:10px" data-act="duelNew" data-id="${esc(up.id)}" data-rival="${esc(id)}">⚔️ Retar a ${esc(p.name)} (${esc(fmtShort(up))})</button>`:''})()}
     ${(()=>{const sk=streak(s);return sk?`<div class="banner" style="margin-top:12px"><span class="e">${sk.e}</span><span><b>${sk.t[0].toUpperCase()+sk.t.slice(1)}</b></span></div>`:''})()}
     <div class="row" style="margin-top:14px"><button class="btn wht full" style="flex:1" data-act="share" data-kind="card" data-id="${esc(id)}">📸 Compartir carta</button>${(()=>{const y=seasonOfDate(new Date());return wrapOn()&&s.hist.some(x=>seasonOf(x.m)===y)?`<button class="btn pri" style="flex:1" data-act="wrapped" data-id="${esc(id)}">🎬 ${id===me?'Mi':'Su'} temporada</button>`:''})()}</div>
     ${kitOn()&&id===me&&!p.kit?`<button class="btn full" style="margin-top:8px" data-act="kitOrder">👕 Pedir mi equipación</button>`:''}
@@ -2371,10 +2391,18 @@ function shrinkImage(file,size){
   });
 }
 // 🔎 Busco jugadores (idea de los partidos abiertos de Playtomic): mensaje para fuera del grupo con día, campo, plazas y nivel.
+function cancelForm(mid){const m=S.matches[mid];if(!m)return;let why=CANCEL_WHY[0];
+  modal(`${mh('Cancelar partido')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}. No se borra: queda como cancelado y no cuenta para nada (ni puntos, ni votos, ni tarjetas). Se puede reactivar.</p>
+    <h3>¿Por qué?</h3><div class="opts" id="cw">${CANCEL_WHY.map((w,i)=>`<button class="opt ${i===0?'on':''}" data-v="${esc(w)}">${esc(w)}</button>`).join('')}</div>
+    <button class="btn pri full" id="sv" style="margin-top:18px">🌧️ Cancelar partido</button>`,
+  md=>{md.querySelectorAll('#cw .opt').forEach(b=>b.onclick=()=>{why=b.dataset.v;md.querySelectorAll('#cw .opt').forEach(x=>x.classList.toggle('on',x===b))});
+    md.querySelector('#sv').onclick=async e=>{e.target.disabled=true;try{await store.doc('matches/'+mid).update({status:'cancelled',cancel:{why,by:me,at:Date.now()},open:null});close();
+      const txt=`${why.split(' ')[0]} *Partido cancelado*: ${fmtShort(m)} a las ${m.time}h en ${m.venue||'el campo'}. Motivo: ${why.replace(/^\S+\s/,'')}. ¡Otra vez será!`;
+      modal(`${mh('Cancelado')}<p class="muted">Avisa al grupo:</p><textarea rows="3" readonly style="margin-top:10px">${esc(txt)}</textarea><button class="btn pri full" id="cp" style="margin-top:12px">📲 Copiar aviso</button>`,md2=>md2.querySelector('#cp').onclick=()=>copyText(txt,'Copiado 📲',md2.querySelector('textarea')))}catch(x){e.target.disabled=false;err(x)}}})}
 function buscoText(m,note){const L=lineup(m),n=m.slots||10,need=n-L.in.length;const st=computeStats();
   const lv=L.in.map(p=>st[p]?.level||START_LV);const avg=lv.length?lv.reduce((a,b)=>a+b,0)/lv.length:START_LV;
   const word=avg<2.5?'tranquilo (de risas)':avg<3.5?'medio':'alto (se corre)';const org=m.createdBy&&P(m.createdBy)?m.createdBy:me;const ph=P(org)?.phone;
-  return `🔎 *Buscamos ${need} ${need===1?'jugador':'jugadores'}* para una pachanga\n\n📅 ${fmtShort(m)} a las ${m.time}h\n📍 ${m.venue||'Por decidir'} (${m.format})${m.price?`\n💶 ${m.price}€ por cabeza`:''}\n⚡ Nivel ${word} · media ${avg.toFixed(1)} de 5\n${note?`📝 ${note}\n`:''}\n¿Te apuntas? Escribe a ${pname(org)}${ph?` (${ph})`:''} 🙌`}
+  return `🔎 *Buscamos ${need} ${need===1?'jugador':'jugadores'}* para una pachanga\n\n📅 ${fmtShort(m)} a las ${m.time}h\n📍 ${m.venue||'Por decidir'} (${m.format})${m.price?`\n💶 ${m.price}€ por cabeza`:''}\n★ Nivel ${word} · media ${avg.toFixed(1)} de 5\n${note?`📝 ${note}\n`:''}\n¿Te apuntas? Escribe a ${pname(org)}${ph?` (${ph})`:''} 🙌`}
 function buscoForm(mid){const m=S.matches[mid];if(!m)return;
   modal(`${mh('Buscar jugadores fuera')}<p class="muted small">Mensaje para otros grupos de WhatsApp o amigos de amigos. Cuando alguien diga que sí, el organizador o un admin lo añade como invitado desde la lista.</p>
     <label>Nota (opcional)</label><input id="bn" maxlength="80" placeholder="Ej: buen rollo, nada de entradas fuertes" value="${esc(m.open?.note||'')}">
@@ -2793,7 +2821,7 @@ async function drawFut(g,x,y,w,id,st,opt={}){
   g.font=`${w*.22}px Anton`;g.fillText(String(s.ovr),lx,y+h*.12+w*.2);
   g.font=`700 ${w*.095}px "Barlow Condensed"`;g.fillText(p.pos||'TODO',lx,y+h*.12+w*.31);
   g.globalAlpha=.35;g.fillRect(lx-w*.065,y+h*.12+w*.345,w*.13,Math.max(1.5,w*.006));g.globalAlpha=1;
-  g.font=`700 ${w*.08}px "Barlow Condensed"`;g.fillText('⚡'+s.level.toFixed(1),lx,y+h*.12+w*.44);
+  g.font=`700 ${w*.08}px "Barlow Condensed"`;g.fillText('★'+s.level.toFixed(1),lx,y+h*.12+w*.44);
   const cx=x+w*.64,cy=y+h*.09+w*.285,r=w*.285;
   if(okPhoto(p.photo)){try{const im=await loadImg(p.photo);g.save();const rg=g.createRadialGradient(cx,cy,r*.6,cx,cy,r);g.beginPath();g.arc(cx,cy,r*.98,0,Math.PI*2);g.clip();g.drawImage(im,cx-r,cy-r,r*2,r*2);g.restore()}catch(e){}}
   else{g.font=`${w*(opt.small?.32:.38)}px serif`;g.textBaseline='middle';g.fillText(p.emoji||'⚽',cx,cy);g.textBaseline='alphabetic'}
@@ -2973,7 +3001,7 @@ function galaView(st){
     P2('🪨','El Duro del año',id=>stS[id].aw.duro,v=>`${v} ${v===1?'vez':'veces'}`),
     P2('🤦','Vaya temporada',id=>stS[id].aw.vaya,v=>`${v} ${v===1?'vez':'veces'}`),
     P2('📅','El más fiel',id=>stS[id].pj,v=>`${v} PJ`),
-    P2('📈','Revelación',growth,v=>`+${v.toFixed(2)} ⚡ de nivel`),
+    P2('📈','Revelación',growth,v=>`+${v.toFixed(2)} ★ de nivel`),
     P2('🟨','Tarjetero',cards,v=>`${v} ${v===1?'tarjeta':'tarjetas'}`),
   ];
   h+=`<h2>Premios por números</h2><div class="prizes">`;
@@ -3019,7 +3047,7 @@ function previewHtml(m,T,st){
   const hot=t=>t.map(p=>[p,streak(st[p])]).filter(([,s])=>s&&(s.e==='🔥'||s.e==='⚽'));
   const cold=t=>t.map(p=>[p,streak(st[p])]).filter(([,s])=>s&&(s.e==='🥶'||s.e==='🧊'));
   const col=(k,t)=>{const s=star(t),h=hot(t),c=cold(t);return`<div class="pv-col ${TEAM[k].c}">
-    <div class="pv-t">${TEAM[k].n}</div><div class="pv-lv">⚡${avg(t).toFixed(2)}</div>
+    <div class="pv-t">${TEAM[k].n}</div><div class="pv-lv">★${avg(t).toFixed(2)}</div>
     <div class="pv-k">A seguir</div><div class="pv-p">${face(s)} ${esc(pname(s))}</div>
     ${h.length?`<div class="pv-k">En racha</div>${h.slice(0,2).map(([p,s])=>`<div class="pv-p">${s.e}${s.n} ${esc(pname(p))}</div>`).join('')}`:''}
     ${c.length?`<div class="pv-k">En crisis</div>${c.slice(0,1).map(([p,s])=>`<div class="pv-p">${s.e}${s.n} ${esc(pname(p))}</div>`).join('')}`:''}</div>`};
@@ -3206,7 +3234,7 @@ function wrappedSlides(pid,y){
   sl.push({c:'white',h:`<div class="wk">Goles</div><div class="wbig">${s.g}</div><div class="wsub">${s.g===1?'gol':'goles'}${astOn()?` · ${s.a} asistencias`:''}</div>${s.g?`<div class="wline">Tu mejor noche: <b>${W.goalM.g} ${W.goalM.g===1?'gol':'goles'}</b> en ${esc(W.goalM.m.venue||'')} el ${esc(fmtShort(W.goalM.m))}.</div><div class="wline">Nº ${W.gpos} en la tabla de goleadores.</div>`:'<div class="wline">Cero goles. Lo tuyo es otra cosa. No sabemos el qué.</div>'}`});
   sl.push({c:'black',h:`<div class="wk">Lo que opina el vestuario</div><div class="wawards">${AWARDS.map(A=>`<div><span>${A.e}</span><b>${s.aw[A.k]}</b><small>${A.n}</small></div>`).join('')}</div><div class="wline">${s.avg!=null?`Te pusieron de media <b>${s.avg.toFixed(1)} ★</b>.`:''} ${s.aw.crack>s.aw.vaya?'Te quieren. O te temen.':s.aw.vaya>s.aw.crack?'Te quieren, pero de otra manera.':'Opiniones divididas.'}</div>`});
   const dl=W.endLv-W.startLv;
-  sl.push({c:'red',h:`<div class="wk">Tu nivel ⚡</div><div class="wlv"><span>${W.startLv.toFixed(2)}</span><span class="war">→</span><b>${W.endLv.toFixed(2)}</b></div><div class="wsub">${dl>=0?`Has subido ${dl.toFixed(2)}`:`Has bajado ${(-dl).toFixed(2)}`}</div><div class="wline">${dl>0.3?'Progresión de crack. Casi pareces futbolista.':dl>=0?'Subiendo poquito a poco.':dl>-0.3?'Ligera bajada. Nada que una buena racha no arregle.':'Caída libre. Pero con estilo.'}</div>`});
+  sl.push({c:'red',h:`<div class="wk">Tu nivel ★</div><div class="wlv"><span>${W.startLv.toFixed(2)}</span><span class="war">→</span><b>${W.endLv.toFixed(2)}</b></div><div class="wsub">${dl>=0?`Has subido ${dl.toFixed(2)}`:`Has bajado ${(-dl).toFixed(2)}`}</div><div class="wline">${dl>0.3?'Progresión de crack. Casi pareces futbolista.':dl>=0?'Subiendo poquito a poco.':dl>-0.3?'Ligera bajada. Nada que una buena racha no arregle.':'Caída libre. Pero con estilo.'}</div>`});
   const c=W.chem;
   sl.push({c:'white',h:`<div class="wk">Química</div>${c.best?`<div class="wchem"><small>🤝 Tu dupla perfecta</small><div>${face(c.best[0])} <b>${esc(pname(c.best[0]))}</b></div><small>${Math.round(c.best[1].w/c.best[1].pj*100)}% de victorias juntos</small></div>`:''}${c.nemesis?`<div class="wchem"><small>😈 Tu bestia negra</small><div>${face(c.nemesis[0])} <b>${esc(pname(c.nemesis[0]))}</b></div><small>Te ha ganado ${c.nemesis[1].l} de ${c.nemesis[1].pj}</small></div>`:''}${!c.best&&!c.nemesis?'<div class="wline">Aún no hay datos de duplas. Juega más.</div>':''}`});
   sl.push({c:'black',h:`<div class="wk">Rachas y logros</div><div class="wbig">${s.maxW}<span style="font-size:54px;vertical-align:middle"> 🔥</span></div><div class="wsub">mejor racha de victorias</div><div class="wach">${W.ach.map(a=>`<span title="${esc(a.n)}">${a.e}</span>`).join('')}</div><div class="wline">${W.ach.length} de ${achList().length} logros desbloqueados.</div>`});
@@ -3233,7 +3261,7 @@ async function imgWrapped(pid){
   await drawFut(g,64,230,330,pid,st,{});
   g.fillStyle='#fff';g.font='64px Anton';g.fillText(pname(pid).toUpperCase(),440,300);
   g.font='800 28px Archivo';g.fillStyle='#8f8f8f';g.fillText(`TEMPORADA ${seasonLabel(S.season)}`,442,345);
-  const items=[[s.pj,'PARTIDOS'],[s.g,'GOLES'],[`${W.pos}º`,'EN LA LIGA'],[W.endLv.toFixed(2),'NIVEL ⚡']];
+  const items=[[s.pj,'PARTIDOS'],[s.g,'GOLES'],[`${W.pos}º`,'EN LA LIGA'],[W.endLv.toFixed(2),'NIVEL ★']];
   items.forEach(([v,k],i)=>{const x=440+(i%2)*290,y=440+Math.floor(i/2)*150;g.font='90px Anton';g.fillStyle=i===2?'#ff2b3b':'#fff';g.fillText(String(v),x,y);g.font='800 22px Archivo';g.fillStyle='#8f8f8f';g.fillText(k,x+2,y+36)});
   rr(g,64,760,952,200,28);g.fillStyle='#141414';g.fill();
   AWARDS.forEach((A,i)=>{const x=64+i*238+119;g.textAlign='center';g.font='56px serif';g.fillText(A.e,x,850);g.font='64px Anton';g.fillStyle='#fff';g.fillText(String(s.aw[A.k]),x,925);g.textAlign='left'});
@@ -3386,12 +3414,13 @@ function recForm(idx){
 
 /* ============ DUELOS ============ */
 // Un jugador reta a otro para un partido concreto; el rival acepta o rechaza. Se juegan una caña o la cuota de la pista.
-const DUEL_KINDS={goals:{e:'⚽',n:'Más goles',d:'Quién mete más goles en el partido'},win:{e:'🏆',n:'Gana su equipo',d:'Solo vale si os toca en equipos distintos'},stars:{e:'⭐',n:'Mejor nota',d:'Quién saca más estrellas del vestuario'},nutmeg:{e:'🥜',n:'Hacerle un caño',d:'Si se lo haces, ganas. Lo confirma él'}};
+const DUEL_KINDS={goals:{e:'⚽',n:'Más goles',d:'Quién mete más goles en el partido'},win:{e:'🏆',n:'Gana su equipo',d:'Solo vale si os toca en equipos distintos'},stars:{e:'⭐',n:'Mejor nota',d:'Quién saca más estrellas del vestuario'},nutmeg:{e:'🥜',n:'Hacerle un caño',d:'Si se lo haces, ganas. Lo confirma él'},gkconc:{e:'🧤',n:'Menos goles encajados',d:'Entre porteros. Solo vale si sois porteros fijos en equipos distintos',gk:1},gkstars:{e:'🧱',n:'Mejor nota bajo palos',d:'Entre porteros. Gana quien saque mejor nota en portería',gk:1}};
 const DUEL_STAKES={beer:{e:'🍺',n:'Una caña'},court:{e:'💶',n:'La cuota de la pista'}};
 const duelsOf=mid=>Object.values(S.duels).filter(d=>d.mid===mid&&d.status!=='rejected'&&d.status!=='cancelled');
 const stakeTxt=d=>{const m=S.matches[d.mid];return d.stake==='court'?`💶 la pista${m?.price?` (${m.price}€)`:''}`:'🍺 una caña'};
 function duelResult(d){
   const m=S.matches[d.mid];if(!m)return{state:'void',why:'el partido se borró'};
+  if(isCanc(m))return{state:'void',why:'el partido se canceló'};
   const started=m.status==='played'||hoursTo(m)<=0;
   if(d.status==='pending'&&started)return{state:'void',why:'no se aceptó antes del partido'};
   if(d.status!=='accepted')return{state:d.status};
@@ -3410,7 +3439,12 @@ function duelResult(d){
     if(d.nut==='claimed')return{state:'nutclaim'};
     if(duelLocked(m))return{state:'final',winner:d.to,loser:d.from,timeout:true};
     return{state:'nutwait'};
-  }else if(d.kind==='goals'){const g=goalsOf(m);a=g[d.from]||0;b=g[d.to]||0;final=true}
+  }else if(d.kind==='gkconc'){const K=keepersOf(m);const tf=K.A?.mode==='fixed'&&K.A.pid===d.from?'A':K.B?.mode==='fixed'&&K.B.pid===d.from?'B':null;const tt=K.A?.mode==='fixed'&&K.A.pid===d.to?'A':K.B?.mode==='fixed'&&K.B.pid===d.to?'B':null;
+    if(!tf||!tt||tf===tt)return{state:'void',why:'no fuisteis porteros fijos en equipos distintos'};
+    const conc=t=>t==='A'?+m.scoreB||0:+m.scoreA||0;a=-conc(tf);b=-conc(tt);final=true;
+    if(a===b)return{state:'draw',a:-a,b:-b};const w=a>b?d.from:d.to,l=a>b?d.to:d.from;return{state:'final',winner:w,loser:l,a:-a,b:-b}
+  }else if(d.kind==='gkstars'){const ga=matchAwards(m).gkAvg||{};if(ga[d.from]==null||ga[d.to]==null){if(duelLocked(m))return{state:'void',why:'no hay notas de portero de los dos'};return{state:'live',a:ga[d.from]||0,b:ga[d.to]||0}}a=ga[d.from];b=ga[d.to];final=duelLocked(m)}
+  else if(d.kind==='goals'){const g=goalsOf(m);a=g[d.from]||0;b=g[d.to]||0;final=true}
   else{const av=matchAwards(m).avg;a=av[d.from]||0;b=av[d.to]||0;final=duelLocked(m)}
   if(a===b)return{state:final?'draw':'live',a,b};
   const w=a>b?d.from:d.to,l=a>b?d.to:d.from;
@@ -3452,7 +3486,7 @@ function duelForm(mid,rivalPre){
   let rival=rivals.includes(rivalPre)?rivalPre:null,kind='goals',stake='beer';
   modal(`${mh('⚔️ Nuevo duelo')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}. Tu rival tiene que aceptarlo.</p>
     <h3>¿A quién retas?</h3><p class="small muted" style="margin:-4px 0 8px">Solo los que están dentro de la lista, los de reserva no.</p><div class="opts" id="dr">${rivals.map(p=>`<button class="opt ${p===rival?'on':''}" data-v="${esc(p)}">${esc(pname(p))}</button>`).join('')}</div>
-    <h3>¿A qué?</h3><div id="dk">${Object.entries(DUEL_KINDS).map(([k,K])=>`<button class="pl" data-v="${k}" style="width:100%"><span style="font-size:22px">${K.e}</span><span class="nm">${K.n}<br><span class="small muted" style="font-weight:500">${K.d}</span></span><span class="chk">${k===kind?'✓':''}</span></button>`).join('')}</div>
+    <h3>¿A qué?</h3><div id="dk">${Object.entries(DUEL_KINDS).filter(([k,K])=>!K.gk||(isGK(me)&&(!rival||isGK(rival)))).map(([k,K])=>`<button class="pl" data-v="${k}" style="width:100%"><span style="font-size:22px">${K.e}</span><span class="nm">${K.n}<br><span class="small muted" style="font-weight:500">${K.d}</span></span><span class="chk">${k===kind?'✓':''}</span></button>`).join('')}</div>
     <h3>¿Qué os jugáis?</h3><div class="opts" id="ds">${Object.entries(DUEL_STAKES).map(([k,s])=>`<button class="opt ${k===stake?'on':''}" data-v="${k}">${s.e} ${s.n}${k==='court'&&m.price?` (${esc(m.price)}€)`:''}</button>`).join('')}</div>
     <button class="btn pri full" id="sv" style="margin-top:20px">⚔️ Lanzar el reto</button>`,
   md=>{
@@ -3461,6 +3495,7 @@ function duelForm(mid,rivalPre){
     md.querySelectorAll('#ds .opt').forEach(b=>b.onclick=()=>{stake=b.dataset.v;md.querySelectorAll('#ds .opt').forEach(x=>x.classList.toggle('on',x===b))});
     md.querySelector('#sv').onclick=async e=>{
       if(!rival){toast('Elige a tu rival');return}
+      if(DUEL_KINDS[kind].gk&&!(isGK(me)&&isGK(rival))){toast('🧤 Los retos de porteros son solo entre porteros (marcados como portero en su perfil)');return}
       e.target.disabled=true;const id=nid();
       try{await store.doc('duels/'+id).set({mid,from:me,to:rival,kind,stake,status:'pending',settled:false,createdAt:Date.now()});
         const K=DUEL_KINDS[kind];const txt=`⚔️ *DUELO* en ${APP_NAME.join('')}\n${pname(me)} reta a ${pname(rival)}: ${kind==='nutmeg'?`🥜 le va a hacer un caño`:`${K.e} ${K.n.toLowerCase()}`} el ${fmtShort(m)}.\nSe juegan ${stake==='court'?'💶 la pista':'🍺 una caña'}. ${pname(rival)}, ¿aceptas o te escondes? 🐔\n${appUrl()}`;
@@ -3686,6 +3721,8 @@ document.addEventListener('click',e=>{
     case'fixGhost':ghostForm(id);break;
     case'pollWho':pollWho(id);break;
     case'busco':buscoForm(id);break;
+    case'cancelMatch':cancelForm(id);break;
+    case'uncancel':confirmBox('Reactivar partido','Vuelve a estar abierto con la misma gente apuntada.','Reactivar',async()=>{await store.doc('matches/'+id).update({status:'open',cancel:null});toast('Partido reactivado ✅')});break;
     case'cVenues':venuesAdmin();break;
     case'cRules':rulesForm();break;
     case'cList':listForm(a.dataset.k);break;
@@ -3834,7 +3871,7 @@ async function penalizeNoVote(){
   S._pen=1;
   try{for(const m of todo){const miss=voteMissing(m);
       await store.doc('matches/'+m.id).update({novoteDone:true,novote:miss});
-      for(const p of miss){const pl=P(p);if(!pl||(pl.cardLog||[]).some(c=>c.mid===m.id&&c.reason==='novote'))continue;const red=(pl.yellow||0)>=1;
+      for(const p of miss){const pl=P(p);if(!pl||(pl.cardLog||[]).some(c=>c.mid===m.id&&c.reason==='novote'))continue;const red=yellowsThisMonth(p)>=1;
         const log=[...(pl.cardLog||[]),{type:red?'red':'yellow',mid:m.id,reason:'novote',at:voteEnd(m)}];
         await store.doc('players/'+p).update({...(red?{red:(pl.red||0)+1}:{yellow:(pl.yellow||0)+1}),cardLog:log,tail:{at:voteEnd(m),mid:m.id}})}}
   }catch(e){console.error(e)}finally{S._pen=0}}
