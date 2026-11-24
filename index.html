@@ -277,6 +277,8 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .natl .sep{grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:10px 0 2px}
 .posg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.posg button{padding:18px 10px;border-radius:18px;background:var(--s1);border:1px solid var(--line2);text-align:center;color:var(--txt)}
 .posg .e{font-size:30px;display:block}.posg b{display:block;font-family:Anton;font-size:30px;letter-spacing:.03em;margin-top:2px}.posg span{font-size:12px;color:var(--mut)}.posg button.on{border-color:var(--red);background:var(--redbg)}
+.natsel{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--redbg);border:1px solid var(--red);font-size:16px;text-align:center}.natsel .rflag{width:1.3em;height:.87em}
+.obnext{position:sticky;bottom:0;margin:18px -4px 0;padding:14px 4px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 35%);z-index:3}
 .obph{width:150px;height:150px;border-radius:50%;margin:18px auto 14px;background:var(--s1);border:2px dashed var(--line2);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden}.obph img{width:100%;height:100%;object-fit:cover}
 .natpk{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center}.natpk .in{background:var(--s0,#111);width:100%;max-width:520px;max-height:86vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .wo{position:fixed;inset:0;z-index:250;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden;color:#fff}
@@ -383,6 +385,9 @@ td.pts{font-family:'Anton';font-size:18px}
 .pv-col{border-radius:14px;padding:10px}
 .pv-col.w{background:#fff;color:#0a0a0a}.pv-col.b{background:#000;border:1.5px solid #fff}
 .pv-t{font-family:'Anton';font-size:18px;text-transform:uppercase}
+.farr{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;margin-left:5px;vertical-align:-3px;flex:none;color:#fff}.farr svg{width:12px;height:12px;display:block}
+.farr.up{background:#16a34a}.farr.up2{background:#65c466}.farr.eq{background:#8a8a8a}.farr.dn2{background:#f08a24}.farr.dn{background:#dc2626}
+.team .p .farr{margin-left:6px}.flegend{margin-top:8px;display:flex;align-items:center;gap:2px;flex-wrap:wrap}.flegend .farr{margin:0 2px 0 0;width:15px;height:15px}.flegend .farr svg{width:10px;height:10px}
 .tstars{display:inline-flex;gap:1px;line-height:1;vertical-align:middle}.tstars i{position:relative;font-style:normal;color:currentColor;opacity:1}.tstars i:not(.f){color:rgba(127,127,127,.45)}.tstars i.f{color:#f5c542;text-shadow:0 1px 0 rgba(0,0,0,.25)}
 .tstars i.h::before{content:'★';position:absolute;left:0;top:0;width:50%;overflow:hidden;color:#f5c542}
 .pv-crest{display:flex;justify-content:center;margin:2px 0 4px}.pv-col .tstars{font-size:20px;margin:4px 0 2px}.pv-col{text-align:center}.pv-col .pv-p{justify-content:center}
@@ -1059,6 +1064,14 @@ function balance(ids,st){
 // ⭐ Estrellas de equipo, estilo FIFA (de 0,5 en 0,5), a partir de la valoración interna media del equipo
 const teamStarsV=(arr,st)=>arr.length?Math.max(.5,Math.min(5,Math.round(arr.reduce((t,p)=>t+(st[p]?.level||2),0)/arr.length*2)/2)):0;
 const tStars=v=>`<span class="tstars" title="${String(v).replace('.',',')} estrellas">${[1,2,3,4,5].map(i=>`<i class="${v>=i?'f':v>=i-.5?'h':''}">★</i>`).join('')}</span>`;
+// 📈 Flechas de forma, como en el FIFA. Movimiento de la media (en puntos) en un partido concreto o en el último jugado.
+function formOf(pid,mid){const L=computeLevels()[pid];if(!L)return null;
+  if(mid)return L.d[mid]!=null?L.d[mid]*11:null;
+  const ms=Object.keys(L.d).map(id=>S.matches[id]).filter(m=>m&&m.status==='played').sort((a,b)=>mdt(b)-mdt(a));return ms[0]?L.d[ms[0].id]*11:null}
+const FORM=[[1.5,'up',0,'Sube'],[.4,'up2',45,'Sube un poco'],[-.4,'eq',90,'Se mantiene'],[-1.5,'dn2',135,'Baja un poco'],[-Infinity,'dn',180,'Baja']];
+const formK=v=>FORM.find(f=>v>=f[0]);
+function formArrow(v){if(v==null||isNaN(v))return '';const[,k,r,t]=formK(v);
+  return `<i class="farr ${k}" title="${t}${Math.abs(v)>=.5?` (${v>0?'+':''}${Math.round(v)})`:''}"><svg viewBox="0 0 16 16" style="transform:rotate(${r}deg)"><path d="M8 2.5l4.5 5H9.6V13H6.4V7.5H3.5z" fill="currentColor"/></svg></i>`}
 const avgOvr=(arr,st)=>arr.length?Math.round(arr.reduce((t,p)=>t+(st[p]?.ovr||60),0)/arr.length):0;
 const lvOvr=l=>Math.max(40,Math.min(99,Math.round(40+l*11))); // nivel interno → media aprox. (solo para el resumen de temporada)
 const stars=v=>{const f=Math.round(v);return `<span class="stars">${'★'.repeat(f)}<span style="color:#3a3a3a">${'★'.repeat(5-f)}</span></span>`};
@@ -1624,10 +1637,11 @@ function matchDetail(m,st){
       const showV=played&&(newVoteRule(m)||Date.now()-mdt(m)<14*864e5);const MR=played&&matchClosed(m)?matchRatings(m):null;
       arr.forEach(p=>{const g=+goalsOf(m)[p]||0;const vs=showV&&P(p)&&!P(p).guest&&!(m.noShow||[]).includes(p)?(hasVoted(m.id,p)?'<span class="vst ok" title="Ya votó">✓</span>':`<span class="vst no" title="Sin votar">${voteClosed(m)?'🟨':'⏳'}</span>`):'';
         const ico=`${vs}${KP[k].mode==='fixed'&&KP[k].pid===p?'<span class="gk">🧤</span>':''}${g?`<span class="g">⚽${g>1?`<i>×${g}</i>`:''}</span>`:''}`;
-        x+=`<button class="p ${vs.includes('vst no')?'novote':''}" ${hasTeams&&!played&&canManage(m)?`data-act="swap" data-id="${esc(m.id)}" data-p="${esc(p)}"`:''}><span class="fc">${face(p)}</span><span class="pm"><span class="pn">${esc(pname(p))}</span>${ico?`<span class="ic">${ico}</span>`:''}</span>${MR?(MR.avg[p]?`<span class="o rt" title="Nota del partido">${MR.avg[p].toFixed(1)}</span>`:'<span class="o rt">—</span>'):`<span class="o">${st[p]?.ovr||'—'}</span>`}</button>`});
+        x+=`<button class="p ${vs.includes('vst no')?'novote':''}" ${hasTeams&&!played&&canManage(m)?`data-act="swap" data-id="${esc(m.id)}" data-p="${esc(p)}"`:''}><span class="fc">${face(p)}</span><span class="pm"><span class="pn">${esc(pname(p))}</span>${ico?`<span class="ic">${ico}</span>`:''}</span>${MR?(MR.avg[p]?`<span class="o rt" title="Nota del partido">${MR.avg[p].toFixed(1)}</span>`:'<span class="o rt">—</span>'):`<span class="o">${st[p]?.ovr||'—'}</span>`}${played?formArrow(formOf(p,m.id)):formArrow(formOf(p))}</button>`});
       x+=`</div>`;
     });
     x+=`</div>`;
+    x+=`<p class="small muted flegend">${formArrow(2)}${formArrow(0)}${formArrow(-2)} ${played?'Cómo le ha movido la media este partido.':'Forma: cómo le fue en su último partido.'}</p>`;
     if(played&&matchClosed(m)){const R=matchRatings(m);if(R.votes){const best=Object.entries(R.avg).sort((a,b)=>b[1]-a[1])[0];
       x+=`<div class="mrate"><div><b>${R.all.toFixed(1)}</b><span>Nota media</span></div>${best&&P(best[0])?`<div><b>${esc(pname(best[0]))}</b><span>Mejor nota · ${best[1].toFixed(1)}</span></div>`:''}${R.field?`<div><b>🏟️ ${R.field.toFixed(1)}</b><span>El campo</span></div>`:''}<div><b>${R.votes}</b><span>${R.votes===1?'voto':'votos'}</span></div></div>`}}
     else if(played&&R0(m))x+=`<p class="small muted" style="margin-top:6px">⭐ Las notas de cada uno salen cuando voten todos${newVoteRule(m)?` o se cierre la votación (en ${hLeft(voteEnd(m))})`:''}.</p>`;
@@ -3022,7 +3036,10 @@ async function imgLineup(m){
     g.fillStyle=W?'#d8d8d8':'#2c2c2c';g.fillRect(x+30,y+92,w-60,2);
     arr.forEach((p,j)=>{const yy=y+120+j*rh+rh*.62;g.fillStyle=W?'#141414':'#fff';g.font=`800 ${Math.min(34,rh*.46)}px Archivo`;
       let t=pname(p)+(KP[k]?.mode==='fixed'&&KP[k].pid===p?' 🧤':'');while(g.measureText(t).width>320&&t.length>3)t=t.slice(0,-2)+'…';g.fillText(t,x+30,yy);
-      g.textAlign='right';g.font=`700 ${Math.min(30,rh*.4)}px "Barlow Condensed"`;g.fillStyle=W?'#888':'#8a8a8a';g.fillText((st[p]?.ovr||'')+'',x+w-30,yy);g.textAlign='left'})});
+      const fv=formOf(p);const fk=fv==null?null:formK(fv);const ax=x+w-30-(fk?34:0);
+      g.textAlign='right';g.font=`700 ${Math.min(34,rh*.44)}px "Barlow Condensed"`;g.fillStyle=W?'#555':'#bdbdbd';g.fillText((st[p]?.ovr||'')+'',ax,yy);g.textAlign='left';
+      if(fk){const cx=x+w-30-13,cy=yy-11,R=13;g.fillStyle={up:'#16a34a',up2:'#65c466',eq:'#8a8a8a',dn2:'#f08a24',dn:'#dc2626'}[fk[1]];g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.fill();
+        g.save();g.translate(cx,cy);g.rotate(fk[2]*Math.PI/180);g.fillStyle='#fff';g.beginPath();g.moveTo(0,-8);g.lineTo(7,0);g.lineTo(2.6,0);g.lineTo(2.6,8);g.lineTo(-2.6,8);g.lineTo(-2.6,0);g.lineTo(-7,0);g.closePath();g.fill();g.restore()}})});
   g.font='60px Anton';g.fillStyle='#e30613';g.textAlign='center';g.fillText('¿QUIÉN GANA?',540,Math.min(1240,350+120+rh*n+130));g.textAlign='left';
   return c;
 }
@@ -3460,15 +3477,16 @@ function mountOb(){const x=document.getElementById('obx');if(!x||x.childElementC
   const isLast=O.i===O.steps.length-1;const nxtT=isLast?'🎴 Ver mi carta':'Siguiente →';
   let h=`<div class="obw">${dots}`;
   if(k==='nat')h+=`<div style="text-align:center;font-size:44px">🌍</div><h2>¿De dónde eres?</h2><p class="muted small sub">Tu bandera sale en la carta, como en el FIFA. Puedes poner tu país o tu comunidad autónoma.</p>
-    <input id="nq" placeholder="Busca tu país…" autocomplete="off" style="margin-top:14px"><div class="natl" id="nl">${natListHTML('',O.nat)}</div>`;
+    <div class="natsel" id="nsel">${flagHTML(O.nat)} <b>${esc(natName(O.nat))}</b> <span class="muted small">· seleccionado</span></div>
+    <input id="nq" placeholder="Busca tu país o comunidad…" autocomplete="off" style="margin-top:10px"><div class="natl" id="nl">${natListHTML('',O.nat)}</div>`;
   if(k==='pos')h+=`<div style="text-align:center;font-size:44px">📋</div><h2>¿Dónde juegas?</h2><p class="muted small sub">${O.wasTodo?'Lo de <b>Todocampista</b> se acabó: todo el mundo lo era 😅. Elige una de verdad.':'Sale en tu carta. Puedes cambiarla luego en tu perfil.'}</p>
     <div class="posg">${Object.entries(POS_SEL).map(([c,t])=>`<button data-pos="${c}" class="${O.pos===c?'on':''}"><span class="e">${t.split(' ')[0]}</span><b>${c}</b><span>${t.split(' ').slice(1).join(' ')}</span></button>`).join('')}</div>`;
   if(k==='photo')h+=`<div style="text-align:center;font-size:44px">📸</div><h2>Pon tu cara</h2><p class="muted small sub">A partir de ahora la foto es obligatoria: así todos sabemos quién es quién. Una de la cara, que se te reconozca.</p>
     <div class="obph" id="obpv">${O.photo?`<img src="${O.photo}" alt="">`:'👤'}</div>
     <label class="btn wht full" style="margin:0;text-transform:none;letter-spacing:0">📷 ${O.photo?'Cambiar foto':'Subir foto'}<input type="file" accept="image/*" id="obf" style="display:none"></label>`;
-  h+=`<button class="btn pri full" id="obn" style="margin-top:18px" ${((k==='nat'&&!O.nat)||(k==='pos'&&!O.pos)||(k==='photo'&&!O.photo))?'disabled':''}>${nxtT}</button></div>`;
+  h+=`<div class="obnext"><button class="btn pri full" id="obn" ${((k==='nat'&&!O.nat)||(k==='pos'&&!O.pos)||(k==='photo'&&!O.photo))?'disabled':''}>${nxtT}</button></div></div>`;
   x.innerHTML=h;const nb=x.querySelector('#obn');nb.onclick=next;
-  if(k==='nat'){const nl=x.querySelector('#nl');const bind=()=>nl.querySelectorAll('[data-nat]').forEach(b=>b.onclick=()=>{O.nat=b.dataset.nat;nl.querySelectorAll('[data-nat]').forEach(y=>y.classList.toggle('on',y===b));nb.disabled=false});
+  if(k==='nat'){const nl=x.querySelector('#nl');const bind=()=>nl.querySelectorAll('[data-nat]').forEach(b=>b.onclick=()=>{O.nat=b.dataset.nat;nl.querySelectorAll('[data-nat]').forEach(y=>y.classList.toggle('on',y===b));nb.disabled=false;const ns=x.querySelector('#nsel');if(ns)ns.innerHTML=`${flagHTML(O.nat)} <b>${esc(natName(O.nat))}</b> <span class="muted small">· seleccionado</span>`});
     bind();x.querySelector('#nq').oninput=e=>{nl.innerHTML=natListHTML(e.target.value,O.nat);bind()}}
   if(k==='pos')x.querySelectorAll('[data-pos]').forEach(b=>b.onclick=()=>{O.pos=b.dataset.pos;x.querySelectorAll('[data-pos]').forEach(y=>y.classList.toggle('on',y===b));nb.disabled=false});
   if(k==='photo')x.querySelector('#obf').onchange=async e=>{const fl=e.target.files&&e.target.files[0];if(!fl)return;
@@ -3863,7 +3881,7 @@ function kitForm(){
 /* ============ EVENTOS ============ */
 // Barra inferior blindada: en iPhone, con la página aún deslizándose, el toque podía "atravesar" la barra
 // y abrir la tarjeta que había detrás. Cualquier toque a la altura de la barra cuenta como toque en la barra.
-function navHit(x,y){const nav=document.querySelector('nav.tabs');if(!nav||document.querySelector('#modalRoot .ov,.wr'))return null;
+function navHit(x,y){const nav=document.querySelector('nav.tabs');if(!nav||nav.offsetParent===null||document.querySelector('#modalRoot .ov,.wr,.wo,.natpk'))return null;
   const r=nav.getBoundingClientRect();if(y<r.top-2)return null;
   return [...nav.querySelectorAll('button')].find(b=>{const q=b.getBoundingClientRect();return x>=q.left&&x<=q.right})||null}
 function goTab(t){if(!t)return;S.tab=t;render();window.scrollTo({top:0})}
