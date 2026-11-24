@@ -308,8 +308,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .fut .mp{position:absolute;left:0;right:0;top:69%;font-family:'Barlow Condensed';font-weight:700;font-size:11cqw;z-index:2}
 .fut.big{max-width:240px;margin:0 auto}
 .pitch .fut{width:104px;flex:none}
-.potm .fut{width:120px;flex:none}
-.potm .fut .st,.potm .fut .strk,.potm .fut .sep{display:none}
+.potm .fut{width:150px;flex:none}
 .pitch .fut .badge,.potm .fut .badge{font-size:5.5cqw}
 
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px}
@@ -689,9 +688,10 @@ function regionSVG(c){const H=(fill,y,h)=>`<rect x="0" y="${y}" width="30" heigh
   'ES-PV':H('#d52b1e',0,20)+'<path d="M0 0L30 20M30 0L0 20" stroke="#009b48" stroke-width="3"/><path d="M15 0v20M0 10h30" stroke="#fff" stroke-width="3"/>',
   'ES-VC':sen(6)+'<rect width="6" height="20" fill="#0055a4"/>',
   'ES-CE':'<path d="M0 0h30v20H0z" fill="#fff"/><path d="M0 0L15 10L0 20zM30 0L15 10L30 20z" fill="#000"/><path d="M15 0L30 0L15 10zM15 20L0 20L15 10z" fill="#000" opacity=".0"/>',
-  'ES-ML':H('#71c5e8',0,20)}[c]||H('#ccc',0,20);
+  'ES-ML':H('#71c5e8',0,20),
+  'ES':H('#c60b1e',0,5)+H('#ffc400',5,10)+H('#c60b1e',15,5)+'<g transform="translate(5.2 6.1)"><rect x="0" y="1.4" width=".75" height="5.6" fill="#d9d9d9"/><rect x="-.2" y="1.1" width="1.15" height=".5" fill="#c8b100"/><rect x="-.2" y="6.9" width="1.15" height=".5" fill="#c8b100"/><rect x="0" y="3.6" width=".75" height=".6" fill="#ad1519"/><rect x="5.65" y="1.4" width=".75" height="5.6" fill="#d9d9d9"/><rect x="5.45" y="1.1" width="1.15" height=".5" fill="#c8b100"/><rect x="5.45" y="6.9" width="1.15" height=".5" fill="#c8b100"/><rect x="5.65" y="3.6" width=".75" height=".6" fill="#ad1519"/><path d="M1.6 .9h3.2l-.2-.7l-.5.4l-.5-.6l-.4.5l-.4-.5l-.5.6l-.5-.4z" fill="#c8b100"/><clipPath id="esc"><path d="M1.3 1.3h3.8v3.7q0 2.2-1.9 2.6q-1.9-.4-1.9-2.6z"/></clipPath><g clip-path="url(#esc)"><rect x="1.3" y="1.3" width="1.9" height="3.1" fill="#c8102e"/><rect x="3.2" y="1.3" width="1.9" height="3.1" fill="#fff"/><rect x="1.3" y="4.4" width="1.9" height="3.4" fill="#fcdd09"/><rect x="1.6" y="4.4" width=".35" height="3.4" fill="#da121a"/><rect x="2.35" y="4.4" width=".35" height="3.4" fill="#da121a"/><rect x="3.2" y="4.4" width="1.9" height="3.4" fill="#c8102e"/><rect x="1.85" y="2.1" width=".8" height="1.2" fill="#fcdd09"/><circle cx="4.15" cy="2.75" r=".55" fill="#8b1a4a"/><circle cx="3.2" cy="4.4" r=".55" fill="#0039f0"/></g><path d="M1.3 1.3h3.8v3.7q0 2.2-1.9 2.6q-1.9-.4-1.9-2.6z" fill="none" stroke="#7a0e14" stroke-width=".25"/></g>'}[c]||H('#ccc',0,20);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20" width="30" height="20"><g>${b}</g><rect width="30" height="20" fill="none" stroke="rgba(0,0,0,.25)" stroke-width=".6"/></svg>`}
-const isReg=c=>!!CCAA[c];
+const isReg=c=>!!CCAA[c]||c==='ES'; // banderas dibujadas (comunidades y España)
 const flagHTML=c=>isReg(c)?`<span class="rflag">${regionSVG(c)}</span>`:flagOf(c);
 
 const EMOJIS=['😎','🤠','🥸','🧔','👨‍🦲','👱','🧑‍🦱','🦁','🐂','🐐','🦍','🐢','🦥','🐷','🥔','🍺','🔥','💩','🤡','👽','🦄','🐙','🧱','🚌'];
@@ -1713,7 +1713,7 @@ function monthView(st){
   <div class="box potm">${futCard(top,st,false,{noVaya:true,badge:'🏆 Jugador del mes'})}
     <div><div style="font-family:Anton;font-size:26px;text-transform:uppercase;line-height:1">${esc(pname(top))}</div>
     <div style="font-family:Anton;font-size:30px;color:var(--red2);margin-top:6px">${t.pts} <span style="font-size:14px;font-family:Archivo;color:var(--mut)">pts</span></div>
-    <div class="muted small" style="line-height:1.6">${t.pj} PJ · ${t.g} goles${astOn()?` · ${t.a} asist.`:''}<br>${AWARDS.filter(A=>t.aw[A.k]).map(A=>`${A.e}×${t.aw[A.k]}`).join('  ')}${t.avg!=null?` · ${t.avg.toFixed(1)}★`:''}</div></div></div>`;
+    <div class="muted small" style="line-height:1.6">${t.pj} PJ · ${t.g} goles${astOn()?` · ${t.a} asist.`:''}<br>${AWARDS.filter(A=>t.aw[A.k]).map(A=>`${A.e}×${t.aw[A.k]}`).join('  ')}${t.avg!=null?` · Nota ${t.avg.toFixed(1)}`:''}</div></div></div>`;
   const lines=totmLines(stM,st);
   h+=`<h2>Equipo del mes <span class="sub">el mejor de cada posición</span></h2><div class="pitch rombo"><div class="area"></div>`;
   const spots=rombo(lines);
