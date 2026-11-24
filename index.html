@@ -1575,7 +1575,7 @@ function viewMatches(st){
   }
   if(kitOn()&&me&&P(me)&&!P(me).kit&&!S.kitPromoHidden)h+=`<div class="kitpromo"><div class="ks">${shirtSVG('w',{size:54})}${shirtSVG('b',{size:54})}</div><div class="sp"><b>¿Ya tienes la equipación?</b><div class="small" style="opacity:.75;margin-top:2px">Blanca y negra con tu nombre y dorsal. Pedido conjunto del grupo.</div><button class="btn pri sm" style="margin-top:10px" data-act="kitOrder">👕 Pedir la mía</button></div><button class="x" data-act="kitHide" style="align-self:flex-start">✕</button></div>`;
   if(me){
-    const mine=Object.values(S.duels).filter(d=>(d.from===me||d.to===me)&&d.status!=='rejected'&&d.status!=='cancelled').filter(d=>{const r=duelResult(d);return r.state==='pending'||r.state==='upcoming'||r.state==='live'||(r.state==='final'&&!d.settled)}).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const mine=Object.values(S.duels).filter(d=>(d.from===me||d.to===me)&&d.status!=='rejected'&&d.status!=='cancelled').filter(d=>{const r=duelResult(d);return ['pending','upcoming','nores','live','nutwait','nutclaim'].includes(r.state)||(r.state==='final'&&!d.settled)}).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     const toMe=mine.filter(d=>d.status==='pending'&&d.to===me&&duelResult(d).state==='pending');
     if(toMe.length)h+=`<div class="banner" style="margin-top:14px"><span class="e">⚔️</span><span><b>${esc(pname(toMe[0].from))} te ha retado</b><br>${DUEL_KINDS[toMe[0].kind].n} · ${stakeTxt(toMe[0])}. ¿Aceptas o te escondes? 🐔</span></div>`;
     if(mine.length){h+=`<h2>Tus duelos <span class="sub">${mine.length}</span></h2>`;mine.forEach(d=>h+=duelLine(d))}
@@ -1818,6 +1818,7 @@ function seasonView(stAll){
     <div class="lbc"><div class="tt">📈 Mejor media</div>${top(r=>r.ovr,v=>v,r=>r.pj>=5)}</div>
     <div class="lbc"><div class="tt">🏃 Más partidos</div>${top(r=>r.pj)}</div>
     <div class="lbc"><div class="tt">🏅 % victorias</div>${top(r=>r.pj?r.v/r.pj*100:0,v=>Math.round(v)+'%',r=>r.pj>=3)}</div>
+    <div class="lbc"><div class="tt">🐈‍⬛ El Gafe <span style="text-transform:none;font-weight:500">· % derrotas</span></div>${top(r=>r.pj?r.d/r.pj*100:0,v=>Math.round(v)+'%',r=>r.pj>=3)}</div>
     <div class="lbc"><div class="tt">🟨 Tarjeteros</div>${top(r=>r.y+r.r*2)}</div>
   </div>`;
   if(y===seasonOfDate(new Date())){const K=kings();const ks=[...Object.keys(KINGS).filter(f=>K[f]).map(f=>K[f]),...(K.todo?[K.todo]:[])];
@@ -1833,9 +1834,13 @@ function viewRanking(st){
 }
 
 /* ---- Plantilla ---- */
+// 🤦 Solo hay UN Rey del Vaya día. Desempate: 1) más Vaya día; 2) más por partido (menos PJ); 3) peor nota media; 4) el más reciente.
+function vayaKingId(){return memo('vayaK',()=>{const st=computeStats();const c=Object.keys(st).filter(id=>st[id].aw.vaya>0&&P(id));if(!c.length)return null;
+  const last=id=>Math.max(0,...st[id].hist.filter(h=>h.aws.includes('🤦')).map(h=>+mdt(h.m)));
+  c.sort((a,b)=>st[b].aw.vaya-st[a].aw.vaya||st[b].aw.vaya/st[b].pj-st[a].aw.vaya/st[a].pj||(st[a].avg??9)-(st[b].avg??9)||last(b)-last(a));return c[0]})}
 function futCard(id,st,big=false,opt={}){
   const p=P(id),s=st[id];if(!p)return'';
-  const vayaKing=!opt.noVaya&&s.aw.vaya>0&&s.aw.vaya===Math.max(...Object.values(st).map(x=>x.aw.vaya));
+  const vayaKing=!opt.noVaya&&vayaKingId()===id;
   const inf=!opt.noInform&&S._inf&&S._inf.has(id);
   const t=inf?'inform':vayaKing?'vaya':tier(s.ovr);const sk=streak(s);
   const at=attrs(s,id),L=at.slice(0,3),R=at.slice(3);
@@ -3752,7 +3757,7 @@ function duelResult(d){
   const started=m.status==='played'||hoursTo(m)<=0;
   if(d.status==='pending'&&started)return{state:'void',why:'no se aceptó antes del partido'};
   if(d.status!=='accepted')return{state:d.status};
-  if(m.status!=='played')return{state:'upcoming'};
+  if(m.status!=='played'){if(hoursTo(m)<=-24*7)return{state:'void',why:'el partido se quedó sin resultado'};return{state:hoursTo(m)<=0?'nores':'upcoming'}}
   const att=attendees(m);if(!att.includes(d.from)||!att.includes(d.to))return{state:'void',why:'no jugaron los dos'};
   let a,b,final=true;
   if(d.kind==='win'){
@@ -3764,7 +3769,7 @@ function duelResult(d){
     if(sameTeam)return{state:'void',why:'os tocó en el mismo equipo'};
     if(d.nut==='yes')return{state:'final',winner:d.from,loser:d.to};
     if(d.nut==='no')return{state:'final',winner:d.to,loser:d.from};
-    if(d.nut==='claimed')return{state:'nutclaim'};
+    if(d.nut==='claimed'){if((Date.now()-mdt(m).getTime())>2*DUEL_HOURS*36e5)return{state:'final',winner:d.from,loser:d.to,claimTimeout:true};return{state:'nutclaim'}} // quien calla, otorga
     if(duelLocked(m))return{state:'final',winner:d.to,loser:d.from,timeout:true};
     return{state:'nutwait'};
   }else if(d.kind==='gkconc'){const K=keepersOf(m);const tf=K.A?.mode==='fixed'&&K.A.pid===d.from?'A':K.B?.mode==='fixed'&&K.B.pid===d.from?'B':null;const tt=K.A?.mode==='fixed'&&K.A.pid===d.to?'A':K.B?.mode==='fixed'&&K.B.pid===d.to?'B':null;
@@ -3783,6 +3788,7 @@ function duelLine(d){
   let st='';
   if(r.state==='pending')st=`<span class="pill">Esperando respuesta</span>`;
   else if(r.state==='upcoming')st=`<span class="pill wht">Aceptado</span>`;
+  else if(r.state==='nores')st=`<span class="pill">⏳ Esperando el resultado del partido</span>`;
   else if(r.state==='live')st=`<span class="pill">${r.winner?`Va ganando ${esc(pname(r.winner))}`:'Van empatados'} (${d.kind==='stars'?`${(r.a||0).toFixed(1)}–${(r.b||0).toFixed(1)}`:`${r.a}–${r.b}`})</span>`;
   else if(r.state==='final')st=d.settled?`<span class="pill out">✅ Saldado</span>`:`<span class="pill red">${esc(pname(r.loser))} paga</span>`;
   else if(r.state==='draw')st=`<span class="pill">🤝 Empate, nadie paga</span>`;
@@ -3794,10 +3800,11 @@ function duelLine(d){
   else if((d.status==='pending'||(d.status==='accepted'&&m&&m.status!=='played'&&hoursTo(m)>0))&&d.from===me)acts=`<button class="btn sm ghost" data-act="duelCancel" data-id="${esc(d.id)}">Retirar</button>`;
   if(r.state==='nutwait'&&d.from===me)acts+=`<button class="btn sm pri" data-act="duelNut" data-v="claimed" data-id="${esc(d.id)}">🥜 ¡Se lo hice!</button><button class="btn sm ghost" data-act="duelNut" data-v="no" data-id="${esc(d.id)}">No pude</button>`;
   if(r.state==='nutclaim'&&(d.to===me||isAdmin()||(m&&canManage(m)&&d.from!==me)))acts+=`<button class="btn sm pri" data-act="duelNut" data-v="yes" data-id="${esc(d.id)}">${d.to===me?'Sí, me lo hizo 😩':'Confirmar caño'}</button><button class="btn sm ghost" data-act="duelNut" data-v="no" data-id="${esc(d.id)}">${d.to===me?'¡Mentira!':'No hubo'}</button>`;
+  if(isAdmin()&&['pending','upcoming','nores','live','nutwait','nutclaim'].includes(r.state))acts+=`<button class="btn sm ghost" data-act="duelVoid" data-id="${esc(d.id)}">🛠️ Anular</button>`;
   if(r.state==='final'&&!d.settled&&(r.winner===me||isAdmin()))acts+=`<button class="btn sm wht" data-act="duelSettle" data-id="${esc(d.id)}">✅ Me ha pagado</button>`;
   return `<div class="duel"><div class="dv-top"><span class="av">${face(d.from)}</span><b>${esc(pname(d.from))}</b><span class="vs">⚔️</span><b>${esc(pname(d.to))}</b><span class="av">${face(d.to)}</span></div>
     <div class="small muted" style="margin-top:6px">${K.e} ${K.n} · ${stakeTxt(d)}${m?` · ${esc(fmtShort(m))}`:''}</div>
-    ${d.kind==='nutmeg'&&r.state==='final'?`<div class="small muted" style="margin-top:6px">${d.nut==='yes'?'🥜 Caño confirmado':r.timeout?'Nadie dijo que hubiera caño en 24 h':'🥜 Sin caño'}</div>`:''}
+    ${d.kind==='nutmeg'&&r.state==='final'?`<div class="small muted" style="margin-top:6px">${d.nut==='yes'?'🥜 Caño confirmado':r.claimTimeout?`🥜 Caño reclamado y sin respuesta en ${2*DUEL_HOURS} h: quien calla, otorga`:r.timeout?`Nadie dijo que hubiera caño en ${DUEL_HOURS} h`:'🥜 Sin caño'}</div>`:''}
     ${r.state==='nutwait'&&d.from===me?`<div class="small muted" style="margin-top:6px">Tienes 24 h para decir si se lo hiciste. Si no dices nada, gana ${esc(pname(d.to))}.</div>`:''}
     ${r.state==='final'&&!d.settled?`<div class="small" style="margin-top:6px"><b>${esc(pname(r.loser))}</b> le debe ${stakeTxt(d)} a <b>${esc(pname(r.winner))}</b></div>`:''}
     <div class="row wrapr" style="margin-top:8px">${st}<span class="sp"></span>${acts}</div></div>`;
@@ -4004,6 +4011,7 @@ document.addEventListener('click',e=>{
     case'duelNew':duelForm(id,a.dataset.rival);break;
     case'duelAccept':{const d=S.duels[id],mm=d&&S.matches[d.mid];if(mm&&(mm.status==='played'||hoursTo(mm)<=0)){toast('El partido ya ha empezado: el reto ha caducado');break}if(mm&&!lineup(mm).in.includes(me)){toast('Estás en reserva: no puedes aceptar hasta entrar en la lista 🪑');break}}store.doc('duels/'+id).update({status:'accepted',acceptedAt:Date.now()}).then(()=>toast('Reto aceptado ⚔️ ¡Que gane el peor!')).catch(err);break;
     case'duelReject':confirmBox('Rechazar duelo','¿Seguro? Quedará registrado como 🐔.','🐔 Rechazar',async()=>{await store.doc('duels/'+id).update({status:'rejected'})},true);break;
+    case'duelVoid':confirmBox('Anular duelo','Se anula el reto y nadie paga. Úsalo si se ha quedado atascado.','Anular',async()=>{await store.doc('duels/'+id).update({status:'cancelled',voidBy:me,voidAt:Date.now()})},true);break;
     case'duelCancel':confirmBox('Retirar duelo','Se anula el reto.','Retirar',async()=>{await store.doc('duels/'+id).update({status:'cancelled'})},true);break;
     case'arcNow':a.disabled=true;archiveOld(true).then(n=>{toast(n?`Archivados ${n} documentos 📦`:'No hay nada que archivar todavía (se archivan los meses cerrados hace más de '+ARC_DAYS+' días)');render()});break;
     case'guestAccess':{const p=P(id);confirmBox('Darle acceso a '+esc(p.name),'Le creamos un PIN para que entre en la app con su nombre. Conserva sus partidos, goles y nivel.','🔑 Crear PIN',async()=>{const np=randPin();await store.doc('players/'+id).update({pinHash:await hashPin(np),guest:false,accessAt:Date.now()});showInvite(p.name,np);S.keepModal=true},false);break}
