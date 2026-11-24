@@ -832,6 +832,9 @@ const dateMin=()=>ymd(new Date()),dateMax=()=>{const d=new Date();d.setDate(d.ge
 const hasPlayed=pid=>Object.values(S.matches).some(m=>m.status==='played'&&attendees(m).includes(pid));
 const levelLocked=pid=>!!pid&&hasPlayed(pid)&&!isAdmin(); // el nivel inicial se congela tras el primer partido (solo admins pueden tocarlo)
 const goalsLocked=m=>(Date.now()-mdt(m).getTime())>GOALS_EDIT_HOURS*36e5;
+// ⚠️ Goles sin dueño: el marcador del equipo menos lo que han apuntado sus jugadores
+function missingGoals(m){const g=goalsOf(m),o={};if(m.status!=='played')return o;
+  for(const[k,sc]of[['A',+m.scoreA||0],['B',+m.scoreB||0]]){const sum=(m['team'+k]||[]).reduce((t,p)=>t+(+g[p]||0),0);if(sc>sum)o[k]=sc-sum}return o}
 // 🗳️ Votación: 24 h desde que se mete el resultado. Quien no vote a tiempo: amarilla y a la cola en su siguiente partido.
 // Solo para los partidos cuyo resultado se mete desde esta versión (los anteriores siguen como estaban).
 let VOTE_HOURS=24;const NOVOTE_FROM=Date.parse('2026-11-21T13:00:00+01:00');
@@ -1562,6 +1565,8 @@ function viewMatches(st){
     const toVote=played.filter(m=>attendees(m).includes(me)&&!hasVoted(m.id,me)&&!voteClosed(m)&&(Date.now()-mdt(m))<14*864e5);
     const noStats=played.filter(m=>attendees(m).includes(me)&&hasVoted(m.id,me)&&!myStat(m.id,me)&&!goalsLocked(m));
     if(!toVote.length&&noStats.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="myStats" data-id="${esc(noStats[0].id)}"><span class="e">⚽</span><span><b>Apunta tus goles del ${esc(fmtShort(noStats[0]))}</b><br>Para que cuadren con el resultado.</span></button>`;
+    {const gm=Object.values(S.matches).filter(m=>m.status==='played'&&!goalsLocked(m)&&me&&hasVoted(m.id,me)).map(m=>{const mg=missingGoals(m);const k=(m.teamA||[]).includes(me)?'A':(m.teamB||[]).includes(me)?'B':null;return k&&mg[k]?{m,n:mg[k],k}:null}).filter(Boolean)[0];
+     if(gm)h+=`<button class="banner" style="width:100%;text-align:left;border-color:#f3dc5c" data-act="myStats" data-id="${esc(gm.m.id)}"><span class="e">⚠️</span><span class="sp"><b>A ${TEAM[gm.k].n} ${gm.n===1?'le falta 1 gol':`le faltan ${gm.n} goles`} por apuntar</b><br><span class="small muted">${esc(fmtShort(gm.m))}. ¿Alguno es tuyo? Toca para revisar tus goles.</span></span><span>›</span></button>`}
     if(toVote.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="vote" data-id="${esc(toVote[0].id)}"><span class="e">🗳️</span><span><b>Tienes ${toVote.length} ${toVote.length===1?'partido':'partidos'} por puntuar</b><br>Reparte estrellas y premios. Es anónimo.</span></button>`;
     const owe=[...up,...played.slice(0,6)].filter(m=>m.price&&attendees(m).includes(me)&&!(m.paid||{})[me]);
     if(owe.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="pay" data-id="${esc(owe[0].id)}"><span class="e">💶</span><span><b>Debes ${esc(owe[0].price)}€ del ${esc(fmtShort(owe[0]))}</b><br>${owe[0].bizum?`Bizum a ${esc(owe[0].bizum)}`:'Toca para marcarlo como pagado'}</span></button>`;
@@ -1705,6 +1710,8 @@ function matchDetail(m,st){
       x+=`</div>`;
     });
     x+=`</div>`;
+    if(played){const mg=missingGoals(m);const ks=Object.keys(mg);if(ks.length){const mine=me&&ks.some(k=>(m['team'+k]||[]).includes(me));
+      x+=`<div class="banner" style="margin-top:10px;border-color:#f3dc5c"><span class="e">⚠️</span><span class="sp"><b>${ks.map(k=>`${TEAM[k].n}: ${mg[k]===1?'falta 1 gol':`faltan ${mg[k]} goles`} por apuntar`).join(' · ')}</b><br><span class="small muted">${goalsLocked(m)?'Ya no se pueden apuntar: el organizador puede corregirlo.':`Cada uno apunta los suyos al votar (hasta ${GOALS_EDIT_HOURS} h después).`}</span></span>${mine&&hasVoted(m.id,me)&&!goalsLocked(m)?`<button class="btn sm" data-act="myStats" data-id="${esc(m.id)}">¿Son tuyos?</button>`:''}</div>`}}
     x+=`<p class="small muted flegend">${formArrow(2)}${formArrow(0)}${formArrow(-2)} ${played?'Cómo le ha movido la media este partido.':'Forma: cómo le fue en su último partido.'}</p>`;
     if(played&&matchClosed(m)){const R=matchRatings(m);if(R.votes){const best=Object.entries(R.avg).sort((a,b)=>b[1]-a[1])[0];
       x+=`<div class="mrate"><div><b>${R.all.toFixed(1)}</b><span>Nota media</span></div>${best&&P(best[0])?`<div><b>${esc(pname(best[0]))}</b><span>Mejor nota · ${best[1].toFixed(1)}</span></div>`:''}${R.field?`<div><b>🏟️ ${R.field.toFixed(1)}</b><span>El campo</span></div>`:''}<div><b>${R.votes}</b><span>${R.votes===1?'voto':'votos'}</span></div></div>`}}
@@ -2379,7 +2386,7 @@ function voteForm(mid){
   const SL={1:'Tronco',2:'Flojito',3:'Cumplió',4:'Muy bien',5:'Crack'};
   modal(`${mh('Puntúa el partido')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}<br>🔒 <b>Voto anónimo:</b> nadie, ni los admins, puede ver qué has votado. Solo se puede votar una vez.</p>
     ${goalsLocked(m)?`<p class="small muted" style="margin-top:14px">🔒 Ya han pasado ${GOALS_EDIT_HOURS} h: tus goles no se pueden cambiar.</p><div style="display:none">`:'<div>'}
-    <h3>⚽ Tus números <span style="text-transform:none;letter-spacing:0;font-weight:500">· sé honesto, se nota 😏</span></h3>
+    <h3>⚽ Tus números <span style="text-transform:none;letter-spacing:0;font-weight:500">· revisa que estén bien, sé honesto 😏</span></h3>
     <div class="box row" style="justify-content:space-around"><div style="text-align:center"><div class="lbl" style="font-size:11px;color:var(--mut);font-weight:800">GOLES</div><div class="stepper" style="margin-top:6px"><button data-mg="-1">−</button><span id="mg">${myG}</span><button data-mg="1">+</button></div></div>
       ${astOn()?`<div style="text-align:center"><div class="lbl" style="font-size:11px;color:var(--mut);font-weight:800">ASISTENCIAS</div><div class="stepper" style="margin-top:6px"><button data-ma="-1">−</button><span id="ma">${myA}</span><button data-ma="1">+</button></div></div>`:''}</div>
     </div>
