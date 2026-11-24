@@ -289,7 +289,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .wo .bigp{font-family:Anton;font-size:160px;color:#f5c542;line-height:1}.wo .cw{width:min(70vw,290px);margin:0 auto}.wo .go{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));left:24px;right:24px;opacity:0;transition:opacity .6s}.wo.done .go{opacity:1}
 .wo .go .btn{background:var(--red);border-color:var(--red);color:#fff}
 @keyframes wospin{to{transform:rotate(360deg)}}
-.fut .flagb{position:absolute;left:0;right:0;bottom:4.2%;text-align:center;font-size:8.5cqw;line-height:1;z-index:2;filter:drop-shadow(0 .4cqw .6cqw rgba(0,0,0,.35))}
+.fut .flagb{position:absolute;left:0;right:0;bottom:4.4%;display:flex;justify-content:center;align-items:center;gap:2.4cqw;font-size:8.5cqw;line-height:1;z-index:2}.fut .flagb .fg{filter:drop-shadow(0 .4cqw .6cqw rgba(0,0,0,.35));line-height:1}.fut .flagb .strk{margin:0;font-size:6.6cqw}
 .rflag{display:inline-block;width:1.25em;height:.84em;vertical-align:-.08em;border-radius:.12em;overflow:hidden}.rflag svg{width:100%;height:100%;display:block}
 .natl .f .rflag,.wo .bigf .rflag{width:1.3em;height:.87em}
 .fut .lvl{font-family:'Barlow Condensed';font-weight:700;font-size:8cqw;line-height:1}
@@ -309,7 +309,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .fut.big{max-width:240px;margin:0 auto}
 .pitch .fut{width:104px;flex:none}
 .potm .fut{width:120px;flex:none}
-.pitch .fut .st,.potm .fut .st,.pitch .fut .strk,.potm .fut .strk,.pitch .fut .sep,.potm .fut .sep{display:none}
+.potm .fut .st,.potm .fut .strk,.potm .fut .sep{display:none}
 .pitch .fut .badge,.potm .fut .badge{font-size:5.5cqw}
 
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px}
@@ -343,7 +343,7 @@ td.pts{font-family:'Anton';font-size:18px}
 .pitch::before{content:"";position:absolute;left:50%;top:50%;width:96px;height:96px;border:1.5px solid rgba(255,255,255,.35);border-radius:50%;transform:translate(-50%,-50%)}
 .pitch::after{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px solid rgba(255,255,255,.35)}
 .pitch .ln{position:relative;z-index:1;display:flex;justify-content:center;gap:6px;margin:8px 0}
-.pitch.rombo{height:600px;padding:0}
+.pitch.rombo{height:670px;padding:0}
 .pitch.rombo::after{display:none}
 .pitch.rombo::before{top:31%}
 .pitch .area{position:absolute;left:50%;bottom:-2px;width:62%;height:24%;transform:translateX(-50%);border:1.5px solid rgba(255,255,255,.35);border-bottom:0;border-radius:90px 90px 0 0}
@@ -1715,9 +1715,9 @@ function monthView(st){
     <div style="font-family:Anton;font-size:30px;color:var(--red2);margin-top:6px">${t.pts} <span style="font-size:14px;font-family:Archivo;color:var(--mut)">pts</span></div>
     <div class="muted small" style="line-height:1.6">${t.pj} PJ · ${t.g} goles${astOn()?` · ${t.a} asist.`:''}<br>${AWARDS.filter(A=>t.aw[A.k]).map(A=>`${A.e}×${t.aw[A.k]}`).join('  ')}${t.avg!=null?` · ${t.avg.toFixed(1)}★`:''}</div></div></div>`;
   const lines=totmLines(stM,st);
-  h+=`<h2>Equipo del mes <span class="sub">los 4 mejores + el mejor portero</span></h2><div class="pitch rombo"><div class="area"></div>`;
+  h+=`<h2>Equipo del mes <span class="sub">el mejor de cada posición</span></h2><div class="pitch rombo"><div class="area"></div>`;
   const spots=rombo(lines);
-  spots.forEach(([id,x,y,lab])=>{h+=`<div class="spot" style="left:${x}%;top:${y}%">${futCard(id,st,false,{noVaya:true,noInform:true,extra:`<div class="mp">${stM[id].pts} pts</div>`})}</div>`});
+  spots.forEach(([id,x,y,lab])=>{h+=`<div class="spot" style="left:${x}%;top:${y}%">${futCard(id,st,false,{noVaya:true,noInform:true})}<div class="slab">${stM[id].pts} pts</div></div>`});
   h+=`</div><button class="btn wht full" style="margin-top:12px" data-act="share" data-kind="month">📸 Compartir equipo del mes</button>`;
   const sc=ranked.filter(id=>stM[id].g>0).sort((a,b)=>stM[b].g-stM[a].g||stM[a].pj-stM[b].pj);
   h+=`<h2>Goleadores del mes</h2>`;
@@ -1769,11 +1769,11 @@ function futCard(id,st,big=false,opt={}){
   return `<button class="fut ${t} ${big?'big':''} ${ij?'injd':''} ${aw?'awyd':''}" ${big?'':`data-act="profile" data-id="${esc(id)}"`}><div class="fi">
     ${ij?`<div class="injb">✚ ${esc(ij.label)}</div>`:aw?`<div class="awyb">${esc(aw.e)} ${esc(aw.label)}</div>`:''}
     ${badge?`<div class="badge">${badge}</div>`:''}
-    <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(opt.pos??posTxt(p.pos))}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i>${sk&&!opt.extra?`<div class="strk">${sk.e}${sk.n}</div>`:''}</div>
+    <div class="fl"><div class="ovr">${s.ovr}</div><div class="pos">${esc(opt.pos??posTxt(p.pos))}${kitOn()&&p.dorsal?` ${+p.dorsal}`:''}</div><i></i></div>
     <div class="face ${okPhoto(p.photo)?'hasph':''}">${face(id)}</div>
     <div class="nm">${esc(p.name)}</div>${opt.extra?'':'<div class="sep"></div>'}
     ${opt.extra?opt.extra:`<div class="st"><div class="col">${L.map(row).join('')}</div><div class="dv"></div><div class="col">${R.map(row).join('')}</div></div>`}
-    ${opt.extra?'':`<div class="flagb">${flagHTML(natOf(id))}</div>`}
+    ${opt.extra?'':`<div class="flagb">${sk?`<span class="strk" title="${esc(sk.t||'')}">${sk.e}${sk.n}</span>`:''}<span class="fg">${flagHTML(natOf(id))}</span></div>`}
   </div></button>`;
 }
 // 😴 Desaparecidos: más de INACTIVE_DAYS sin entrar en la app ni jugar. Su carta se esconde (no se borra nada)
@@ -2918,8 +2918,11 @@ async function drawFut(g,x,y,w,id,st,opt={}){
     const at=attrs(s);at.forEach(([k,v],i)=>{const col=i<3?0:1,row=i%3;const cxx=x+w*(col?.7:.3),cyy=y+h*(.725+row*.06);
       g.textAlign='right';g.font=`700 ${w*.095}px "Barlow Condensed"`;g.fillText(String(v),cxx-w*.01,cyy);
       g.textAlign='left';g.font=`600 ${w*.08}px "Barlow Condensed"`;g.globalAlpha=.85;g.fillText(k,cxx+w*.02,cyy);g.globalAlpha=1});
-    const nc=natOf(id);if(isReg(nc)){try{const im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(regionSVG(nc)));const fw=w*.1,fh=fw*2/3;g.drawImage(im,x+w/2-fw/2,y+h*.935-fh,fw,fh)}catch(e){}}
-    else{g.textAlign='center';g.font=`${w*.075}px serif`;g.fillText(flagOf(nc),x+w/2,y+h*.94)}
+    const nc=natOf(id),sk=streak(s);let fx=x+w/2;
+    if(sk){g.font=`700 ${w*.066}px "Barlow Condensed"`;const t=sk.e+sk.n,tw=g.measureText(t).width+w*.05,ph=w*.075;const tot=tw+w*.025+w*.1;const sx=x+w/2-tot/2;
+      g.save();g.globalAlpha=.18;g.fillStyle='#000';rr(g,sx,y+h*.94-ph*.85,tw,ph,ph/2);g.fill();g.restore();g.textAlign='center';g.fillText(t,sx+tw/2,y+h*.94-ph*.17);fx=sx+tw+w*.025+w*.05}
+    if(isReg(nc)){try{const im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(regionSVG(nc)));const fw=w*.1,fh=fw*2/3;g.drawImage(im,fx-fw/2,y+h*.935-fh,fw,fh)}catch(e){}}
+    else{g.textAlign='center';g.font=`${w*.075}px serif`;g.fillText(flagOf(nc),fx,y+h*.94)}
   }else if(opt.extra){g.textAlign='center';g.font=`700 ${w*.11}px "Barlow Condensed"`;g.fillText(opt.extra,x+w/2,y+h*.8)}
   g.textAlign='left';g.restore();
 }
@@ -2961,12 +2964,13 @@ async function imgMonth(){
   const{c,g}=cvBase('Equipo del mes');
   g.font='64px Anton';g.fillStyle='#fff';g.fillText(label.toUpperCase(),64,260);
   const lines=totmLines(stM,st);
-  rr(g,40,300,1000,1010,40);g.fillStyle='#0f0f0f';g.fill();g.strokeStyle='#fff';g.lineWidth=3;g.stroke();
-  g.strokeStyle='rgba(255,255,255,.3)';g.beginPath();g.arc(540,640,110,0,Math.PI*2);g.stroke();
-  g.beginPath();g.moveTo(230,1310);g.lineTo(230,1170);g.arcTo(230,1080,330,1080,90);g.lineTo(750,1080);g.arcTo(850,1080,850,1170,90);g.lineTo(850,1310);g.stroke();
-  const cw=186;const pos=rombo(lines);const YS={0:0,24:225,46:445,71:690};
-  for(const[id,xp,yp,lab]of pos){const x=40+1000*xp/100-cw/2,y=315+YS[yp];
-    await drawFut(g,x,y,cw,id,st,{small:true,extra:`${stM[id].pts} PTS`})}
+  rr(g,40,292,1000,990,40);g.fillStyle='#0f0f0f';g.fill();g.strokeStyle='#fff';g.lineWidth=3;g.stroke();
+  g.strokeStyle='rgba(255,255,255,.3)';g.beginPath();g.arc(540,620,110,0,Math.PI*2);g.stroke();
+  g.beginPath();g.moveTo(230,1281);g.lineTo(230,1150);g.arcTo(230,1060,330,1060,90);g.lineTo(750,1060);g.arcTo(850,1060,850,1150,90);g.lineTo(850,1281);g.stroke();
+  const cw=168;const pos=rombo(lines);const YS={0:0,24:205,46:410,73:695};
+  for(const[id,xp,yp,lab]of pos){const x=40+1000*xp/100-cw/2,y=304+YS[yp];
+    await drawFut(g,x,y,cw,id,st,{});
+    g.font='800 18px Archivo';g.fillStyle='#bdbdbd';g.textAlign='center';g.fillText(`${stM[id].pts} PTS`,x+cw/2,y+cw*1.46+22);g.textAlign='left'}
   return c;
 }
 // Rombo de fútbol sala: pívot arriba, dos alas, cierre y portero. Devuelve [id, x%, y%, etiqueta].
@@ -2977,17 +2981,19 @@ function rombo(lines){
   if(med[0])out.push([med[0],med[1]?18:50,24,'2º de campo']);
   if(med[1])out.push([med[1],82,24,'3º de campo']);
   if(def[0])out.push([def[0],50,46,'4º de campo']);
-  if(por[0])out.push([por[0],50,71,'Portero']);
+  if(por[0])out.push([por[0],50,73,'Portero']);
   return out;
 }
 function totmLines(stM,st){
-  const ranked=Object.keys(stM).filter(id=>stM[id].pj>0).sort((a,b)=>stM[b].pts-stM[a].pts||st[b].level-st[a].level);
-  // Solo dos tipos: portero (el mejor de los marcados como portero) y 4 de campo (los 4 mejores del resto, por puntos)
-  const gk=ranked.find(id=>isGK(id)||P(id)?.pos==='POR');
-  const field=ranked.filter(id=>id!==gk&&!isGK(id)).slice(0,4);
-  const left=ranked.filter(id=>id!==gk&&!field.includes(id));while(field.length<4&&left.length)field.push(left.shift());
-  const por=gk?[gk]:left.length?[left.shift()]:[];
-  return [[field[0]].filter(Boolean),field.slice(1,3),[field[3]].filter(Boolean),por];
+  const ranked=Object.keys(stM).filter(id=>stM[id].pj>0&&P(id)).sort((a,b)=>stM[b].pts-stM[a].pts||st[b].level-st[a].level);
+  // Estricto por posiciones: el mejor delantero (arriba), los dos mejores medios (laterales), el mejor defensa (abajo)
+  // y el mejor portero. Si un mes nadie de una posición ha jugado, ese hueco lo ocupa el mejor que quede libre.
+  const used=new Set();const take=(f,n=1)=>{const r=ranked.filter(id=>!used.has(id)&&f(id)).slice(0,n);r.forEach(id=>used.add(id));return r};
+  const isPor=id=>P(id)?.pos==='POR'||isGK(id);
+  const por=take(isPor);const del=take(id=>P(id)?.pos==='DEL'&&!isPor(id));const med=take(id=>P(id)?.pos==='MED'&&!isPor(id),2);const def=take(id=>P(id)?.pos==='DEF'&&!isPor(id));
+  const fill=(arr,n)=>{while(arr.length<n){const x=take(id=>!isPor(id))[0]||take(()=>true)[0];if(!x)break;arr.push(x)}};
+  fill(del,1);fill(med,2);fill(def,1);if(!por.length)fill(por,1);
+  return [del,med,def,por];
 }
 const unesc=s=>{const t=document.createElement('textarea');t.innerHTML=String(s||'').replace(/<[^>]+>/g,'');return t.value};
 const dateLine=m=>{const d=mdt(m);return `${DIA[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]}`.toUpperCase()};
