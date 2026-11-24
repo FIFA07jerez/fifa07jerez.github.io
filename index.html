@@ -177,6 +177,10 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .promo .cd{background:var(--red);color:#fff;border-radius:12px;padding:6px 10px;text-align:center;line-height:1}
 .promo .cd b{display:block;font-size:22px}.promo .cd span{font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
 .promo .tag{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;letter-spacing:.15em;font-weight:800;padding:5px 9px;border-radius:99px;text-transform:uppercase}
+.updc{margin-bottom:12px}.updt{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;align-items:stretch}.updt::-webkit-scrollbar{display:none}
+.updt .banner.upd{flex:0 0 100%;scroll-snap-align:start;margin:0;box-sizing:border-box}
+.updn{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:8px}.updb{width:34px;height:34px;border-radius:50%;background:#fff6bf;color:#2a2200;font-size:20px;font-weight:800;line-height:1;border:1px solid #f3dc5c;display:flex;align-items:center;justify-content:center}
+.upddots{display:flex;gap:5px}.upddots i{width:7px;height:7px;border-radius:50%;background:rgba(255,246,191,.3);transition:all .2s}.upddots i.on{background:#fff6bf;width:18px;border-radius:4px}.updi{font-size:12px;font-weight:800;color:var(--mut);min-width:28px;text-align:center}
 .banner.upd{background:#fff6bf;color:#2a2200;border-color:#f3dc5c}.banner.upd .small{color:#5a4d00}.banner.upd .x{background:rgba(0,0,0,.08);color:#2a2200}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--s2);color:var(--mut)}
 .pill.red{background:var(--red);color:#fff}
@@ -289,6 +293,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .wo .bigp{font-family:Anton;font-size:160px;color:#f5c542;line-height:1}.wo .cw{width:min(70vw,290px);margin:0 auto}.wo .go{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));left:24px;right:24px;opacity:0;transition:opacity .6s}.wo.done .go{opacity:1}
 .wo .go .btn{background:var(--red);border-color:var(--red);color:#fff}
 @keyframes wospin{to{transform:rotate(360deg)}}
+.fseg{margin-top:-4px}.fseg button{font-size:12px}
 .fut .flagb{position:absolute;left:0;right:0;bottom:4.4%;display:flex;justify-content:center;align-items:center;gap:2.4cqw;font-size:8.5cqw;line-height:1;z-index:2}.fut .flagb .fg{filter:drop-shadow(0 .4cqw .6cqw rgba(0,0,0,.35));line-height:1}.fut .flagb .strk{margin:0;font-size:6.6cqw}
 .rflag{display:inline-block;width:1.25em;height:.84em;vertical-align:-.08em;border-radius:.12em;overflow:hidden}.rflag svg{width:100%;height:100%;display:block}
 .natl .f .rflag,.wo .bigf .rflag{width:1.3em;height:.87em}
@@ -626,6 +631,11 @@ const CREATOR = 'Daniel Lucena';
 const APP_URL = (location.host&&!/localhost|127\.0/.test(location.host)?location.host:'fifa07jerez.github.io');
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
+  {at:'2026-11-24T20:45:00+01:00', e:'⚖️', t:'Nuevas reglas: ganar manda', d:'Ganar +5, empatar +2, gol +2, asistencia +1. En partidos de muchos goles cada gol vale menos (en un 18-17, un tercio). Para la media cuenta cómo ganas: un 18-17 mueve poco y un 5-2 mucho. Y si marcas bastante más que el resto en ese partido, subes aunque pierdas. Se han recalculado todas las medias desde el principio.'},
+  {at:'2026-11-24T20:45:00+01:00', e:'🎯', t:'Asistencias y Coladero', d:'Ya se apuntan las asistencias al votar, porque pasar también cuenta. Y al votar: valora cómo ha jugado, no cuántos goles ha metido. Si a un portero le meten 5 o más, ya no puede ser El Muro: se vota 🥅 El Coladero, que resta.'},
+  {at:'2026-11-24T20:45:00+01:00', e:'👑', t:'Reyes de cada pista', d:'En Ranking puedes filtrar entre Futsal y Fútbol. Cada categoría tiene su Rey, el que más puntos por partido saca (O Rei do Futsal, El Rey del Fut7…), y el 🚙 Todoterreno es el que mejor rinde en las dos. La corona sale en su carta.'},
+  {at:'2026-11-24T20:45:00+01:00', e:'🎴', t:'Tu carta, estilo Ultimate Team', d:'Bandera (país o comunidad), posición y foto obligatoria. Solo queda la media FIFA, con flechas de forma ⬆️⬇️ en los equipos y estrellas para la fuerza de cada equipo. Las estadísticas de la carta ahora son por partido: mira qué es cada una en Info → Tu carta.'},
+  {at:'2026-11-24T20:45:00+01:00', e:'📸', t:'Comparte y presume', d:'Nuevas imágenes para el grupo: la portada del periódico, la convocatoria con los equipos, El Crack del partido y tus logros. Y cuando un partido está en marcha, sale 🟢 EN JUEGO hasta que se apunta el resultado.'},
   {at:'2026-11-22T22:50:00+01:00', e:'👑', t:'Leyenda del campo', d:'Cada campo tiene su Leyenda: el que más partidos ha jugado ahí en los últimos 90 días. No gana el mejor, gana el que más va. Míralo en Info → Campos, y ojo, que la corona se puede perder.'},
   {at:'2026-11-22T22:50:00+01:00', e:'🔎', t:'Busco jugadores', d:'¿Faltan para completar? En el partido, pulsa "🔎 Busco": te prepara un mensaje con día, campo y nivel para mandarlo a otros grupos. El partido sale como "Buscando" para todos.'},
   {at:'2026-11-19T22:10:00+01:00', e:'⚖️', t:'Niveles igualados', d:'Ahora todos empezamos en 3,0 y la app ha recalculado los niveles con todos los partidos jugados: solo cuenta lo que pasa en el campo y lo que vota el vestuario.'},
@@ -697,7 +707,7 @@ const isReg=c=>!!CCAA[c]||c==='ES'; // banderas dibujadas (comunidades y España
 const flagHTML=c=>isReg(c)?`<span class="rflag">${regionSVG(c)}</span>`:flagOf(c);
 
 const EMOJIS=['😎','🤠','🥸','🧔','👨‍🦲','👱','🧑‍🦱','🦁','🐂','🐐','🦍','🐢','🦥','🐷','🥔','🍺','🔥','💩','🤡','👽','🦄','🐙','🧱','🚌'];
-const PTS={play:2,win:3,draw:1,goal:3,assist:2,kit:1,yellow:-3,red:-6};
+const PTS={play:2,win:5,draw:2,goal:2,assist:1,kit:1,yellow:-3,red:-6};
 const AWARDS=[
   {k:'crack',e:'⭐',n:'El Crack',d:'El mejor del partido',pts:5,self:false},
   {k:'dandy',e:'🎩',n:'El Dandy',d:'Filigranas, elegancia y postureo',pts:2,self:false},
@@ -706,6 +716,23 @@ const AWARDS=[
 ];
 // 🧤 Porteros
 const GK_AWARD={k:'muro',e:'🧤',n:'El Muro bajo palos',d:'El mejor en portería',pts:3};
+// 🥅 Si a un portero fijo le meten 5 o más, no puede ser El Muro: se vota El Coladero (resta, como Vaya día).
+const COLAD_MIN=5,GK_COLAD={k:'colad',e:'🥅',n:'El Coladero',d:`Le han metido ${COLAD_MIN} o más`,pts:-2};
+// 🏟️ Categorías: futsal (pabellón) frente a fútbol (5, 6, 7, 8)
+const isFutsal=m=>m&&m.format==='Futsal';
+const FMT_F={all:()=>true,futsal:m=>isFutsal(m),futbol:m=>!isFutsal(m)};
+const fmtF=()=>FMT_F[S.fmt]||FMT_F.all;
+const KINGS={Futsal:{e:'👑',n:'O Rei do Futsal'},Fut5:{e:'👑',n:'El Rey del Fut5'},Fut6:{e:'👑',n:'El Rey del Fut6'},Fut7:{e:'👑',n:'El Rey del Fut7'},Fut8:{e:'👑',n:'El Rey del Fut8'}};
+const KING_MIN=3; // partidos mínimos en esa categoría (temporada actual)
+// Reyes de cada categoría (más puntos por partido en esa categoría esta temporada) y el Todoterreno
+// (el que mejor rinde a la vez en futsal y en fútbol: mejor de sus dos medias de puntos por partido, con 3+ en cada una).
+function kings(){return memo('kings',()=>{const y=seasonOfDate(new Date());const st=computeStats(m=>seasonOf(m)===y);const out={},by={};
+  for(const id in st){const s=st[id];if(!P(id)||P(id).guest)continue;for(const[f,x]of Object.entries(s.byF||{})){if(x.pj<KING_MIN)continue;const ppm=x.pts/x.pj;if(!by[f]||ppm>by[f].v||(ppm===by[f].v&&x.pj>by[f].pj))by[f]={id,v:ppm,pj:x.pj}}}
+  for(const f in by)if(KINGS[f])out[f]={...KINGS[f],...by[f]};
+  let tt=null;for(const id in st){const s=st[id];if(!P(id)||P(id).guest)continue;const a=s.byC?.futsal,b=s.byC?.futbol;if(!a||!b||a.pj<KING_MIN||b.pj<KING_MIN)continue;const v=Math.min(a.pts/a.pj,b.pts/b.pj);if(!tt||v>tt.v)tt={id,v}}
+  if(tt)out.todo={e:'🚙',n:'Todoterreno',...tt};return out})}
+const titlesOf=id=>Object.values(kings()).filter(k=>k.id===id);
+const concOf=(m,p)=>(m.teamA||[]).includes(p)?(+m.scoreB||0):(+m.scoreA||0);
 const GK_PTS={cs:5,low:3}; // portería a cero +5 · encajar 2 o menos +3
 const GK_BONUS=0.5;        // en el reparto, tener portero fijo cuenta como medio punto de nivel más para ese equipo
 const KMODES={fixed:{e:'🧤',n:'Portero fijo'},broom:{e:'🧹',n:'Portero escoba'},rot:{e:'🔄',n:'Rotativo'}};
@@ -716,10 +743,17 @@ function keepersOf(m){const out={};for(const T of ['A','B']){const team=m['team'
   return out}
 function gkIn(m,pid){const T=(m.teamA||[]).includes(pid)?'A':(m.teamB||[]).includes(pid)?'B':null;if(!T)return false;const k=keepersOf(m)[T];return k.mode==='fixed'&&k.pid===pid}
 const START_LV=3; // nivel con el que empieza todo el mundo (escala 1–5)
-const LV_VER=2;   // versión del cálculo de niveles (para no disparar el aviso de carta al cambiarlo)
+const LV_VER=3;   // versión del cálculo de niveles (para no disparar el aviso de carta al cambiarlo)
 const LEVELS={1:'Paquete integral',2:'Me defiendo',3:'Normalito',4:'Apañado',5:'El bueno del grupo'};
 // Motor de nivel tipo Playtomic: empiezas con tus estrellas y cada partido te sube o baja.
-const LV={K:0.15,K_NEW:0.28,NEW_MATCHES:5,SCALE:1.5,MARGIN:0.12,STARS_PULL:0.08,MIN:1,MAX:5,FULL:10};
+const LV={K:0.15,K_NEW:0.28,NEW_MATCHES:5,SCALE:1.5,STARS_PULL:0.08,GOAL_W:0.06,MIN:1,MAX:5,FULL:10};
+// ⚽ Contexto de cada partido: un gol en un 18-17 no vale lo mismo que en un 3-2.
+const GOAL_REF=12; // goles totales de una pachanga "normal"; por encima, cada gol vale proporcionalmente menos en los puntos
+function matchCtx(m){const tot=(+m.scoreA||0)+(+m.scoreB||0);const n=Math.max(1,(m.teamA||[]).length+(m.teamB||[]).length);
+  return{tot,avgG:tot/n,f:tot>GOAL_REF?GOAL_REF/tot:1}}
+// Resultado "relativo": 0 = derrota clara, 0,5 = empate, 1 = victoria clara. Ganar 18-17 cuenta poco (0,65); 5-2 es victoria clara (1).
+const relRes=(ga,gb)=>{if(ga===gb)return .5;const r=.5+.5*Math.max(-1,Math.min(1,(ga-gb)/Math.max(3,(ga+gb)*.25)));
+  return ga>gb?Math.max(.65,r):Math.min(.35,r)}; // ganar siempre cuenta como mínimo 0,65 (perder, como máximo 0,35)
 const TEAM={A:{n:'Blancos',c:'w'},B:{n:'Negros',c:'b'}};
 const SIZES=['XS','S','M','L','XL','XXL','3XL'];
 const kitOn=()=>!!S.config?.app?.kit;
@@ -734,7 +768,7 @@ const promoCfg=()=>S.config?.app?.promo||null;
 // Anuncio (p. ej. Memorial Alberto Lucena): ventana emergente al abrir la app desde 'days' días antes hasta que acaba el día del evento.
 function promoLive(pr=promoCfg()){if(!pr||!pr.on||!pr.date)return false;const ev=new Date(pr.date+'T23:59:59');const from=new Date(pr.date+'T00:00:00');from.setDate(from.getDate()-(+pr.days||30));const n=new Date(Date.now());return n>=from&&n<=ev}
 function promoDaysLeft(pr){const a=new Date(Date.now());a.setHours(0,0,0,0);const b=new Date(pr.date+'T00:00:00');return Math.round((b-a)/864e5)}
-const astOn=()=>!!S.config?.app?.assists;
+const astOn=()=>S.config?.app?.assists!==false; // activadas salvo que un admin las apague
 const wrapOn=()=>!!S.config?.app?.wrapped; // "Tu temporada" (estilo Spotify): oculto hasta que lo active un admin // asistencias ocultas hasta que un admin las active // la Gala está oculta hasta que un admin la active // la equipación está oculta hasta que un admin la active
 
 /* ============ ESTADO ============ */
@@ -942,21 +976,22 @@ const hasVoted=(mid,pid)=>!!S.voted[`${mid}__${pid}`];
 function tally(o){let max=0,w=[];for(const[k,v]of Object.entries(o)){if(v>max){max=v;w=[k]}else if(v===max&&v>0)w.push(k)}return w}
 function matchAwards(m){return memo('aw:'+m.id,()=>matchAwardsRaw(m))}
 function matchAwardsRaw(m){
-  const vs=votesOf(m.id),cnt={},rat={},grat={},mcnt={};AWARDS.forEach(a=>cnt[a.k]={});
+  const vs=votesOf(m.id),cnt={},rat={},grat={},mcnt={},ccnt={};AWARDS.forEach(a=>cnt[a.k]={});
   vs.forEach(v=>{const aw=v.awards||{};AWARDS.forEach(a=>{const p=aw[a.k];if(p)cnt[a.k][p]=(cnt[a.k][p]||0)+1});
     for(const[p,x]of Object.entries(v.ratings||{})){const n=+x;if(n>=1&&n<=5)(rat[p]=rat[p]||[]).push(n)}
     for(const[p,x]of Object.entries(v.gk||{})){const n=+x;if(n>=1&&n<=5)(grat[p]=grat[p]||[]).push(n)}
-    const mu=(v.awards||{}).muro;if(mu)mcnt[mu]=(mcnt[mu]||0)+1});
+    const mu=(v.awards||{}).muro;if(mu&&concOf(m,mu)<COLAD_MIN)mcnt[mu]=(mcnt[mu]||0)+1;
+    const co=(v.awards||{}).colad;if(co&&concOf(m,co)>=COLAD_MIN)ccnt[co]=(ccnt[co]||0)+1});
   const gkAvg={};for(const[p,a]of Object.entries(grat))gkAvg[p]=a.reduce((x,y)=>x+y,0)/a.length;
   const avg={};for(const[p,a]of Object.entries(rat))avg[p]=a.reduce((x,y)=>x+y,0)/a.length;
   // Un ganador por premio y UN premio por jugador. Se reparte de mayor a menor número de votos:
   // si alguien ya se ha llevado un premio, el siguiente premio pasa al siguiente más votado.
   // Desempates: 1) más votos; 2) importancia del premio (Crack, Muro, Duro, Dandy, Vaya día);
   // 3) nota media del partido (más alta; en "Vaya día", más baja); 4) goles (más; en "Vaya día", menos); 5) orden alfabético.
-  const g=goalsOf(m),win={},cnt2={};const ORDER=['crack','muro','duro','dandy','vaya'];
-  const all={...cnt,muro:mcnt};const negK=k=>(AWARDS.find(a=>a.k===k)?.pts??1)<0;
+  const g=goalsOf(m),win={},cnt2={};const ORDER=['crack','muro','duro','dandy','vaya','colad'];
+  const all={...cnt,muro:mcnt,colad:ccnt};const negK=k=>k==='colad'||(AWARDS.find(a=>a.k===k)?.pts??1)<0;
   const pairs=[];for(const k of ORDER)for(const[p,v]of Object.entries(all[k]||{}))if(v>0)pairs.push({k,p,v});
-  const tb=(k,x,y)=>{const neg=negK(k);const src=k==='muro'?gkAvg:avg;const ax=src[x]??(neg?9:0),ay=src[y]??(neg?9:0);if(ax!==ay)return neg?ax-ay:ay-ax;
+  const tb=(k,x,y)=>{const neg=negK(k);const src=k==='muro'||k==='colad'?gkAvg:avg;const ax=src[x]??(neg?9:0),ay=src[y]??(neg?9:0);if(ax!==ay)return neg?ax-ay:ay-ax;
     const gx=g[x]||0,gy=g[y]||0;if(gx!==gy)return neg?gx-gy:gy-gx;return pname(x).localeCompare(pname(y))};
   pairs.sort((a,b)=>b.v-a.v||ORDER.indexOf(a.k)-ORDER.indexOf(b.k)||tb(a.k,a.p,b.p));
   const taken=new Set(),done=new Set();
@@ -988,10 +1023,11 @@ function computeLevelsRaw(){
     const avg=t=>t.reduce((s,p)=>s+L[p].level,0)/t.length;
     const la=avg(A),lb=avg(B);
     const eA=1/(1+Math.pow(10,(lb-la)/LV.SCALE));
-    const ga=+m.scoreA||0,gb=+m.scoreB||0;const sA=ga>gb?1:ga<gb?0:.5;
-    const mult=1+Math.min(Math.abs(ga-gb),4)*LV.MARGIN;
-    const aw=matchAwards(m);
+    const ga=+m.scoreA||0,gb=+m.scoreB||0;const sA=relRes(ga,gb);const mult=1;
+    const aw=matchAwards(m);const GG=goalsOf(m),AA=assistsOf(m),C=matchCtx(m);
     const apply=(p,s,e)=>{const x=L[p];x.pre[m.id]=x.level;const k=x.n<LV.NEW_MATCHES?LV.K_NEW:LV.K;let d=k*mult*(s-e);
+      // aportación personal: goles (+ media asistencia) por encima de lo normal en ESE partido
+      if(C.tot){const c=(+GG[p]||0)+.5*(+AA[p]||0);d+=LV.GOAL_W*Math.max(0,Math.min(1.5,(c-C.avgG)/(C.avgG+1)))}
       {const sv=gkIn(m,p)&&aw.gkAvg[p]!=null?(aw.avg[p]!=null?(aw.avg[p]+aw.gkAvg[p]*2)/3:aw.gkAvg[p]):aw.avg[p];if(sv!=null)d+=LV.STARS_PULL*(sv-x.level)}
       const nl=Math.max(LV.MIN,Math.min(LV.MAX,x.level+d));x.d[m.id]=nl-x.level;x.level=nl;x.n++};
     A.forEach(p=>apply(p,sA,eA));B.forEach(p=>apply(p,1-sA,1-eA));
@@ -1003,7 +1039,7 @@ function computeStats(flt){return flt?enrich(computeStatsRaw(flt)):memo('st',()=
 function computeStatsRaw(flt){
   const LVL=computeLevels();
   const st={};
-  for(const id in S.players){const p=S.players[id];if(p.status==='pending')continue;st[id]={pj:0,v:0,e:0,d:0,g:0,a:0,aw:{crack:0,dandy:0,duro:0,vaya:0,muro:0},rs:[],gkRs:[],gkPJ:0,conc:0,cs:0,low:0,maxConc:0,pts:0,y:p.yellow||0,r:p.red||0,hist:[],lv0:+p.level0||2,kitN:0,hasKit:!!p.kit,id}}
+  for(const id in S.players){const p=S.players[id];if(p.status==='pending')continue;st[id]={pj:0,v:0,e:0,d:0,g:0,rg:0,a:0,byF:{},byC:{},aw:{crack:0,dandy:0,duro:0,vaya:0,muro:0,colad:0},rs:[],gkRs:[],gkPJ:0,conc:0,cs:0,low:0,maxConc:0,pts:0,y:p.yellow||0,r:p.red||0,hist:[],lv0:+p.level0||2,kitN:0,hasKit:!!p.kit,id}}
   const played=Object.values(S.matches).filter(m=>m.status==='played'&&(!flt||flt(m))).sort((a,b)=>mdt(a)-mdt(b));
   for(const m of played){
     const aw=matchAwards(m);
@@ -1012,8 +1048,8 @@ function computeStatsRaw(flt){
       let pts=PTS.play;s.pj++;
       const res=resultFor(m,pid);
       if(res==='V'){s.v++;pts+=PTS.win}else if(res==='E'){s.e++;pts+=PTS.draw}else if(res==='D')s.d++;
-      const g=+goalsOf(m)[pid]||0,a=+assistsOf(m)[pid]||0;
-      s.g+=g;s.a+=a;pts+=g*PTS.goal+(astOn()?a*PTS.assist:0);
+      const g=+goalsOf(m)[pid]||0,a=+assistsOf(m)[pid]||0,C=matchCtx(m);
+      s.g+=g;s.a+=a;pts+=Math.round((g*PTS.goal+(astOn()?a*PTS.assist:0))*C.f);if(C.avgG>0)s.rg+=g/C.avgG;
       if((m.kit||{})[pid]){s.kitN++;if(kitOn())pts+=PTS.kit}
       const aws=[];AWARDS.forEach(A=>{if(aw.win[A.k].includes(pid)){s.aw[A.k]++;pts+=A.pts;aws.push(A.e)}});
       if(aw.rat[pid])s.rs.push(...aw.rat[pid]);
@@ -1021,8 +1057,10 @@ function computeStatsRaw(flt){
       if(gkIn(m,pid)){const conc=(m.teamA||[]).includes(pid)?(+m.scoreB||0):(+m.scoreA||0);s.gkPJ++;s.conc+=conc;s.maxConc=Math.max(s.maxConc,conc);
         if(conc===0){s.cs++;pts+=GK_PTS.cs}else if(conc<=2){s.low++;pts+=GK_PTS.low}
         if(aw.gkAvg[pid]!=null){s.gkRs.push(aw.gkAvg[pid]);pts+=Math.round((aw.gkAvg[pid]-3)*2)}
-        if(aw.win.muro.includes(pid)){s.aw.muro++;pts+=GK_AWARD.pts;aws.push(GK_AWARD.e)}}
+        if(aw.win.muro.includes(pid)){s.aw.muro++;pts+=GK_AWARD.pts;aws.push(GK_AWARD.e)}
+        if(aw.win.colad.includes(pid)){s.aw.colad++;pts+=GK_COLAD.pts;aws.push(GK_COLAD.e)}}
       s.pts+=pts;s.hist.push({m,res,g,a,aws,avg:aw.avg[pid],pts,dl:LVL[pid]?.d[m.id]});
+      {const f=m.format||'Fut7',c=isFutsal(m)?'futsal':'futbol';for(const[o,k]of[[s.byF,f],[s.byC,c]]){const x=o[k]=o[k]||{pj:0,v:0,pts:0};x.pj++;x.pts+=pts;if(res==='V')x.v++}}
     }
   }
   for(const id in st){
@@ -1030,11 +1068,11 @@ function computeStatsRaw(flt){
     s.avg=s.rs.length?s.rs.reduce((x,y)=>x+y,0)/s.rs.length:null;
     s.lv0=LVL[id]?.start??START_LV;s.level=LVL[id]?.level??s.lv0;
     s.rel=Math.min(100,Math.round((LVL[id]?.n||0)/LV.FULL*100));
-    const gpm=s.pj?s.g/s.pj:0,cr=s.pj?s.aw.crack/s.pj:0,wr=s.pj?s.v/s.pj:0,vr=s.pj?s.aw.vaya/s.pj:0;
+    const gpm=s.pj?s.rg/s.pj:0,cr=s.pj?s.aw.crack/s.pj:0,wr=s.pj?s.v/s.pj:0,vr=s.pj?s.aw.vaya/s.pj:0;
     s.gkAvg=s.gkRs.length?s.gkRs.reduce((x,y)=>x+y,0)/s.gkRs.length:null;
     s.keeper=s.gkPJ>0&&s.gkPJ*2>=s.pj;
     if(s.keeper){const imb=(s.cs+s.low)/s.gkPJ;s.ovr=Math.max(40,Math.min(99,Math.round(40+s.level*11+imb*3+(s.gkAvg!=null?(s.gkAvg-3)*1.5:0)+cr*4+wr*2-vr*3)))}
-    else s.ovr=Math.max(40,Math.min(99,Math.round(40+s.level*11+Math.min(gpm,2)*1.5+cr*4+wr*2-vr*3)));
+    else s.ovr=Math.max(40,Math.min(99,Math.round(40+s.level*11+Math.min(gpm,2.5)*1.2+cr*4+wr*2-vr*3)));
   }
   return st;
 }
@@ -1042,7 +1080,7 @@ function computeStatsRaw(flt){
 // del grupo y te vas separando según juegas (ATTR_K partidos "imaginarios" en la media). Escala 40–95.
 const ATTR_K=5,FIA_DAYS=90;
 function attrG(){return memo('attrG',()=>{const st=computeStats();let pj=0,gk=0;const t={crack:0,dandy:0,duro:0,g:0,muro:0,imb:0,conc:0};
-  for(const id in st){const s=st[id];if(!s||!s.pj)continue;pj+=s.pj;t.crack+=s.aw.crack;t.dandy+=s.aw.dandy;t.duro+=s.aw.duro;t.g+=s.g;
+  for(const id in st){const s=st[id];if(!s||!s.pj)continue;pj+=s.pj;t.crack+=s.aw.crack;t.dandy+=s.aw.dandy;t.duro+=s.aw.duro;t.g+=s.rg;
     if(s.gkPJ){gk+=s.gkPJ;t.muro+=s.aw.muro;t.imb+=s.cs+s.low;t.conc+=s.conc}}
   const r=(x,n,d)=>n?Math.max(x/n,d):d;
   return{crack:r(t.crack,pj,.08),dandy:r(t.dandy,pj,.08),duro:r(t.duro,pj,.08),g:r(t.g,pj,.8),muro:r(t.muro,gk,.15),imb:r(t.imb,gk,.4),conc:r(t.conc,gk,4)}})}
@@ -1057,7 +1095,7 @@ function attrs(s,id){
   if(s.keeper){const n=s.gkPJ;const enc=sm(s.conc,n,G.conc);
     const par=s.gkRs.length?sc(40+55*((s.gkRs.reduce((x,y)=>x+y,0)+ATTR_K*3)/(s.gkRs.length+ATTR_K)-1)/4):'—';
     return[['IMB',up(s.cs+s.low,n,G.imb)],['ENC',sc(40+55*Math.max(0,Math.min(1,1-enc/(2*G.conc))))],['PAR',par],['VIC',vic],['MUR',up(s.aw.muro,n,G.muro)],['FIA',fia(id)]]}
-  return[['CRK',up(s.aw.crack,s.pj,G.crack)],['GOL',up(s.g,s.pj,G.g)],['DAN',up(s.aw.dandy,s.pj,G.dandy)],['VIC',vic],['DUR',up(s.aw.duro,s.pj,G.duro)],['FIA',fia(id)]];
+  return[['CRK',up(s.aw.crack,s.pj,G.crack)],['GOL',up(s.rg,s.pj,G.g)],['DAN',up(s.aw.dandy,s.pj,G.dandy)],['VIC',vic],['DUR',up(s.aw.duro,s.pj,G.duro)],['FIA',fia(id)]];
 }
 const tier=o=>o>=75?'gold':o>=65?'silver':'bronze'; // como en FIFA: oro 75+, plata 65-74, bronce <65
 function balance(ids,st){
@@ -1453,8 +1491,12 @@ function maybePaper(){}
 // estaba abierto, se veía un amago de periódico que desaparecía al recargar. Al salir se cierra (se puede reabrir con el botón).
 const autoClose=()=>{if(document.querySelector('#modalRoot [data-auto]'))close()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)autoClose()});window.addEventListener('pagehide',autoClose);
+const updKey=u=>u.at+'|'+u.t; // varios avisos pueden compartir hora: se cierran uno a uno
 function liveUpdates(){const now=Date.now();let seen={};try{seen=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){}
-  return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[u.at]})}
+  return UPDATES.filter(u=>{const t=Date.parse(u.at);return now>=t&&now-t<UPDATE_HOURS*3600e3&&!seen[updKey(u)]&&!(seen[u.at]===1&&t<Date.parse('2026-11-24T00:00:00+01:00'))})}
+// Carrusel de avisos: se pasan en horizontal (deslizando o con las flechas)
+document.addEventListener('scroll',e=>{const t=e.target;if(!t||t.id!=='updt')return;const i=Math.round(t.scrollLeft/Math.max(1,t.clientWidth));const n=t.children.length;
+  const c=t.parentNode;const lab=c.querySelector('#updi');if(lab)lab.textContent=`${i+1}/${n}`;c.querySelectorAll('.upddots i').forEach((d,k)=>d.classList.toggle('on',k===i))},true);
 // ✏️ Contenido editable desde la app (config/content): campos, plazos, etiquetas y lesiones. Sin tocar el HTML.
 let _cc;function applyContent(){const c=S.config?.content;if(c===_cc)return;_cc=c;
   VENUES=Array.isArray(c?.venues)&&c.venues.length?c.venues:VENUES_DEF;
@@ -1507,7 +1549,9 @@ function viewMatches(st){
   if(pushReady()&&me&&P(me)&&['ask','install'].includes(pushState())){let hid=0;try{hid=+localStorage.getItem('fifa07_pushask')||0}catch(e){}
     if(Date.now()-hid>14*864e5)h+=`<div class="banner"><span class="e">🔔</span><span class="sp"><b>Activa los avisos</b><br><span class="small">Para enterarte al momento si subes de la reserva, te retan o se abre partido.</span></span><button class="btn sm pri" data-act="push">Activar</button><button class="x" data-act="pushHide" style="width:28px;height:28px;font-size:14px;margin-left:6px" aria-label="Ahora no">✕</button></div>`}
   if(me&&P(me)&&bannedFor(me))h+=`<div class="banner" style="border-color:#e10600;background:rgba(225,6,0,.16)"><span class="e">🟥</span><span class="sp"><b>Estás sancionado</b><br><span class="small">Por la roja no puedes apuntarte hasta el ${esc(fmtBan(me))}. A reflexionar 🙃</span></span></div>`;
-  liveUpdates().forEach(u=>{h+=`<div class="banner upd"><span class="e">${u.e}</span><span class="sp"><b>${esc(u.t)}</b><br><span class="small">${esc(u.d)}</span></span><button class="x" data-act="updHide" data-id="${esc(u.at)}" style="width:28px;height:28px;font-size:14px" aria-label="Cerrar">✕</button></div>`});
+  {const U=liveUpdates();const card=u=>`<div class="banner upd"><span class="e">${u.e}</span><span class="sp"><b>${esc(u.t)}</b><br><span class="small">${esc(u.d)}</span></span><button class="x" data-act="updHide" data-id="${esc(updKey(u))}" style="width:28px;height:28px;font-size:14px" aria-label="Cerrar">✕</button></div>`;
+   if(U.length===1)h+=card(U[0]);
+   else if(U.length>1)h+=`<div class="updc"><div class="updt" id="updt">${U.map(card).join('')}</div><div class="updn"><button class="updb" data-act="updNav" data-d="-1" aria-label="Anterior">‹</button><span class="upddots">${U.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</span><span class="updi" id="updi">1/${U.length}</span><button class="updb" data-act="updNav" data-d="1" aria-label="Siguiente">›</button></div></div>`}
   const npend=Object.values(S.players).filter(p=>p.status==='pending').length;
   if(isAdmin()&&npend)h+=`<button class="banner" style="width:100%;text-align:left" data-act="goAdmin"><span class="e">🙋</span><span><b>${npend} ${npend===1?'persona quiere':'personas quieren'} entrar</b><br>Toca para aprobar o rechazar.</span></button>`;
   if(!isStandalone()&&!S.instHidden&&store?.mode!=='demo')h+=`<div class="banner" style="background:var(--s1);border-color:var(--line2)"><span class="e">📲</span><span class="sp"><b>Instálala en tu móvil</b><br><span class="small muted">Para tenerla como una app más.</span></span><button class="btn sm wht" data-act="install">Cómo</button><button class="x" data-act="instHide" style="width:28px;height:28px;font-size:14px">✕</button></div>`;
@@ -1620,7 +1664,7 @@ function matchDetail(m,st){
     {const cr=matchClosed(m)&&matchAwards(m).win.crack[0];x+=`<div class="row" style="margin-top:12px;gap:8px"><button class="btn wht" style="flex:1" data-act="share" data-kind="result" data-id="${esc(m.id)}">📸 Resultado</button>${cr&&P(cr)?`<button class="btn" style="flex:1" data-act="share" data-kind="crack" data-id="${esc(m.id)}">⭐ El Crack</button>`:''}</div>`}
     const aw=matchAwards(m);
     {const elig=att.filter(p=>P(p)&&!P(p).guest),nv=elig.filter(p=>hasVoted(m.id,p)).length;x+=`<h3>Premios del partido · ${aw.nVotes} ${aw.nVotes===1?'voto':'votos'}</h3><p class="small muted" style="margin:-4px 0 8px">${matchClosed(m)?'🔒 Votación cerrada':`🗳️ Han votado ${nv} de ${elig.length} · se cierra cuando voten todos o a las ${GOALS_EDIT_HOURS} h`}</p>`}
-    if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>{const i=aw.info[A.k];return `<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b>${i?`<div class="small muted" style="font-size:11px">${i.votes} ${i.votes===1?'voto':'votos'}${i.tie?' · desempate':''}${i.moved&&i.moved.length?` · pasa de ${esc(pname(i.moved[0]))}`:''}</div>`:''}</div>`}).join('')}${aw.win.muro&&aw.win.muro.length?`<div class="aw"><div class="ae">${GK_AWARD.e}</div><div class="an">${GK_AWARD.n}</div><b>${esc(pname(aw.win.muro[0]))}</b>${aw.info.muro?`<div class="small muted" style="font-size:11px">${aw.info.muro.votes} ${aw.info.muro.votes===1?'voto':'votos'}</div>`:''}</div>`:''}</div>
+    if(aw.nVotes)x+=`<div class="awards">${AWARDS.map(A=>{const i=aw.info[A.k];return `<div class="aw ${A.pts<0?'neg':''}"><div class="ae">${A.e}</div><div class="an">${A.n}</div><b>${aw.win[A.k].map(pname).map(esc).join(', ')||'—'}</b>${i?`<div class="small muted" style="font-size:11px">${i.votes} ${i.votes===1?'voto':'votos'}${i.tie?' · desempate':''}${i.moved&&i.moved.length?` · pasa de ${esc(pname(i.moved[0]))}`:''}</div>`:''}</div>`}).join('')}${aw.win.muro&&aw.win.muro.length?`<div class="aw"><div class="ae">${GK_AWARD.e}</div><div class="an">${GK_AWARD.n}</div><b>${esc(pname(aw.win.muro[0]))}</b>${aw.info.muro?`<div class="small muted" style="font-size:11px">${aw.info.muro.votes} ${aw.info.muro.votes===1?'voto':'votos'}</div>`:''}</div>`:''}${aw.win.colad&&aw.win.colad.length?`<div class="aw neg"><div class="ae">${GK_COLAD.e}</div><div class="an">${GK_COLAD.n}</div><b>${esc(pname(aw.win.colad[0]))}</b>${aw.info.colad?`<div class="small muted" style="font-size:11px">${aw.info.colad.votes} ${aw.info.colad.votes===1?'voto':'votos'}</div>`:''}</div>`:''}</div>
       <p class="small muted" style="margin-top:6px">Un ganador por premio y <b>un premio por jugador</b>: si alguien gana varios, se queda el que más votos tiene y el otro pasa al siguiente más votado. Si hay empate a votos, gana quien tenga mejor nota del partido (en Vaya día, peor), y luego más goles (en Vaya día, menos).</p>`;
     else x+=`<p class="muted small">Todavía nadie ha votado.</p>`;
     if(me&&att.includes(me)&&hasVoted(m.id,me)){const s=myStat(m.id,me);x+=`<button class="btn sm" style="margin-top:10px" data-act="myStats" data-id="${esc(m.id)}">⚽ Mis goles: ${s?`${+s.g||0}${astOn()?` · 🎯 ${+s.a||0}`:''}`:'sin apuntar'} ${goalsLocked(m)?'🔒':'✏️'}</button>`}
@@ -1723,8 +1767,8 @@ function matchDetail(m,st){
 function monthView(st){
   const [Y,M]=S.month.split('-').map(Number);
   const label=new Date(Y,M-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
-  const stM=computeStats(m=>(m.date||'').startsWith(S.month));
-  const nM=Object.values(S.matches).filter(m=>m.status==='played'&&(m.date||'').startsWith(S.month)).length;
+  const ff=fmtF();const stM=computeStats(m=>(m.date||'').startsWith(S.month)&&ff(m));
+  const nM=Object.values(S.matches).filter(m=>m.status==='played'&&(m.date||'').startsWith(S.month)&&ff(m)).length;
   let h=`<div class="monthnav"><button class="iconbtn" data-act="month" data-d="-1">‹</button><div class="t">${esc(label)}</div><button class="iconbtn" data-act="month" data-d="1">›</button></div>`;
   const ranked=Object.keys(stM).filter(id=>stM[id].pj>0).sort((a,b)=>stM[b].pts-stM[a].pts||st[b].level-st[a].level);
   if(!ranked.length)return h+`<div class="empty" style="margin-top:12px"><div class="big">📆</div>No hay partidos jugados este mes.</div>`;
@@ -1750,7 +1794,7 @@ function monthView(st){
 }
 function seasonView(stAll){
   const y=S.season;const[t0,t1]=seasonRange(y);
-  const st=computeStats(m=>seasonOf(m)===y);
+  const ff=fmtF();const st=computeStats(m=>seasonOf(m)===y&&ff(m));
   for(const id in st){const log=(P(id).cardLog||[]).filter(c=>c.at>=t0&&c.at<t1);st[id].y=log.filter(c=>c.type!=='red').length;st[id].r=log.filter(c=>c.type==='red').length;st[id].pts+=st[id].y*PTS.yellow+st[id].r*PTS.red}
   const ids=Object.keys(S.players).filter(id=>st[id].pj>0||st[id].y||st[id].r);
   let h=`<div class="monthnav"><button class="iconbtn" data-act="season" data-d="-1">‹</button><div class="t">Temporada ${seasonLabel(y)}</div><button class="iconbtn" data-act="season" data-d="1">›</button></div>`;
@@ -1764,16 +1808,21 @@ function seasonView(stAll){
     ${AWARDS.map(A=>`<div class="lbc"><div class="tt">${A.e} ${A.n}</div>${top(r=>r.aw[A.k])}</div>`).join('')}
     <div class="lbc"><div class="tt">⚽ Pichichi</div>${top(r=>r.g)}</div>
     ${astOn()?`<div class="lbc"><div class="tt">🎯 Asistencias</div>${top(r=>r.a)}</div>`:''}
-    <div class="lbc"><div class="tt">★ Mejor nivel</div>${top(r=>r.level,v=>v.toFixed(2),r=>r.rs.length>=5)}</div>
+    <div class="lbc"><div class="tt">📈 Mejor media</div>${top(r=>r.ovr,v=>v,r=>r.pj>=5)}</div>
     <div class="lbc"><div class="tt">🏃 Más partidos</div>${top(r=>r.pj)}</div>
     <div class="lbc"><div class="tt">🏅 % victorias</div>${top(r=>r.pj?r.v/r.pj*100:0,v=>Math.round(v)+'%',r=>r.pj>=3)}</div>
     <div class="lbc"><div class="tt">🟨 Tarjeteros</div>${top(r=>r.y+r.r*2)}</div>
   </div>`;
+  if(y===seasonOfDate(new Date())){const K=kings();const ks=[...Object.keys(KINGS).filter(f=>K[f]).map(f=>K[f]),...(K.todo?[K.todo]:[])];
+    h+=`<h2>Reyes de cada pista <span class="sub">más puntos por partido · mín. ${KING_MIN}</span></h2><div class="lb">${ks.length?ks.map(k=>`<div class="lbc" data-act="profile" data-id="${esc(k.id)}"><div class="tt">${k.e} ${esc(k.n)}</div><div class="l">${face(k.id)} ${esc(pname(k.id))}<b>${k.v.toFixed(1)} pts/p</b></div></div>`).join(''):'<div class="muted small">Aún nadie tiene 3 partidos en una categoría.</div>'}</div>
+    <p class="small muted" style="margin-top:6px">🚙 <b>Todoterreno</b>: el que mejor rinde en futsal <i>y</i> en fútbol a la vez (3+ partidos en cada uno).</p>`}
   return h;
 }
+function fmtSeg(){const pl=Object.values(S.matches).filter(m=>m.status==='played');if(!pl.some(isFutsal)||!pl.some(m=>!isFutsal(m)))return'';
+  const f=S.fmt||'all';return `<div class="seg fseg">${[['all','Todo'],['futsal','🏟️ Futsal'],['futbol','⚽ Fútbol 5-8']].map(([k,t])=>`<button class="${f===k?'on':''}" data-act="fmt" data-v="${k}">${t}</button>`).join('')}</div>`}
 function viewRanking(st){
   const rk=(S.rk==='gala'&&!galaOn()&&!isAdmin())?'month':(S.rk||'month');
-  return `<div class="seg"><button class="${rk==='month'?'on':''}" data-act="rk" data-v="month">Mes</button><button class="${rk==='season'?'on':''}" data-act="rk" data-v="season">Temporada</button>${galaOn()||isAdmin()?`<button class="${rk==='gala'?'on':''}" data-act="rk" data-v="gala">🏆 Gala${galaOn()?'':' 🔒'}</button>`:''}</div>`+(rk==='season'?seasonView(st):rk==='gala'?galaView(st):monthView(st));
+  return `<div class="seg"><button class="${rk==='month'?'on':''}" data-act="rk" data-v="month">Mes</button><button class="${rk==='season'?'on':''}" data-act="rk" data-v="season">Temporada</button>${galaOn()||isAdmin()?`<button class="${rk==='gala'?'on':''}" data-act="rk" data-v="gala">🏆 Gala${galaOn()?'':' 🔒'}</button>`:''}</div>`+(rk!=='gala'?fmtSeg():'')+(rk==='season'?seasonView(st):rk==='gala'?galaView(st):monthView(st));
 }
 
 /* ---- Plantilla ---- */
@@ -1784,7 +1833,8 @@ function futCard(id,st,big=false,opt={}){
   const t=inf?'inform':vayaKing?'vaya':tier(s.ovr);const sk=streak(s);
   const at=attrs(s,id),L=at.slice(0,3),R=at.slice(3);
   const row=([k,v])=>`<div class="r"><b>${v}</b><span>${k}</span></div>`;
-  const badge=opt.badge||(inf?'⭐ Crack de la jornada':vayaKing?'🤦 Rey del Vaya día':s.aw.crack>=3?'⭐ Leyenda':'');
+  const kt=opt.noVaya?null:titlesOf(id)[0];
+  const badge=opt.badge||(inf?'⭐ Crack de la jornada':vayaKing?'🤦 Rey del Vaya día':kt?`${kt.e} ${kt.n}`:s.aw.crack>=3?'⭐ Leyenda':'');
   const ij=injOf(id),aw=!ij&&awayOn(id)?awayCfg(id):null;
   return `<button class="fut ${t} ${big?'big':''} ${ij?'injd':''} ${aw?'awyd':''}" ${big?'':`data-act="profile" data-id="${esc(id)}"`}><div class="fi">
     ${ij?`<div class="injb">✚ ${esc(ij.label)}</div>`:aw?`<div class="awyb">${esc(aw.e)} ${esc(aw.label)}</div>`:''}
@@ -1842,9 +1892,9 @@ function viewInfo(){
     <li>Después del partido, <b>el organizador apunta el resultado</b> y <b>cada uno sus goles</b> al votar (la app avisa si no cuadran y el organizador corrige).</li>
     <li>Y cada uno vota de forma <b>anónima</b> 1–5 ★ a sus compañeros más ⭐ El Crack, 🎩 El Dandy, 🪨 El Duro y 🤦 Vaya día.</li>
     <li>El buen fútbol no es bienvenido. 😄</li></ul></div>`;
-  h+=`<h2>Puntos fantasy</h2><div class="box small" style="line-height:1.8">Jugar <b>+${PTS.play}</b> · Ganar <b>+${PTS.win}</b> · Empatar <b>+${PTS.draw}</b> · Gol <b>+${PTS.goal}</b> ${astOn()?`· Asistencia <b>+${PTS.assist}</b> `:''}· ${AWARDS.map(A=>`${A.e} <b>${A.pts>0?'+':''}${A.pts}</b>`).join(' · ')} · Estrellas: <b>(media − 3) × 2</b> · 🟨 <b>${PTS.yellow}</b> · 🟥 <b>${PTS.red}</b><br>🧤 <b>Porteros fijos:</b> portería a cero <b>+${GK_PTS.cs}</b> · encajar 2 o menos <b>+${GK_PTS.low}</b> · nota de portero <b>(media − 3) × 2</b> · ${GK_AWARD.e} ${GK_AWARD.n} <b>+${GK_AWARD.pts}</b>. </div>`;
-  h+=`<h2>Tu carta</h2><div class="box small" style="line-height:1.6"><b>La media</b> es el número grande, como en el FIFA:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo más fuerte sube más; perder contra uno más flojo baja más.</li><li>Las goleadas cuentan un poco más.</li><li>Las estrellas que te ponen tus compañeros (de 1 a 5) empujan hacia arriba o hacia abajo.</li><li>Un pequeño extra por goles por partido, veces Crack y % de victorias; y resta ser Vaya día a menudo.</li><li>En tus primeros ${LV.NEW_MATCHES} partidos se mueve más rápido, hasta que encuentra tu sitio. A los ${LV.FULL} partidos tu media es 100% precisa.</li></ul>
-  <b>Las 6 estadísticas</b> describen tu estilo y <b>no cambian la media</b>. Van de 40 a 95 y son <b>por partido</b>: no se inflan por jugar más. Con pocos partidos estás cerca de la media del grupo, y te vas separando según juegas.<ul class="rules" style="margin-top:6px"><li><b>CRK</b> · veces Crack por partido</li><li><b>GOL</b> · goles por partido</li><li><b>DAN</b> · veces Dandy por partido</li><li><b>VIC</b> · % de victorias (el empate cuenta medio)</li><li><b>DUR</b> · veces Duro por partido</li><li><b>FIA</b> · fiabilidad: baja con las tarjetas de los últimos ${FIA_DAYS} días</li></ul>
+  h+=`<h2>Puntos fantasy</h2><div class="box small" style="line-height:1.8">Jugar <b>+${PTS.play}</b> · Ganar <b>+${PTS.win}</b> · Empatar <b>+${PTS.draw}</b> · Gol <b>+${PTS.goal}</b> ${astOn()?`· Asistencia <b>+${PTS.assist}</b> `:''}· ${AWARDS.map(A=>`${A.e} <b>${A.pts>0?'+':''}${A.pts}</b>`).join(' · ')} · Estrellas: <b>(media − 3) × 2</b> · 🟨 <b>${PTS.yellow}</b> · 🟥 <b>${PTS.red}</b><br>⚖️ <b>Partidos con muchos goles:</b> si se marcan más de ${GOAL_REF} entre los dos equipos, cada gol${astOn()?' y asistencia':''} vale proporcionalmente menos (en un 18-17, un gol vale un tercio). Así no compensa inflar el marcador.<br>🧤 <b>Porteros fijos:</b> portería a cero <b>+${GK_PTS.cs}</b> · encajar 2 o menos <b>+${GK_PTS.low}</b> · nota de portero <b>(media − 3) × 2</b> · ${GK_AWARD.e} ${GK_AWARD.n} <b>+${GK_AWARD.pts}</b> · ${GK_COLAD.e} ${GK_COLAD.n} <b>${GK_COLAD.pts}</b> (si le meten ${COLAD_MIN} o más, no puede ser El Muro). </div>`;
+  h+=`<h2>Tu carta</h2><div class="box small" style="line-height:1.6"><b>La media</b> es el número grande, como en el FIFA:<ul class="rules" style="margin-top:6px"><li><b>Ganar sube, perder baja.</b> Ganar a un equipo más fuerte sube más; perder contra uno más flojo baja más.</li><li><b>Cuenta cómo ganas:</b> un 5-2 es una victoria clara; un 18-17 cuenta como una victoria por la mínima y mueve poco.</li><li><b>Tu aportación:</b> si marcas bastante más que lo normal en ese partido, subes aunque pierdas. Se compara con el partido: 4 goles en un 3-2 valen mucho más que en un 18-17.</li><li>Las estrellas que te ponen tus compañeros (de 1 a 5) empujan hacia arriba o hacia abajo.</li><li>Un pequeño extra por goles por partido, veces Crack y % de victorias; y resta ser Vaya día a menudo.</li><li>En tus primeros ${LV.NEW_MATCHES} partidos se mueve más rápido, hasta que encuentra tu sitio. A los ${LV.FULL} partidos tu media es 100% precisa.</li></ul>
+  <b>Las 6 estadísticas</b> describen tu estilo y <b>no cambian la media</b>. Van de 40 a 95 y son <b>por partido</b>: no se inflan por jugar más. Con pocos partidos estás cerca de la media del grupo, y te vas separando según juegas.<ul class="rules" style="margin-top:6px"><li><b>CRK</b> · veces Crack por partido</li><li><b>GOL</b> · goles por partido, comparados con lo que se marca en cada partido (así futsal y fútbol 7 son comparables)</li><li><b>DAN</b> · veces Dandy por partido</li><li><b>VIC</b> · % de victorias (el empate cuenta medio)</li><li><b>DUR</b> · veces Duro por partido</li><li><b>FIA</b> · fiabilidad: baja con las tarjetas de los últimos ${FIA_DAYS} días</li></ul>
   🧤 <b>Porteros:</b> IMB (partidos encajando 2 o menos) · ENC (pocos goles encajados) · PAR (nota bajo palos) · VIC · MUR (veces Muro) · FIA.<br>
   Carta <b style="color:#f1d27a">oro</b> 75+ · <b style="color:#cfd5da">plata</b> 65–74 · <b style="color:#d69767">bronce</b> menos de 65. Los equipos se hacen equilibrados con esta valoración.</div>`;
   if(isAdmin())h+=adminSection();
@@ -2323,7 +2373,8 @@ function voteForm(mid){
   if(hasVoted(mid,me)){toast('Ya has votado este partido ✅');return}
   if(!attendees(m).includes(me)){toast('Solo votan los que jugaron');return}
   const others=attendees(m).filter(p=>p!==me&&P(p));
-  const KPm=keepersOf(m);const gkO=['A','B'].map(k=>KPm[k]).filter(k=>k.mode==='fixed'&&k.pid!==me&&P(k.pid)).map(k=>k.pid);const gr={};let muro=null;
+  const KPm=keepersOf(m);const gkO=['A','B'].map(k=>KPm[k]).filter(k=>k.mode==='fixed'&&k.pid!==me&&P(k.pid)).map(k=>k.pid);const gr={};let muro=null,colad=null;
+  const gkM=gkO.filter(p=>concOf(m,p)<COLAD_MIN),gkC=gkO.filter(p=>concOf(m,p)>=COLAD_MIN);
   const r={},aw={};const ms=myStat(mid,me)||{};let myG=+ms.g||0,myA=+ms.a||0;let fs=0;const ftags=new Set();
   const SL={1:'Tronco',2:'Flojito',3:'Cumplió',4:'Muy bien',5:'Crack'};
   modal(`${mh('Puntúa el partido')}<p class="muted small">${esc(fmtShort(m))} · ${esc(m.venue||'')}<br>🔒 <b>Voto anónimo:</b> nadie, ni los admins, puede ver qué has votado. Solo se puede votar una vez.</p>
@@ -2335,11 +2386,13 @@ function voteForm(mid){
     <h3 id="vqField">🏟️ ¿Qué tal el campo? <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${esc(m.venue||'')}</span></h3>
     <div class="row"><div class="starpick" id="fst">${[1,2,3,4,5].map(i=>`<button data-fs="${i}">★</button>`).join('')}</div></div>
     <div class="opts" id="ftg" style="margin-top:8px">${FIELD_TAGS.map(t=>`<button class="opt" data-ft="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-    <h3>Nivel de hoy</h3>
+    <h3>Nivel de hoy <span style="text-transform:none;letter-spacing:0;font-weight:500">· valora cómo ha jugado, no cuántos goles ha metido</span></h3>
+    <p class="small muted" style="margin:-4px 0 8px">¿La pasaba? ¿Defendía? ¿Ayudaba al equipo? El que solo va a lo suyo, menos estrellas. 😉</p>
     ${others.map(p=>`<div class="prow"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}</span><div class="starpick" data-p="${esc(p)}">${[1,2,3,4,5].map(i=>`<button data-s="${i}">★</button>`).join('')}</div><span class="sl"></span></div>`).join('')}
     ${gkO.length?`<h3>🧤 ¿Qué tal en portería?</h3>
       ${gkO.map(p=>`<div class="prow"><span class="av">${face(p)}</span><span class="nm">${esc(pname(p))}</span><div class="starpick" data-g="${esc(p)}">${[1,2,3,4,5].map(i=>`<button data-s="${i}">★</button>`).join('')}</div><span class="sl"></span></div>`).join('')}
-      <h3 id="vqMuro">${GK_AWARD.e} ${GK_AWARD.n} <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${GK_AWARD.d}</span></h3><div class="opts" data-awg="1">${gkO.map(p=>`<button class="opt" data-v="${esc(p)}">${esc(pname(p))}</button>`).join('')}</div>`:''}
+      ${gkC.length?`<h3 id="vqColad">${GK_COLAD.e} ${GK_COLAD.n} <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${GK_COLAD.d}</span></h3><div class="opts" data-awc="1">${gkC.map(p=>`<button class="opt" data-v="${esc(p)}">${esc(pname(p))} <span class="muted">(${concOf(m,p)})</span></button>`).join('')}</div>`:''}
+      ${gkM.length?`<h3 id="vqMuro">${GK_AWARD.e} ${GK_AWARD.n} <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${GK_AWARD.d}</span></h3><div class="opts" data-awg="1">${gkM.map(p=>`<button class="opt" data-v="${esc(p)}">${esc(pname(p))}</button>`).join('')}</div>`:''}`:''}
     ${AWARDS.map(A=>`<h3 id="vqAw_${A.k}">${A.e} ${A.n} <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${A.d}</span></h3><div class="opts" data-aw="${A.k}">${(A.self?[me,...others]:others).map(p=>`<button class="opt" data-v="${esc(p)}">${p===me?'Yo mismo 🙋':esc(pname(p))}</button>`).join('')}</div>`).join('')}
     <p class="small muted" style="margin-top:18px">Hay que rellenarlo todo (las etiquetas del campo son opcionales).</p><button class="btn pri full" id="sv" style="margin-top:10px">Enviar votos</button>`,
   md=>{
@@ -2351,6 +2404,7 @@ function voteForm(mid){
     md.querySelectorAll('.starpick[data-g]').forEach(sp=>sp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
       const p=sp.dataset.g,v=+b.dataset.s;gr[p]=v;sp.querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.s<=v));sp.nextElementSibling.textContent=SL[v]}));
     md.querySelectorAll('[data-awg] .opt').forEach(b=>b.onclick=()=>{muro=muro===b.dataset.v?null:b.dataset.v;md.querySelectorAll('[data-awg] .opt').forEach(x=>x.classList.toggle('on',x.dataset.v===muro))});
+    md.querySelectorAll('[data-awc] .opt').forEach(b=>b.onclick=()=>{colad=colad===b.dataset.v?null:b.dataset.v;md.querySelectorAll('[data-awc] .opt').forEach(x=>x.classList.toggle('on',x.dataset.v===colad))});
     md.querySelectorAll('.starpick[data-p]').forEach(sp=>sp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
       const p=sp.dataset.p,v=+b.dataset.s;r[p]=v;sp.querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.s<=v));sp.nextElementSibling.textContent=SL[v]}));
     md.querySelectorAll('[data-aw]').forEach(g=>{const k=g.dataset.aw,neg=AWARDS.find(a=>a.k===k).pts<0;
@@ -2363,13 +2417,14 @@ function voteForm(mid){
       if(miss.length)return go(md.querySelector(`.starpick[data-p="${CSS.escape(miss[0])}"]`)?.closest('.prow'),`Faltan estrellas para ${miss.map(pname).join(', ')}`);
       const gmiss=gkO.filter(p=>!gr[p]);
       if(gmiss.length)return go(md.querySelector(`.starpick[data-g="${CSS.escape(gmiss[0])}"]`)?.closest('.prow'),`🧤 Puntúa en portería a ${gmiss.map(pname).join(', ')}`);
-      if(gkO.length&&!muro)return go(md.querySelector('#vqMuro'),`${GK_AWARD.e} Elige ${GK_AWARD.n}`);
+      if(gkC.length&&!colad)return go(md.querySelector('#vqColad'),`${GK_COLAD.e} Elige ${GK_COLAD.n}`);
+      if(gkM.length&&!muro)return go(md.querySelector('#vqMuro'),`${GK_AWARD.e} Elige ${GK_AWARD.n}`);
       const am=AWARDS.find(A=>!aw[A.k]);
       if(am)return go(md.querySelector('#vqAw_'+am.k),`${am.e} Elige ${am.n}`);
       if(!goalsLocked(m)){if(myG>gR){toast('⚽ '+capMsg(m,me,'g'));return}if(myA>aR){toast('🎯 '+capMsg(m,me,'a'));return}}
       if(hasVoted(mid,me)){toast('Ya has votado este partido ✅');close();return}
       e.target.disabled=true;
-      const awards={};AWARDS.forEach(A=>{if(aw[A.k])awards[A.k]=aw[A.k]});if(muro)awards.muro=muro;
+      const awards={};AWARDS.forEach(A=>{if(aw[A.k])awards[A.k]=aw[A.k]});if(muro)awards.muro=muro;if(colad)awards.colad=colad;
       try{
         // El voto se guarda SIN identificar a quien vota; aparte solo se marca que ya ha votado.
         const vd={mid,ratings:r,awards};if(Object.keys(gr).length)vd.gk=gr;if(fs)vd.field={s:fs,tags:[...ftags],venue:m.venue||''};
@@ -2406,7 +2461,7 @@ function profile(id){
       ${[['Media',s.ovr],['Puntos',s.pts],['PJ',s.pj],['V-E-D',`${s.v}-${s.e}-${s.d}`],['Goles',s.g],...(astOn()?[['Asist',s.a]]:[]),...AWARDS.map(A=>[A.e,s.aw[A.k]]),...(s.gkPJ?[['🧤 Bajo palos',s.gkPJ],['Encajados/p.',(s.conc/s.gkPJ).toFixed(1)],['A cero',s.cs],['Nota portero',s.gkAvg!=null?s.gkAvg.toFixed(1):'—'],[GK_AWARD.e+' Muro',s.aw.muro]]:[])].map(([k,v])=>`<div class="fact" style="padding:8px 4px"><b style="font-size:18px">${v}</b><span>${k}</span></div>`).join('')}
     </div>
     <p class="small muted" style="margin-top:12px">Precisión de la media <b style="color:var(--txt)">${s.rel}%</b> · empezó en ${lvOvr(s.lv0)} · ahora ${s.ovr}</p>
-    <p class="small muted" style="margin-top:4px">${flagHTML(natOf(id))} ${esc(natName(natOf(id)))} · ${esc(POS[p.pos]||'Sin posición')} · Tarjetas: ${s.y?`🟨×${s.y} `:''}${s.r?`🟥×${s.r}`:''}${!s.y&&!s.r?'limpio 😇':''}${p.admin?' · <span class="pill red">Admin</span>':''}</p>
+    <p class="small muted" style="margin-top:4px">${flagHTML(natOf(id))} ${esc(natName(natOf(id)))} · ${esc(POS[p.pos]||'Sin posición')} · Tarjetas: ${s.y?`🟨×${s.y} `:''}${s.r?`🟥×${s.r}`:''}${!s.y&&!s.r?'limpio 😇':''}${p.admin?' · <span class="pill red">Admin</span>':''}</p>${titlesOf(id).length?`<p class="small" style="margin-top:4px">${titlesOf(id).map(k=>`<span class="pill red" style="margin:2px 4px 0 0">${k.e} ${esc(k.n)}</span>`).join('')}</p>`:''}${(s.byC?.futsal&&s.byC?.futbol)?`<p class="small muted" style="margin-top:4px">${[['🏟️ Futsal',s.byC.futsal],['⚽ Fútbol',s.byC.futbol]].map(([t,x])=>`${t}: <b style="color:var(--txt)">${x.pj}</b> PJ · ${Math.round(x.v/x.pj*100)}% vic. · ${(x.pts/x.pj).toFixed(1)} pts/p`).join('<br>')}</p>`:''}
     ${(()=>{const ij=injOf(id);const mine=id===me;let x='';
       if(ij){const d=Math.floor((Date.now()-(ij.at||Date.now()))/864e5);x+=`<div class="banner" style="margin-top:12px;border-color:#e10600;background:rgba(225,6,0,.12)"><span class="e" style="color:#e10600;font-weight:900">✚</span><span class="sp"><b>${esc(ij.e||'🚑')} ${esc(ij.label)}</b><br><span class="small">${d<1?'Desde hoy':d===1?'Desde ayer':`Desde hace ${d} días`}${ij.note?` · Vuelve: ${esc(ij.note)}`:''}</span></span></div>`}
       if(bannedFor(id))x+=`<div class="banner" style="margin-top:12px;border-color:#e10600;background:rgba(225,6,0,.16)"><span class="e">🟥</span><span class="sp"><b>Sancionado</b><br><span class="small">Una semana sin poder apuntarse por roja · hasta el ${esc(fmtBan(id))}</span></span></div>`;
@@ -2652,6 +2707,7 @@ const ACH=[
   {e:'🎽',n:'Uniformado',d:'10 partidos con la camiseta',t:s=>s.kitN>=10,kit:true},
   // Partidos
   {e:'👟',n:'Debut',d:'Jugar tu primer partido',t:s=>s.pj>=1},
+  {e:'🚙',n:'Todoterreno',d:'Ganar 3 partidos de futsal y 3 de fútbol',t:s=>(s.byC?.futsal?.v||0)>=3&&(s.byC?.futbol?.v||0)>=3},
   {e:'📅',n:'Fijo',d:'10 partidos jugados',t:s=>s.pj>=10},
   {e:'🎖️',n:'Veterano',d:'25 partidos jugados',t:s=>s.pj>=25},
   {e:'🧤',n:'Gato',d:'3 partidos de portero sin encajar',t:s=>s.cs>=3},
@@ -3819,7 +3875,7 @@ function adminSection(){
     ${(()=>{const v=S.config?.app?.vice;return `<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="sp"><b>🌴 Modo Vice</b><br><span class="small muted">Colores neón por el GTA 6. ${v===undefined||v===null?'Automático: del 19 al 30 de noviembre':v?'Forzado: encendido':'Forzado: apagado'}</span></span><button class="tog ${viceOn()?'on':''}" data-act="viceToggle">${viceOn()?'Activado':'Apagado'}</button></div>`})()}
     ${row('🎬','Tu temporada','El resumen tipo Spotify de cada jugador (botón en su carta y en la temporada).',wrapOn(),'wrapToggle')}
     ${row('🏆','Gala de la temporada','Premios de la temporada y votación del Balón de Oro y el de Plomo.',galaOn(),'galaToggle')}
-    ${row('🎯','Asistencias','Que cada uno apunte también sus asistencias (suman +2 y tienen ranking).',astOn(),'astToggle')}
+    ${row('🎯','Asistencias',`Que cada uno apunte también sus asistencias (suman +${PTS.assist} y tienen ranking).`,astOn(),'astToggle')}
     ${row('👕','Equipación oficial','Diseño de las camisetas, pedido conjunto, dorsales y +1 por venir equipado.',kitOn(),'kitToggle')}
     <div style="padding-top:12px" class="small muted">
       <p>🔒 <b style="color:var(--txt)">Grupo privado:</b> nadie entra sin tu aprobación o sin una invitación con PIN.</p>
@@ -4002,18 +4058,20 @@ document.addEventListener('click',e=>{
     case'reject':confirmBox('Rechazar solicitud',`Se borra la solicitud de <b>${esc(pname(id))}</b>.`,'Rechazar',async()=>{await store.doc('players/'+id).delete()},true);break;
     case'install':installModal();break;
     case'promoEdit':promoForm();break;
+    case'updNav':{const t=document.getElementById('updt');if(t)t.scrollBy({left:t.clientWidth*(+a.dataset.d),behavior:'smooth'});break}
     case'updHide':{let s={};try{s=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){};s[id]=1;try{localStorage.setItem('fifa07_upd',JSON.stringify(s))}catch(e){};render();break}
     case'instHide':S.instHidden=true;try{localStorage.setItem('fifa07_insthide','1')}catch(e){};render();break;
     case'goAdmin':S.tab='info';render();setTimeout(()=>document.getElementById('admin')?.scrollIntoView({behavior:'smooth'}),50);break;
     case'viceToggle':store.doc('config/app').set({...(S.config.app||{}),vice:!viceOn()}).then(()=>toast(viceOn()?'🌴 Modo Vice activado':'Vuelve el rojo, blanco y negro')).catch(err);break;
     case'wrapToggle':store.doc('config/app').set({...(S.config.app||{}),wrapped:!wrapOn()}).then(()=>toast(wrapOn()?'🎬 Tu temporada activada':'Tu temporada oculta')).catch(err);break;
     case'galaToggle':confirmBox(galaOn()?'Ocultar la Gala':'Activar la Gala',galaOn()?'La pestaña Gala dejará de verse para el grupo. Los votos se guardan.':'Todo el grupo verá la pestaña Gala en Ranking y podrá votar el Balón de Oro y el de Plomo.',galaOn()?'Ocultar':'🏆 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),gala:!galaOn()})});break;
-    case'astToggle':confirmBox(astOn()?'Ocultar asistencias':'Activar asistencias',astOn()?'Dejarán de apuntarse, verse y sumar puntos. Lo apuntado se guarda.':'Cada uno podrá apuntar sus asistencias al votar; suman +2 y salen en rankings.',astOn()?'Ocultar':'🎯 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),assists:!astOn()})});break;
+    case'astToggle':confirmBox(astOn()?'Ocultar asistencias':'Activar asistencias',astOn()?'Dejarán de apuntarse, verse y sumar puntos. Lo apuntado se guarda.':`Cada uno podrá apuntar sus asistencias al votar; suman +${PTS.assist} y salen en rankings.`,astOn()?'Ocultar':'🎯 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),assists:!astOn()})});break;
     case'kitToggle':confirmBox(kitOn()?'Ocultar equipación':'Activar equipación',kitOn()?'Dejará de verse para todo el grupo. Los pedidos y dorsales se guardan.':'Todo el grupo verá el diseño de las camisetas, el pedido conjunto y el +1 punto por venir equipado.',kitOn()?'Ocultar':'👕 Activar',async()=>{await store.doc('config/app').set({...(S.config.app||{}),kit:!kitOn()})});break;
     case'kitHide':S.kitPromoHidden=true;try{localStorage.setItem('fifa07_kithide','1')}catch(e){};render();break;
     case'kitCopy':copyText(kitOrderText(),'Pedido copiado 📋');break;
     case'morePlayed':S.allPlayed=true;render();break;
     case'rk':S.rk=a.dataset.v;render();break;
+    case'fmt':S.fmt=a.dataset.v;render();break;
     case'month':{const[y,mm]=S.month.split('-').map(Number);S.month=ym(new Date(y,mm-1+ +a.dataset.d,1));render();break}
     case'resetDemo':confirmBox('Reiniciar demo','Se borran los datos de prueba y se cargan otros nuevos.','Reiniciar',async()=>{store.reset();setMe('d0')});break;
   }
