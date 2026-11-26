@@ -293,6 +293,7 @@ h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 .wo .bigp{font-family:Anton;font-size:160px;color:#f5c542;line-height:1}.wo .cw{width:min(70vw,290px);margin:0 auto}.wo .go{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));left:24px;right:24px;opacity:0;transition:opacity .6s}.wo.done .go{opacity:1}
 .wo .go .btn{background:var(--red);border-color:var(--red);color:#fff}
 @keyframes wospin{to{transform:rotate(360deg)}}
+.recr{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.recr:last-child{border-bottom:0}.recr .re{font-size:24px}.recr .rv{font-family:Anton;font-size:24px;white-space:nowrap}
 .fseg{margin-top:-4px}.fseg button{font-size:12px}
 .fut .flagb{position:absolute;left:0;right:0;bottom:4.4%;display:flex;justify-content:center;align-items:center;gap:2.4cqw;font-size:8.5cqw;line-height:1;z-index:2}.fut .flagb .fg{filter:drop-shadow(0 .4cqw .6cqw rgba(0,0,0,.35));line-height:1}.fut .flagb .strk{margin:0;font-size:6.6cqw}
 .rflag{display:inline-block;width:1.25em;height:.84em;vertical-align:-.08em;border-radius:.12em;overflow:hidden}.rflag svg{width:100%;height:100%;display:block}
@@ -521,6 +522,7 @@ td.pts{font-family:'Anton';font-size:18px}
 .starpick{display:flex}
 .starpick button{font-size:27px;line-height:1;color:#3a3a3a;padding:1px}
 .starpick button.on{color:var(--red2)}
+.prow2{flex-wrap:wrap;row-gap:8px}.prow2 .nm{flex:1 1 0;white-space:normal}.prow2 .stp{flex:0 0 100%;display:flex;justify-content:flex-end;gap:22px}
 .prow .sl{width:58px;font-size:11px;color:var(--mut);text-align:right;font-weight:600}
 .opts{display:flex;flex-wrap:wrap;gap:6px}
 .opt{padding:9px 13px;border-radius:999px;background:var(--s1);border:1px solid var(--line2);font-weight:700;font-size:14px}
@@ -631,6 +633,9 @@ const CREATOR = 'Daniel Lucena';
 const APP_URL = (location.host&&!/localhost|127\.0/.test(location.host)?location.host:'fifa07jerez.github.io');
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
+  {at:'2026-11-26T22:30:00+01:00', e:'🗳️', t:'Votar ya es obligatorio', d:'Si tienes el último partido sin puntuar, la app no te deja hacer nada hasta que votes. Es un minuto y es anónimo.'},
+  {at:'2026-11-26T22:30:00+01:00', e:'🟨', t:'Tarjetas más justas', d:'Bajarte con menos de 24 h solo es tarjeta si dejas el partido cojo. Si sube alguien de la reserva, nada. Si no, la tarjeta queda provisional y se quita sola si alguien ocupa tu plaza: la app te prepara el mensaje 🆘 para buscar sustituto.'},
+  {at:'2026-11-26T22:30:00+01:00', e:'🏛️', t:'Récords y revanchas', d:'En Ranking → Temporada están los récords históricos (más goles en un partido, mayor goleada, racha más larga…), y cuando alguien bate uno sale en el tablón. Si pierdes un duelo, botón 🔁 Revancha. Y El Muro va aparte: un portero puede ganar El Muro y El Crack.'},
   {at:'2026-11-24T20:45:00+01:00', e:'⚖️', t:'Nuevas reglas: ganar manda', d:'Ganar +5, empatar +2, gol +2, asistencia +1. En partidos de muchos goles cada gol vale menos (en un 18-17, un tercio). Para la media cuenta cómo ganas: un 18-17 mueve poco y un 5-2 mucho. Y si marcas bastante más que el resto en ese partido, subes aunque pierdas. Se han recalculado todas las medias desde el principio.'},
   {at:'2026-11-24T20:45:00+01:00', e:'🎯', t:'Asistencias y Coladero', d:'Ya se apuntan las asistencias al votar, porque pasar también cuenta. Y al votar: valora cómo ha jugado, no cuántos goles ha metido. Y para los porteros: si a uno le meten 5 o más, se puede votar 🥅 El Coladero (opcional, y resta). Solo se lo lleva si le vota al menos la mitad del vestuario. El Muro va aparte: un portero puede ganar El Muro y El Crack.'},
   {at:'2026-11-24T20:45:00+01:00', e:'👑', t:'Reyes de cada pista', d:'En Ranking puedes filtrar entre Futsal y Fútbol. Cada categoría tiene su Rey, el que más puntos por partido saca (O Rei do Futsal, El Rey del Fut7…), y el 🚙 Todoterreno es el que mejor rinde en las dos. La corona sale en su carta.'},
@@ -1172,17 +1177,31 @@ if(S._lastBoard==null){try{S._lastBoard=localStorage.getItem('fifa07_board')||''
 function fillBoard(){const sl=document.getElementById('boardSlot');if(sl&&sl._h!==S._lastBoard){sl.innerHTML=S._lastBoard;sl._h=S._lastBoard}}
 function setBoard(html){if(html!==S._lastBoard){S._lastBoard=html;try{localStorage.setItem('fifa07_board',html)}catch(e){}}fillBoard()}
 function groupStart(){return memo('gstart',()=>{const t=Object.values(S.players).filter(p=>!p.guest).map(p=>+(p.approvedAt||p.createdAt)||0).filter(x=>x>1e12);return t.length?Math.min(...t):Date.now()})}
+// 🏛️ Récords históricos (todas las temporadas). Cada vez que alguien bate uno, sale en el tablón.
+const REC_MIN=5; // no se anuncian récords hasta que haya al menos 5 partidos jugados
+function recordsData(){return memo('records',()=>{const pl=Object.values(S.matches).filter(m=>m.status==='played'&&!isCanc(m)).sort((a,b)=>mdt(a)-mdt(b));
+  const R={},ev=[],cur={},best={};const tEnd=m=>Math.max(+m.playedAt||0,+mdt(m)+2*36e5);const nm=id=>`<b>${esc(pname(id))}</b>`;
+  const beat=(k,v,o,i,msg)=>{if(!R[k]||v>R[k].v){const had=!!R[k];R[k]={v,...o};if(had&&i>=REC_MIN)ev.push({t:tEnd(o.m),e:'🏛️',x:msg()})}};
+  pl.forEach((m,i)=>{const g=goalsOf(m),ga=+m.scoreA||0,gb=+m.scoreB||0;
+    for(const[p,n]of Object.entries(g))if(P(p)&&!P(p).guest&&+n>0)beat('g1',+n,{id:p,m},i,()=>`¡Récord! ${nm(p)} mete <b>${n} goles</b> en un partido. Nadie había marcado tantos.`);
+    beat('rout',Math.abs(ga-gb),{m},i,()=>`¡Récord de goleada! <b>${Math.max(ga,gb)}–${Math.min(ga,gb)}</b> en ${esc(m.venue||'')}. La mayor de la historia.`);
+    beat('tot',ga+gb,{m},i,()=>`¡Récord! El partido con más goles de la historia: <b>${ga}–${gb}</b>.`);
+    for(const p of attendees(m)){if(!P(p)||P(p).guest)continue;const r=resultFor(m,p);cur[p]=r==='V'?(cur[p]||0)+1:0;
+      if(cur[p]>(best[p]||0))best[p]=cur[p];if(cur[p]>=3)beat('streak',cur[p],{id:p,m},i,()=>`¡Récord! ${nm(p)} lleva <b>${cur[p]} victorias seguidas</b>. La racha más larga de la historia.`)}});
+  const st=computeStats();let cr=null,pj=null;for(const id in st){if(!P(id)||P(id).guest)continue;const s=st[id];if(s.aw.crack&&(!cr||s.aw.crack>cr.v))cr={id,v:s.aw.crack};if(s.pj&&(!pj||s.pj>pj.v))pj={id,v:s.pj}}
+  if(cr)R.crack=cr;if(pj)R.pj=pj;return{R,ev}})}
 function boardItems(days){
   const key=boardKey(days);
   if(boardCache[days]?.k===key)return boardCache[days].v;
   const now=Date.now(),from=now-days*864e5,it=[];const nm=id=>`<b>${esc(pname(id))}</b>`;
+  for(const ev of recordsData().ev)if(ev.t>=from&&ev.t<=now)it.push(ev);
   // ⚔️ Retos
   for(const d of Object.values(S.duels)){if(!P(d.from)||!P(d.to)||d.status==='cancelled')continue;
     const K=DUEL_KINDS[d.kind]||{e:'⚔️',n:'Duelo'},St=DUEL_STAKES[d.stake]||{e:'🍺',n:'Una caña'};const what=d.kind==='nutmeg'?'hacerle un caño':K.n.toLowerCase();
     const r=duelResult(d);const m=S.matches[d.mid];
     const tEnd=m?(d.kind==='stars'||(d.kind==='nutmeg'&&r.timeout)?+mdt(m)+DUEL_HOURS*36e5:d.kind==='nutmeg'&&d.nutAt?d.nutAt:Math.max(+m.playedAt||0,+mdt(m)+2*36e5)):0;
     if(r.state==='final'&&m){const sc=d.kind==='goals'?` (${Math.max(r.a,r.b)}–${Math.min(r.a,r.b)} en goles)`:d.kind==='stars'?` (${(+Math.max(r.a,r.b)).toFixed(1)} a ${(+Math.min(r.a,r.b)).toFixed(1)} de nota)`:'';
-      it.push({t:tEnd,e:'🏆',x:`${nm(r.winner)} gana el reto a ${nm(r.loser)}: ${K.e} ${esc(what)}${sc}. ${nm(r.loser)} paga ${St.e} ${esc(St.n.toLowerCase())}.`,id:d.id});
+      it.push({t:tEnd,e:d.rematchOf?'🔁':'🏆',x:`${d.rematchOf?'Revancha: ':''}${nm(r.winner)} gana el reto a ${nm(r.loser)}: ${K.e} ${esc(what)}${sc}. ${nm(r.loser)} paga ${St.e} ${esc(St.n.toLowerCase())}.`,id:d.id});
       if(d.settled&&d.settledAt)it.push({t:d.settledAt,e:'💸',x:`${nm(r.loser)} ya ha pagado ${St.e} ${esc(St.n.toLowerCase())} a ${nm(r.winner)}. Deuda saldada.`})}
     else if(r.state==='draw'&&m)it.push({t:tEnd,e:'🤝',x:`Empate en el reto entre ${nm(d.from)} y ${nm(d.to)} (${K.e} ${esc(what)}): nadie paga`});
     else if(d.status==='rejected')it.push({t:d.acceptedAt||d.createdAt||0,e:'🐔',x:`${nm(d.to)} se raja: rechaza el reto de ${nm(d.from)}`,neg:1});
@@ -1578,6 +1597,8 @@ function viewMatches(st){
     const toVote=played.filter(m=>attendees(m).includes(me)&&!hasVoted(m.id,me)&&!voteClosed(m)&&(Date.now()-mdt(m))<14*864e5);
     const noStats=played.filter(m=>attendees(m).includes(me)&&hasVoted(m.id,me)&&!myStat(m.id,me)&&!goalsLocked(m));
     if(!toVote.length&&noStats.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="myStats" data-id="${esc(noStats[0].id)}"><span class="e">⚽</span><span><b>Apunta tus goles del ${esc(fmtShort(noStats[0]))}</b><br>Para que cuadren con el resultado.</span></button>`;
+    {const pc=(P(me)?.cardLog||[]).filter(c=>c.prov&&S.matches[c.mid]&&hoursTo(S.matches[c.mid])>0).slice(-1)[0];
+     if(pc){const m=S.matches[pc.mid];h+=`<button class="banner" style="width:100%;text-align:left;border-color:#f3dc5c" data-act="subMsg" data-id="${esc(m.id)}"><span class="e">🆘</span><span class="sp"><b>Tarjeta provisional · ${esc(fmtShort(m))}</b><br><span class="small muted">Te quitamos la ${pc.type==='red'?'🟥':'🟨'} si alguien ocupa tu plaza antes del partido. Toca para buscar sustituto.</span></span><span>›</span></button>`}}
     {const gm=Object.values(S.matches).filter(m=>m.status==='played'&&!goalsLocked(m)&&me&&hasVoted(m.id,me)).map(m=>{const mg=missingGoals(m);const k=(m.teamA||[]).includes(me)?'A':(m.teamB||[]).includes(me)?'B':null;return k&&mg[k]?{m,n:mg[k],k}:null}).filter(Boolean)[0];
      if(gm)h+=`<button class="banner" style="width:100%;text-align:left;border-color:#f3dc5c" data-act="myStats" data-id="${esc(gm.m.id)}"><span class="e">⚠️</span><span class="sp"><b>A ${TEAM[gm.k].n} ${gm.n===1?'le falta 1 gol':`le faltan ${gm.n} goles`} por apuntar</b><br><span class="small muted">${esc(fmtShort(gm.m))}. ¿Alguno es tuyo? Toca para revisar tus goles.</span></span><span>›</span></button>`}
     if(toVote.length)h+=`<button class="banner" style="width:100%;text-align:left" data-act="vote" data-id="${esc(toVote[0].id)}"><span class="e">🗳️</span><span><b>Tienes ${toVote.length} ${toVote.length===1?'partido':'partidos'} por puntuar</b><br>Reparte estrellas y premios. Es anónimo.</span></button>`;
@@ -1694,7 +1715,7 @@ function matchDetail(m,st){
     if(mine)x+=`<button class="btn full" data-act="leave" data-id="${esc(m.id)}">Desapuntarme</button>`;
     else if(me&&pendingVote(me))x+=`<button class="btn wht full" data-act="vote" data-id="${esc(pendingVote(me).id)}">🗳️ Puntúa tu último partido para apuntarte</button>`;
     else x+=`<button class="btn ${cnt>=n?'wht':'pri'} full" data-act="join" data-id="${esc(m.id)}">${cnt>=n?'Apuntarme a reserva':'¡Me apunto!'}</button>`;
-    if(h<24)x+=`<p class="small muted" style="margin-top:8px;text-align:center">⚠️ Quedan menos de 24h: bajarse ahora es 🟨</p>`;
+    if(h<24)x+=`<p class="small muted" style="margin-top:8px;text-align:center">⚠️ Quedan menos de 24h: si te bajas y nadie ocupa tu plaza, es 🟨</p>`;
     x+=`</div>`;
   }else x+=canManage(m)?`<button class="btn pri full" style="margin-top:14px" data-act="result" data-id="${esc(m.id)}">📝 Apuntar resultado</button>`:`<p class="banner" style="margin-top:14px"><span class="e">⏳</span><span>Esperando el resultado de <b>${esc(orgName(m))}</b></span></p>`;
 
@@ -1833,6 +1854,9 @@ function seasonView(stAll){
     <div class="lbc"><div class="tt">🐈‍⬛ El Gafe <span style="text-transform:none;font-weight:500">· % derrotas</span></div>${top(r=>r.pj?r.d/r.pj*100:0,v=>Math.round(v)+'%',r=>r.pj>=3)}</div>
     <div class="lbc"><div class="tt">🟨 Tarjeteros</div>${top(r=>r.y+r.r*2)}</div>
   </div>`;
+  {const{R}=recordsData();const dt=m=>m?`<span class="small muted" style="font-weight:500"> · ${esc(fmtShort(m))}</span>`:'';
+    const rows=[R.g1&&['⚽','Más goles en un partido',R.g1.id,`${R.g1.v}`,R.g1.m],R.streak&&['🔥','Racha de victorias',R.streak.id,`${R.streak.v} seguidas`,R.streak.m],R.rout&&['💥','Mayor goleada',null,`${Math.max(+R.rout.m.scoreA,+R.rout.m.scoreB)}–${Math.min(+R.rout.m.scoreA,+R.rout.m.scoreB)}`,R.rout.m],R.tot&&['🎢','Partido con más goles',null,`${+R.tot.m.scoreA}–${+R.tot.m.scoreB}`,R.tot.m],R.crack&&['⭐','Más veces Crack',R.crack.id,`${R.crack.v}`,null],R.pj&&['🏃','Más partidos jugados',R.pj.id,`${R.pj.v}`,null]].filter(Boolean);
+    if(rows.length)h+=`<h2>🏛️ Récords históricos <span class="sub">de todas las temporadas</span></h2><div class="box">${rows.map(([e,t,id,v,m])=>`<div class="recr" ${id?`data-act="profile" data-id="${esc(id)}"`:m?`data-act="open" data-id="${esc(m.id)}"`:''}><span class="re">${e}</span><span class="sp"><b>${t}</b><br>${id?`${face(id)} ${esc(pname(id))}`:`<span class="muted">${esc(m.venue||'')}</span>`}${dt(m)}</span><b class="rv">${v}</b></div>`).join('')}</div>`}
   if(y===seasonOfDate(new Date())){const K=kings();const ks=[...Object.keys(KINGS).filter(f=>K[f]).map(f=>K[f]),...(K.todo?[K.todo]:[])];
     h+=`<h2>Reyes de cada pista <span class="sub">más puntos por partido · mín. ${KING_MIN}</span></h2><div class="lb">${ks.length?ks.map(k=>`<div class="lbc" data-act="profile" data-id="${esc(k.id)}"><div class="tt">${k.e} ${esc(k.n)}</div><div class="l">${face(k.id)} ${esc(pname(k.id))}<b>${k.v.toFixed(1)} pts/p</b></div></div>`).join(''):'<div class="muted small">Aún nadie tiene 3 partidos en una categoría.</div>'}</div>
     <p class="small muted" style="margin-top:6px">🚙 <b>Todoterreno</b>: el que mejor rinde en futsal <i>y</i> en fútbol a la vez (3+ partidos en cada uno).</p>`}
@@ -1906,7 +1930,7 @@ function viewInfo(){
     <li>🟨 <b>Si no votas a tiempo:</b> amarilla (si ya tenías una en los últimos 30 días, roja) y vas <b>a la cola</b> en tu próximo partido.</li>
     <li>⭐ <b>Si te quedaste de reserva</b> en el último partido, en el siguiente tienes prioridad para entrar <b>solo si te apuntas en las primeras ${PRIO_HOURS} h</b> desde que se abre el partido. Si te apuntas más tarde, vas por orden de llegada como todos.</li>
     <li>⚔️ <b>Duelos:</b> reta a otro apuntado (más goles, gana su equipo o mejor nota) y jugaos una 🍺 o la 💶 pista. Si alguno no juega o os toca en el mismo equipo (en "gana su equipo"), es nulo. Los de goles y equipo se cierran al acabar el partido; los de nota y caño, a las 24 h.</li>
-    <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h</b> (🟨 automática; si reincides en menos de 30 días, 🟥). Si eres reserva y te bajas, no pasa nada.</li>
+    <li>Las tarjetas no son de árbitro: son por <b>bajarse con menos de 24h y dejar el partido cojo</b> (🟨; si reincides en menos de 30 días, 🟥). Si hay alguien en la reserva que sube, no hay tarjeta. Si no lo hay, la tarjeta se queda provisional y <b>se quita sola</b> si antes del partido alguien ocupa tu plaza (busca un sustituto o trae un invitado). Si eres reserva y te bajas, no pasa nada.</li>
     <li>🧽 <b>Las amarillas caducan a los 30 días:</b> para la roja solo cuenta otra amarilla de los últimos 30 días. En puntos y rankings cuentan todas.</li>
     <li>Si te apuntas y <b>no apareces sin avisar</b>: 🟥 directa.</li>
     <li>🟥 <b>Roja = una semana sin poder apuntarte</b> (a los partidos de los 7 días siguientes a la tarjeta).</li>
@@ -2064,7 +2088,7 @@ function pinPrompt(title,sub,cb){
 }
 
 function pickMe(){
-  if(needsGate()){loginForm();return}
+  if(needsGate()&&!voteGate()){loginForm();return}
   const ids=approvedIds().sort((a,b)=>pname(a).localeCompare(pname(b)));
   const mine=me&&P(me)?`<div class="row" style="gap:8px;margin:4px 0 14px"><button class="btn" style="flex:1" data-act="profile" data-id="${esc(me)}">🃏 Mi carta</button>${injOf(me)?`<button class="btn" style="flex:1" data-act="injOff" data-id="${esc(me)}">💪 Ya estoy bien</button>`:`<button class="btn" style="flex:1;border-color:#e10600" data-act="injOn" data-id="${esc(me)}"><b style="color:#e10600">✚</b> Me he lesionado</button>`}</div>`:'';
   const mine3=me&&P(me)&&pushReady()?`<button class="btn full" style="margin:-6px 0 14px" data-act="push">${pushState()==='on'?'🔔 Avisos activados':'🔕 Activar avisos en el móvil'}</button>`:'';
@@ -2200,24 +2224,36 @@ async function join(mid,pid){
     autoTeams(mid);const r=qRank(pid,m2);
     toast(bumped.length&&inL?`¡Dentro por prioridad ⭐! ${pname(bumped[0])} pasa a la reserva`:pid===me?(inL?(r===0?'¡Dentro! Tenías prioridad por quedarte de reserva la última vez ⭐':'¡Dentro! Ahora no falles 😤'):(r===2?'Vas a la cola por no votar el último partido 🐢':'Estás en reserva 🪑')):`${pname(pid)} apuntado`)}catch(e){err(e)}
 }
+// 🆘 Busca sustituto: mensaje listo para WhatsApp. Si alguien ocupa tu plaza, la tarjeta provisional se quita sola.
+function subText(m){return `🆘 Busco sustituto para la pachanga del ${fmtShort(m)} a las ${m.time||''}h en ${m.venue||''}${m.format?` (${m.format})`:''}${m.price?` · ${m.price}€`:''}. Queda 1 plaza libre. ¿Alguien se viene? Apúntate aquí: https://${APP_URL}`}
+async function subModal(mid,isRed){const m=S.matches[mid];if(!m)return;const txt=subText(m);
+  if(!m.open)try{await store.doc('matches/'+mid).update({open:true})}catch(e){}
+  S.keepModal=true;modal(`${mh('🆘 Busca sustituto')}<p class="muted">${isRed?'🟥':'🟨'} Tienes la tarjeta <b>provisional</b>: si antes del partido alguien ocupa tu plaza, <b>se quita sola</b>. Mándalo al grupo o a algún colega:</p>
+    <textarea rows="5" readonly style="margin-top:12px">${esc(txt)}</textarea>
+    <a class="btn pri full" style="margin-top:12px;text-decoration:none;text-align:center" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">📲 Enviar por WhatsApp</a>
+    <button class="btn full" id="cp" style="margin-top:8px">Copiar mensaje</button>
+    <p class="small muted" style="margin-top:10px">Si traes a alguien de fuera, que el organizador lo apunte como invitado en el partido.</p>`,md=>md.querySelector('#cp').onclick=()=>copyText(txt,'Mensaje copiado 📲',md.querySelector('textarea')))}
 function leave(mid){
   if(!me)return;
   const m=S.matches[mid];const h=hoursTo(m);const L=lineup(m);
   const starter=L.in.includes(me),late=h<24&&h>0&&starter;
   const up=starter&&L.res.length?L.res[0]:null;
   const p=P(me);const isRed=yellowsThisMonth(me)>=1;const card=isRed?'🟥 roja':'🟨 amarilla';
-  confirmBox('¿Te bajas?',late?`Quedan menos de 24h. Según las normas te llevas <b>${card}</b>.`:`Te quitamos de la lista.${up?` Sube <b>${esc(pname(up))}</b> desde la reserva.`:''}`,late?`Sí, me la como`:'Desapuntarme',async()=>{
+  // Tarjeta solo si dejas el partido cojo: si sube alguien de la reserva, nada. Si no hay reserva, la tarjeta es
+  // PROVISIONAL: se quita sola si antes del partido alguien ocupa tu plaza (sustituto o invitado).
+  const lateCard=late&&!up;
+  confirmBox('¿Te bajas?',lateCard?`Quedan menos de 24 h y no hay nadie en la reserva. Te llevas <b>${card}</b>… salvo que antes del partido alguien ocupe tu plaza (busca un sustituto o trae un invitado): entonces se te quita sola.`:late?`Quedan menos de 24 h, pero sube <b>${esc(pname(up))}</b> desde la reserva, así que <b>sin tarjeta</b>. 👍`:`Te quitamos de la lista.${up?` Sube <b>${esc(pname(up))}</b> desde la reserva.`:''}`,lateCard?`Me bajo y busco sustituto`:'Desapuntarme',async()=>{
     await store.doc(`signups/${mid}__${me}`).delete();autoTeams(mid);
     if(up)await store.doc('matches/'+mid).update({promoted:{pid:up,at:Date.now(),by:me}});
-    if(late){
-      const log=[...(p.cardLog||[]),{type:isRed?'red':'yellow',mid,at:Date.now()}];
+    if(lateCard){
+      const log=[...(p.cardLog||[]),{type:isRed?'red':'yellow',mid,at:Date.now(),late:true,prov:true,need:L.in.length}];
       await store.doc('players/'+me).update(isRed?{red:(p.red||0)+1,cardLog:log}:{yellow:(p.yellow||0)+1,cardLog:log});
     }
     if(up){S.keepModal=true;
       const txt=`⬆️ ${pname(me)} se baja del partido del ${fmtShort(m)} (${m.venue}). Entra ${pname(up)} desde la reserva. ¡${pname(up)}, cuentan contigo!`;
-      modal(`${mh('Sube '+esc(pname(up)))}<p class="muted">${late?(isRed?'🟥 Roja apuntada. ':'🟨 Amarilla apuntada. '):''}Avisa a ${esc(pname(up))} para que sepa que entra.</p><textarea rows="4" readonly style="margin-top:12px">${esc(txt)}</textarea>${waLink(up,promoText(m,up))?`<a class="btn pri full" style="margin-top:12px;text-decoration:none;background:#25d366;border-color:#25d366" href="${waLink(up,promoText(m,up))}" target="_blank" rel="noopener">💬 Avisar a ${esc(pname(up))} por WhatsApp</a>`:''}<button class="btn ${waLink(up,'x')?'':'pri'} full" id="cp" style="margin-top:10px">📋 Copiar aviso para el grupo</button>${waLink(up,'x')?'':`<p class="small muted" style="margin-top:8px">${esc(pname(up))} no ha puesto su teléfono en el perfil, por eso no sale el botón de WhatsApp directo.</p>`}`,
+      modal(`${mh('Sube '+esc(pname(up)))}<p class="muted">${late?'Sin tarjeta, porque entra alguien de la reserva. ':''}Avisa a ${esc(pname(up))} para que sepa que entra.</p><textarea rows="4" readonly style="margin-top:12px">${esc(txt)}</textarea>${waLink(up,promoText(m,up))?`<a class="btn pri full" style="margin-top:12px;text-decoration:none;background:#25d366;border-color:#25d366" href="${waLink(up,promoText(m,up))}" target="_blank" rel="noopener">💬 Avisar a ${esc(pname(up))} por WhatsApp</a>`:''}<button class="btn ${waLink(up,'x')?'':'pri'} full" id="cp" style="margin-top:10px">📋 Copiar aviso para el grupo</button>${waLink(up,'x')?'':`<p class="small muted" style="margin-top:8px">${esc(pname(up))} no ha puesto su teléfono en el perfil, por eso no sale el botón de WhatsApp directo.</p>`}`,
       md=>md.querySelector('#cp').onclick=()=>copyText(txt,'Aviso copiado. Pégalo en el grupo 📲',md.querySelector('textarea')));
-    }else toast(late?(isRed?'🟥 ¡Roja! Vaya tela…':'🟨 Amarilla. Que no se repita.'):'Desapuntado');
+    }else if(lateCard){subModal(mid,isRed)}else toast('Desapuntado');
   },true);
 }
 function addOther(mid){
@@ -2342,13 +2378,13 @@ function resultForm(mid){
     md.querySelector('#ns').innerHTML=nsPool.map(p=>`<button class="opt ${ns.has(p)?'onr':''}" data-ns="${esc(p)}">${ns.has(p)?'🟥 ':''}${esc(pname(p))}</button>`).join('');
     md.querySelectorAll('[data-ns]').forEach(b=>b.onclick=()=>{const p=b.dataset.ns;if(ns.has(p)){ns.delete(p);team[p]=A.length<=B.length?'A':'B'}else{ns.add(p);delete team[p]}sync();draw(md)});
     const ga=A.reduce((t,p)=>t+(goals[p]||0),0),gb=B.reduce((t,p)=>t+(goals[p]||0),0);
-    md.querySelector('#rows').innerHTML=[...A,...B].map(p=>`<div class="prow">
+    md.querySelector('#rows').innerHTML=[...A,...B].map(p=>`<div class="prow prow2">
+      <span class="nm">${esc(pname(p))}${myStat(mid,p)?`<span class="small muted" style="font-weight:500"> · dijo ⚽${+myStat(mid,p).g||0}${astOn()?` 🎯${+myStat(mid,p).a||0}`:''}</span>`:''}</span>
       <button class="tog ${team[p]==='A'?'on':''}" data-tg="${esc(p)}" style="min-width:64px">${team[p]==='A'?'Blanco':'Negro'}</button>
       ${kitOn()?`<button class="kitt ${kit[p]?'on':''}" data-k="${esc(p)}" title="Vino con la camiseta">👕</button>`:''}
-      <span class="nm">${esc(pname(p))}${myStat(mid,p)?`<br><span class="small muted" style="font-weight:500">dijo ⚽${+myStat(mid,p).g||0}${astOn()?` 🎯${+myStat(mid,p).a||0}`:''}</span>`:''}</span>
-      <div><div class="lbl">Goles</div><div class="stepper"><button data-g="${esc(p)}" data-d="-1">−</button><span>${goals[p]||0}</span><button data-g="${esc(p)}" data-d="1">+</button></div></div>
-      ${astOn()?`<div><div class="lbl">Asist</div><div class="stepper"><button data-a="${esc(p)}" data-d="-1">−</button><span>${ast[p]||0}</span><button data-a="${esc(p)}" data-d="1">+</button></div></div>`:''}</div>`).join('');
-    md.querySelector('#hint').innerHTML=`Goles apuntados: Blancos <b>${ga}</b> – <b>${gb}</b> Negros`;
+      <div class="stp"><div><div class="lbl">Goles</div><div class="stepper"><button data-g="${esc(p)}" data-d="-1">−</button><span>${goals[p]||0}</span><button data-g="${esc(p)}" data-d="1">+</button></div></div>
+      ${astOn()?`<div><div class="lbl">Asist.</div><div class="stepper"><button data-a="${esc(p)}" data-d="-1">−</button><span>${ast[p]||0}</span><button data-a="${esc(p)}" data-d="1">+</button></div></div>`:''}</div></div>`).join('');
+    md.querySelector('#hint').innerHTML=`Goles apuntados: Blancos <b>${ga}</b> – <b>${gb}</b> Negros${m.status==='played'&&(ga!==+m.scoreA||gb!==+m.scoreB)?` <span style="color:#f3dc5c">· marcador ${+m.scoreA||0}–${+m.scoreB||0}</span>`:''}`;
     md.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const p=b.dataset.g;goals[p]=Math.max(0,(goals[p]||0)+ +b.dataset.d);draw(md)});
     md.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const p=b.dataset.a;ast[p]=Math.max(0,(ast[p]||0)+ +b.dataset.d);draw(md)});
     md.querySelectorAll('[data-tg]').forEach(b=>b.onclick=()=>{const p=b.dataset.tg;team[p]=team[p]==='A'?'B':'A';sync();draw(md)});
@@ -3382,7 +3418,7 @@ function calModal(mid){
   const m=S.matches[mid];const d=mdt(m),e=new Date(d.getTime()+90*60000);
   const f=x=>`${x.getFullYear()}${String(x.getMonth()+1).padStart(2,'0')}${String(x.getDate()).padStart(2,'0')}T${String(x.getHours()).padStart(2,'0')}${String(x.getMinutes()).padStart(2,'0')}00`;
   const title=`⚽ ${APP_NAME.join('')} · ${m.format||'Pachanga'}`;const loc=`${m.venue||''}, Jerez de la Frontera`;
-  const desc=`Pachanga de ${APP_NAME.join('')}. ${m.price?m.price+'€ por cabeza. ':''}Bajarse con menos de 24h = tarjeta amarilla.`;
+  const desc=`Pachanga de ${APP_NAME.join('')}. ${m.price?m.price+'€ por cabeza. ':''}Bajarse con menos de 24h y dejarlo cojo = tarjeta amarilla.`;
   const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FIFA07//ES','BEGIN:VEVENT',`UID:${m.id}@fifa07`,`DTSTAMP:${f(new Date())}`,`DTSTART;TZID=Europe/Madrid:${f(d)}`,`DTEND;TZID=Europe/Madrid:${f(e)}`,`SUMMARY:${title}`,`LOCATION:${loc}`,`DESCRIPTION:${desc}`,'BEGIN:VALARM','TRIGGER:-PT3H','ACTION:DISPLAY','DESCRIPTION:Hoy hay pachanga','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
   const icsUrl=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
   const g=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${f(d)}/${f(e)}&ctz=Europe/Madrid&location=${encodeURIComponent(loc)}&details=${encodeURIComponent(desc)}`;
@@ -3574,8 +3610,11 @@ async function imgWrapped(pid){
 function needsGate(){
   if(!S.ready.players)return false;
   if(!me||!P(me))return true;
-  return isPending(me)||needsProfile(me);
+  return isPending(me)||needsProfile(me)||!!voteGate();
 }
+// 🗳️ Votar es obligatorio: si tienes el último partido sin puntuar (y la votación sigue abierta), no puedes usar la app.
+// Los admins pueden saltárselo (por si tienen que corregir el resultado antes).
+const voteGate=()=>me&&P(me)&&!isPending(me)&&!needsProfile(me)&&!S._voteSkip&&S.ready.matches&&S.ready.voted?pendingVote(me):null;
 // 🪪 Ficha obligatoria: nacionalidad (solo los nuevos), posición (Todocampista ya no vale) y foto.
 function obSteps(p){const st=[];if(!p||p.guest)return st;
   if(!p.nat)st.push('nat');
@@ -3646,6 +3685,12 @@ function walkout(id){const p=P(id);if(!p)return;document.querySelector('.wo')?.r
 }
 function gateView(){
   const empty=!Object.keys(S.players).length;
+  {const vm=voteGate();if(vm)return `<div class="gate" style="padding-top:max(26px,env(safe-area-inset-top))"><div class="obw" style="text-align:center">
+    <div style="font-size:56px;line-height:1">🗳️</div><h2 style="margin-top:10px">Antes de nada: puntúa el partido</h2>
+    <p class="muted" style="margin-top:6px">${esc(fmtShort(vm))} · ${esc(vm.venue||'')} · Blancos ${+vm.scoreA||0}–${+vm.scoreB||0} Negros</p>
+    <p class="small muted" style="margin-top:10px;line-height:1.5">Es un minuto y es <b>anónimo</b>. Hasta que no votes no puedes usar la app.<br>La votación cierra en <b>${hLeft(voteEnd(vm))}</b>. Si no votas: 🟨 y a la cola en el siguiente.</p>
+    <button class="btn pri full" style="margin-top:18px" data-act="vote" data-id="${esc(vm.id)}">⭐ Puntuar ahora</button>
+    ${isAdmin()?'<button class="btn ghost full" style="margin-top:10px" data-act="voteSkip">Entrar sin votar (admin)</button>':''}</div></div>`}
   if(me&&P(me)&&!isPending(me)&&needsProfile(me))return `<div class="gate" style="padding-top:max(20px,env(safe-area-inset-top))"><div id="obx"></div></div>`;
   let h=`<div class="gate"><div class="logo" style="font-size:46px">${esc(APP_NAME[0])}<b>${esc(APP_NAME[1])}</b></div><div class="gs">${esc(SLOGAN)}</div>`;
   if(S.conn&&!S.conn.ok)h+=`<div class="banner" style="border-color:#ffd400;background:rgba(255,212,0,.1);text-align:left"><span class="e">⚠️</span><span><b>Sin conexión con la base de datos</b><br><span class="small">${esc(S.conn.code)}</span></span></div>`;
@@ -3834,6 +3879,7 @@ function duelLine(d){
   if(r.state==='nutwait'&&d.from===me)acts+=`<button class="btn sm pri" data-act="duelNut" data-v="claimed" data-id="${esc(d.id)}">🥜 ¡Se lo hice!</button><button class="btn sm ghost" data-act="duelNut" data-v="no" data-id="${esc(d.id)}">No pude</button>`;
   if(r.state==='nutclaim'&&(d.to===me||isAdmin()||(m&&canManage(m)&&d.from!==me)))acts+=`<button class="btn sm pri" data-act="duelNut" data-v="yes" data-id="${esc(d.id)}">${d.to===me?'Sí, me lo hizo 😩':'Confirmar caño'}</button><button class="btn sm ghost" data-act="duelNut" data-v="no" data-id="${esc(d.id)}">${d.to===me?'¡Mentira!':'No hubo'}</button>`;
   if(isAdmin()&&['pending','upcoming','nores','live','nutwait','nutclaim'].includes(r.state))acts+=`<button class="btn sm ghost" data-act="duelVoid" data-id="${esc(d.id)}">🛠️ Anular</button>`;
+  if(r.state==='final'&&r.loser===me&&!d.rematch)acts+=`<button class="btn sm pri" data-act="rematch" data-id="${esc(d.id)}">🔁 Revancha</button>`;
   if(r.state==='final'&&!d.settled&&(r.winner===me||isAdmin()))acts+=`<button class="btn sm wht" data-act="duelSettle" data-id="${esc(d.id)}">✅ Me ha pagado</button>`;
   return `<div class="duel"><div class="dv-top"><span class="av">${face(d.from)}</span><b>${esc(pname(d.from))}</b><span class="vs">⚔️</span><b>${esc(pname(d.to))}</b><span class="av">${face(d.to)}</span></div>
     <div class="small muted" style="margin-top:6px">${K.e} ${K.n} · ${stakeTxt(d)}${m?` · ${esc(fmtShort(m))}`:''}</div>
@@ -3865,7 +3911,9 @@ function duelForm(mid,rivalPre){
       if(!rival){toast('Elige a tu rival');return}
       if(DUEL_KINDS[kind].gk&&!(isGK(me)&&isGK(rival))){toast('🧤 Los retos de porteros son solo entre porteros (marcados como portero en su perfil)');return}
       e.target.disabled=true;const id=nid();
-      try{await store.doc('duels/'+id).set({mid,from:me,to:rival,kind,stake,status:'pending',settled:false,createdAt:Date.now()});
+      try{const rm=S.rematchOf&&S.duels[S.rematchOf]?S.rematchOf:null;S.rematchOf=null;
+        await store.doc('duels/'+id).set({mid,from:me,to:rival,kind,stake,status:'pending',settled:false,createdAt:Date.now(),...(rm?{rematchOf:rm}:{})});
+        if(rm)await store.doc('duels/'+rm).update({rematch:id});
         const K=DUEL_KINDS[kind];const txt=`⚔️ *DUELO* en ${APP_NAME.join('')}\n${pname(me)} reta a ${pname(rival)}: ${kind==='nutmeg'?`🥜 le va a hacer un caño`:`${K.e} ${K.n.toLowerCase()}`} el ${fmtShort(m)}.\nSe juegan ${stake==='court'?'💶 la pista':'🍺 una caña'}. ${pname(rival)}, ¿aceptas o te escondes? 🐔\n${appUrl()}`;
         const wl=waLink(rival,txt);
         modal(`${mh('Reto lanzado ⚔️')}<p class="muted">${esc(pname(rival))} lo verá en la app al entrar. Si quieres que se entere ya (y que se entere el grupo 😏):</p>
@@ -4107,6 +4155,13 @@ document.addEventListener('click',e=>{
     case'reject':confirmBox('Rechazar solicitud',`Se borra la solicitud de <b>${esc(pname(id))}</b>.`,'Rechazar',async()=>{await store.doc('players/'+id).delete()},true);break;
     case'install':installModal();break;
     case'promoEdit':promoForm();break;
+    case'rematch':{const d=S.duels[id];if(!d)break;const r=duelResult(d);const rival=r.winner;
+      const nx=Object.values(S.matches).filter(m=>m.status!=='played'&&!isCanc(m)&&hoursTo(m)>0&&lineup(m).in.includes(me)).sort((a,b)=>mdt(a)-mdt(b))[0];
+      if(!nx){toast('Apúntate al próximo partido y pide la revancha desde ahí 🔁');break}
+      if(!lineup(nx).in.includes(rival)){toast(`${pname(rival)} aún no está dentro del próximo partido. En cuanto se apunte, pídesela 😤`);break}
+      S.rematchOf=d.id;duelForm(nx.id,rival);break}
+    case'subMsg':subModal(id,(P(me)?.cardLog||[]).some(c=>c.prov&&c.mid===id&&c.type==='red'));break;
+    case'voteSkip':S._voteSkip=true;render();break;
     case'updNav':{const t=document.getElementById('updt');if(t)t.scrollBy({left:t.clientWidth*(+a.dataset.d),behavior:'smooth'});break}
     case'updHide':{let s={};try{s=JSON.parse(localStorage.getItem('fifa07_upd')||'{}')}catch(e){};s[id]=1;try{localStorage.setItem('fifa07_upd',JSON.stringify(s))}catch(e){};render();break}
     case'instHide':S.instHidden=true;try{localStorage.setItem('fifa07_insthide','1')}catch(e){};render();break;
@@ -4237,6 +4292,15 @@ function wrapStore(st){const raw=st.doc.bind(st);st.rawDoc=raw;
       delete:async()=>{const mon=S.arcIdx[p];if(mon){const a=S.arc[mon];const cols=JSON.parse(JSON.stringify(a.cols||{}));if(cols[c])delete cols[c][id];await raw('archive/'+mon).set({...a,id:undefined,cols})}
         if(live()||!mon)return d.delete()}}};
   return st}
+// 🟨 Tarjetas provisionales por bajarse tarde: se quitan si el partido se llena (o se cancela) antes de empezar;
+// si empieza cojo, se quedan. Lo resuelve el propio jugador (su ficha) o un admin.
+let _lc=0;async function fixLateCards(){if(!store||_lc||!S.ready.players||!S.ready.matches)return;const ids=isAdmin()?Object.keys(S.players):(me?[me]:[]);
+  for(const id of ids){const p=P(id);const log=p?.cardLog;if(!Array.isArray(log)||!log.some(c=>c.prov))continue;let ch=false,dy=0,dr=0;
+    const nl=log.map(c=>{if(!c.prov)return c;const m=S.matches[c.mid];if(!m)return{...c,prov:false};
+      const full=lineup(m).in.length>=Math.min(m.slots||10,c.need||m.slots||10); // alguien ocupa su plaza: se vuelve a los apuntados que había
+      if(isCanc(m)||full){ch=true;c.type==='red'?dr++:dy++;return{...c,prov:false,forgiven:true,why:isCanc(m)?'cancelado':'plaza cubierta'}}
+      if(m.status==='played'||hoursTo(m)<=0){ch=true;return{...c,prov:false}}return c});
+    if(ch){_lc=1;try{await store.doc('players/'+id).update({cardLog:nl,yellow:Math.max(0,(p.yellow||0)-dy),red:Math.max(0,(p.red||0)-dr)})}catch(e){}finally{_lc=0}}}}
 async function penalizeNoVote(){
   if(!isAdmin()||S._pen||!store)return;if(!['matches','players','voted'].every(c=>S.ready[c]&&S.fresh?.[c]))return;
   const todo=Object.values(S.matches).filter(m=>voteClosed(m)&&!m.novoteDone&&Date.now()-voteEnd(m)<14*864e5);if(!todo.length)return;
@@ -4285,14 +4349,14 @@ function sub(col){
   const t=setTimeout(()=>{if(!S.ready[col]){S.ready[col]=1;render();toast('La conexión va lenta…')}},10000);
   store.collection(col).onSnapshot(snap=>{
     S.fresh=S.fresh||{};
-    if(snap.metaOnly){const was=S.fresh[col];S.fresh[col]=!snap.fromCache;if(!was&&S.fresh[col]){if(isAdmin()){setTimeout(()=>archiveOld(false),4000);setTimeout(penalizeNoVote,2500)}setTimeout(ensureRecurring,500)}return}
+    if(snap.metaOnly){const was=S.fresh[col];S.fresh[col]=!snap.fromCache;if(!was&&S.fresh[col]){if(isAdmin()){setTimeout(()=>archiveOld(false),4000);setTimeout(penalizeNoVote,2500)}setTimeout(fixLateCards,3500);setTimeout(ensureRecurring,500)}return}
     S.fresh[col]=!snap.fromCache;
     clearTimeout(t);S.ver++;const o={};snap.docs.forEach(d=>o[d.id]={id:d.id,...d.data()});
     if(col==='archive'){S.arc={};for(const id in o)S.arc[id]=o[id];arcIndex();ARC_COLS.forEach(arcRebuild)}
     else if(ARC_COLS.includes(col)){S.live[col]=o;arcRebuild(col)}
     else S[col]=o;
     S.ready[col]=1;
-    if(isAdmin()){setTimeout(()=>archiveOld(false),4000);setTimeout(penalizeNoVote,2500)}
+    if(isAdmin()){setTimeout(()=>archiveOld(false),4000);setTimeout(penalizeNoVote,2500)}setTimeout(fixLateCards,3500);
     if(col==='players'&&me&&!o[me]&&snap.docs.length)me=null;
     scheduleRender();
     if(col==='matches'||col==='config'||col==='players')setTimeout(ensureRecurring,500);
@@ -4305,7 +4369,7 @@ function sub(col){
   try{store=wrapStore(FIREBASE_CONFIG?await firebaseStore(FIREBASE_CONFIG):demoStore())}
   catch(e){console.error(e);storeErr=true;render();return}
   ALLCOLS.forEach(sub);
-  setInterval(()=>{ensureRecurring();penalizeNoVote();if(!S.sheet&&!document.querySelector('.md'))render()},60000);
+  setInterval(()=>{ensureRecurring();penalizeNoVote();fixLateCards();if(!S.sheet&&!document.querySelector('.md'))render()},60000);
 })();
 </script>
 </body>
