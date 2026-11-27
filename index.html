@@ -663,7 +663,7 @@ const CREATOR = 'Daniel Lucena';
 const APP_URL = (location.host&&!/localhost|127\.0/.test(location.host)?location.host:'fifa07jerez.github.io');
 // Novedades: cada cambio añade una entrada arriba. Se ve 24 h desde 'at' (hora de Madrid) en un aviso amarillo.
 const UPDATES = [
-  {at:'2026-11-27T21:00:00+01:00', e:'🎯', t:'Draft con capitanes', d:'Además del reparto por media, quien convoca puede montar un draft: los dos con más media son capitanes (se pueden cambiar) y eligen por turnos 1-2-2-2… Una moneda al aire decide quién empieza y al capitán le llega aviso cuando le toca.'},
+  {at:'2026-11-27T21:00:00+01:00', e:'🎯', t:'Draft con capitanes', d:'Además del reparto por media, quien convoca puede montar un draft: los capitanes salen al azar (o los de más o menos media, y se pueden cambiar) y eligen por turnos 1-2-2-2… Una moneda al aire decide quién empieza y al capitán le llega aviso cuando le toca.'},
   {at:'2026-11-27T21:00:00+01:00', e:'🙈', t:'Goles en propia', d:'Al votar ya puedes apuntar tus goles en propia: suben al marcador del rival, restan 1 punto y salen en el tablón. Mejor confesar que te pillen.'},
   {at:'2026-11-27T21:00:00+01:00', e:'🧤', t:'El Muro, para cualquiera', d:'En El Muro ya sale todo el mundo: el que no es portero también puede hartarse de parar. Y si nadie se lo merece, vota 🚫 Nadie.'},
   {at:'2026-11-26T22:30:00+01:00', e:'🗳️', t:'Votar ya es obligatorio', d:'Si tienes el último partido sin puntuar, la app no te deja hacer nada hasta que votes. Es un minuto y es anónimo.'},
@@ -2368,13 +2368,17 @@ async function makeTeams(mid,shuffle){
 function draftForm(mid){const m=S.matches[mid];if(!m||!canManage(m))return;const st=computeStats();const ids=lineup(m).in.slice().sort((a,b)=>(st[b]?.ovr||0)-(st[a]?.ovr||0));
   if(ids.length<4){toast('Hacen falta al menos 4 apuntados');return}
   const opt=sel=>ids.map(p=>`<option value="${esc(p)}" ${p===sel?'selected':''}>${esc(pname(p))} · ${st[p]?.ovr||'—'}</option>`).join('');
+  const pickCaps=k=>{if(k==='high')return[ids[0],ids[1]];if(k==='low')return[ids[ids.length-1],ids[ids.length-2]];const r=ids.slice().sort(()=>Math.random()-.5);return[r[0],r[1]]};
+  const c0=pickCaps('rand');
   modal(`${mh('🎯 Draft con capitanes')}
-    <p class="muted small">Dos capitanes eligen por turnos (1-2-2-2…). <b>Una moneda al aire</b> decide quién empieza. Por defecto, los dos con más media.</p>
-    <label>Capitán 1</label><select id="c1">${opt(ids[0])}</select><label>Capitán 2</label><select id="c2">${opt(ids[1])}</select>
+    <p class="muted small">Dos capitanes eligen por turnos (1-2-2-2…). <b>Una moneda al aire</b> decide quién empieza.</p>
+    <label>Capitanes</label><div class="opts" id="cm"><button class="opt on" data-k="rand">🎲 Al azar</button><button class="opt" data-k="low">🔻 Menos media</button><button class="opt" data-k="high">🔺 Más media</button></div>
+    <label>Capitán 1</label><select id="c1">${opt(c0[0])}</select><label>Capitán 2</label><select id="c2">${opt(c0[1])}</select>
     ${(m.teamA||[]).length?'<p class="small" style="color:var(--yel);margin-top:10px">⚠️ Se deshacen los equipos actuales.</p>':''}
     ${lineup(m).in.length<(m.slots||10)?'<p class="small muted" style="margin-top:6px">La lista aún no está llena: los que se apunten durante el draft entran en el bombo; los de después quedan sin equipo.</p>':''}
     <button class="btn pri full" id="sv" style="margin-top:18px">🎯 Empezar el draft</button>`,
-  md=>{md.querySelector('#sv').onclick=async e=>{let a=md.querySelector('#c1').value,b=md.querySelector('#c2').value;if(a===b){toast('Elige dos capitanes distintos');return}
+  md=>{md.querySelectorAll('#cm .opt').forEach(o=>o.onclick=()=>{md.querySelectorAll('#cm .opt').forEach(x=>x.classList.toggle('on',x===o));const[a,b]=pickCaps(o.dataset.k);md.querySelector('#c1').value=a;md.querySelector('#c2').value=b});
+    md.querySelector('#sv').onclick=async e=>{let a=md.querySelector('#c1').value,b=md.querySelector('#c2').value;if(a===b){toast('Elige dos capitanes distintos');return}
     if((st[b]?.ovr||0)>(st[a]?.ovr||0))[a,b]=[b,a]; // A (blancos) = el de más media
     const first=Math.random()<.5?'A':'B',fc=first==='A'?a:b;
     e.target.disabled=true;try{await store.doc('matches/'+mid).update({teamMode:'draft',teamA:[],teamB:[],teamsBy:null,draft:{capA:a,capB:b,first,picks:[],on:true,at:Date.now(),by:me,turn:fc}});coinFlip(fc)}catch(x){e.target.disabled=false;err(x)}}})}
